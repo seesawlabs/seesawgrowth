@@ -20,6 +20,7 @@ parts=(
   docs/01-decision-brief.md
   docs/02-audit-and-growth-plan.md
   docs/03-targeting-report.md
+  docs/04-offer-project-plan.md
 )
 
 for p in "${parts[@]}"; do
@@ -34,12 +35,13 @@ done
 references an external file, PDF, or link you need to go fetch. Upload this one file and
 a new session has the full picture.
 
-Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains four documents:
+Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains ${#parts[@]} documents:
 
 1. **Current status** — where this stands and what it's blocked on
 2. **The 30-minute version** (2026-08-05) — the four-decision brief written for Jeff
 3. **The full audit & growth plan** (2026-07-22) — 11 sections + evidence appendix
 4. **The targeting report** (2026-07-22) — competitive density check, 50+ referral partners, 66-account ABM list, monthly playbook
+5. **The offer project plan** (2026-08-10) — AI Production Roadmap: deliverables, production process, website flow, copy, unit economics, 8-week phasing
 HEADER
 
   for p in "${parts[@]}"; do

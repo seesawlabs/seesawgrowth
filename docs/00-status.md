@@ -2,6 +2,10 @@
 
 *Last updated 2026-08-10.*
 
+> **In progress:** the offer project plan (`04-offer-project-plan.md`) is drafted and awaiting
+> team alignment. It deliberately does **not** block on the positioning decision — only its
+> copy specificity does. Eight decisions need resolving in the alignment meeting; see §10 there.
+
 | | |
 |---|---|
 | Audit + plan delivered | 2026-07-22 (v2, after a same-day refinement round) |
@@ -37,7 +41,7 @@ actively trying to do less of it.
 | Positioning & messaging hierarchy | Jeff + Calvin | **Open — blocks everything below** |
 | Case-study rebuild (6, metric-led) | Calvin | Not started |
 | Website rebuild (7 items) | Calvin | Not started |
-| The offer as a product (Roadmap page + booking flow) | Calvin | Not started |
+| The offer as a product (Roadmap page + booking flow) | Calvin | **Plan drafted — awaiting team alignment** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |
 | Monthly targeting playbook | Calvin | Defined, not yet running as a cadence |
