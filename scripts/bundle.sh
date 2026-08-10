@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Regenerate the single self-contained working file from docs/.
+#
+# Use this when you need to hand the whole plan to something that can't clone the
+# repo — a fresh chat session, an email attachment, a collaborator without access.
+#
+#   ./scripts/bundle.sh                       # -> SeeSawLabsGrowthPlan-COMPLETE.md
+#   ./scripts/bundle.sh /path/to/output.md
+#
+# docs/ is the source of truth. The output is generated — never edit it by hand.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+out="${1:-SeeSawLabsGrowthPlan-COMPLETE.md}"
+
+parts=(
+  docs/00-status.md
+  docs/01-decision-brief.md
+  docs/02-audit-and-growth-plan.md
+  docs/03-targeting-report.md
+)
+
+for p in "${parts[@]}"; do
+  [ -f "$p" ] || { echo "bundle.sh: missing $p" >&2; exit 1; }
+done
+
+{
+  cat <<HEADER
+# SeeSaw Labs — Growth Plan: Complete Working File
+
+**Self-contained.** Everything from the growth-planning work is inline below — nothing
+references an external file, PDF, or link you need to go fetch. Upload this one file and
+a new session has the full picture.
+
+Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains four documents:
+
+1. **Current status** — where this stands and what it's blocked on
+2. **The 30-minute version** (2026-08-05) — the four-decision brief written for Jeff
+3. **The full audit & growth plan** (2026-07-22) — 11 sections + evidence appendix
+4. **The targeting report** (2026-07-22) — competitive density check, 50+ referral partners, 66-account ABM list, monthly playbook
+HEADER
+
+  for p in "${parts[@]}"; do
+    printf '\n---\n---\n\n'
+    cat "$p"
+  done
+
+  printf '\n---\n\n*End of file. Everything above is self-contained — no external references required.*\n'
+} > "$out"
+
+echo "wrote $out ($(wc -l < "$out" | tr -d ' ') lines)"
