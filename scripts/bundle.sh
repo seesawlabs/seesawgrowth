@@ -21,6 +21,7 @@ parts=(
   docs/02-audit-and-growth-plan.md
   docs/03-targeting-report.md
   docs/04-offer-project-plan.md
+  docs/05-reality-check-spec.md
 )
 
 for p in "${parts[@]}"; do
@@ -42,6 +43,7 @@ Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains ${#parts[@]}
 3. **The full audit & growth plan** (2026-07-22) — 11 sections + evidence appendix
 4. **The targeting report** (2026-07-22) — competitive density check, 50+ referral partners, 66-account ABM list, monthly playbook
 5. **The offer project plan** (2026-08-10) — AI Production Roadmap: deliverables, production process, website flow, copy, unit economics, 8-week phasing
+6. **The Reality Check spec** (2026-08-11) — the free offer: qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build
 HEADER
 
   for p in "${parts[@]}"; do

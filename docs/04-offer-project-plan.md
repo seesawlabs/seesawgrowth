@@ -254,6 +254,15 @@ heroic. Without these, roadmap #2 costs as much to produce as roadmap #1.
 
 ## 6. The website flow
 
+> **Superseded 2026-08-11 by `05-reality-check-spec.md`.** The free tier collapsed from
+> "self-serve scorecard + call" into a single motion: a 60-second qualifier, a one-hour
+> scripted call, and a report built from the transcript plus deep research. The scorecard is
+> deferred to v2, to be built once ~20 real reports exist to calibrate its scoring against.
+>
+> The flow diagram and page inventory below still hold structurally — replace the scorecard
+> node with the qualifier, and read the "Reality Check" node as the single free offer. The
+> `/ai-readiness-scorecard` and score-result pages drop out of v1.
+
 ### Current state
 One generic contact form plus AI Jeff. No lead magnet, no scheduler, no qualification, no
 nurture, no CRM stages. Every recommendation below is net-new infrastructure.
@@ -348,6 +357,11 @@ one of them.** The audit's measurement gap was that we track traffic instead of 
 
 Drafted for review, not final. `[WEDGE]` marks lines whose specificity depends on Decision #1 —
 if positioning lands somewhere other than care operations, swap those and the rest stands.
+
+> **Partially superseded 2026-08-11.** The Roadmap offer-page copy below stands. The scorecard
+> entry and result-page copy are deferred with the scorecard itself; the free offer's copy now
+> leads with *"One hour with our team. You keep the assessment."* See
+> `05-reality-check-spec.md` §10 for the ad hooks and the promise framing.
 
 ### Offer page — hero
 

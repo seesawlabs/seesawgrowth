@@ -1,10 +1,15 @@
 # Current status
 
-*Last updated 2026-08-10.*
+*Last updated 2026-08-11.*
 
-> **In progress:** the offer project plan (`04-offer-project-plan.md`) is drafted and awaiting
-> team alignment. It deliberately does **not** block on the positioning decision — only its
-> copy specificity does. Eight decisions need resolving in the alignment meeting; see §10 there.
+> **In progress:** the offer work. `04-offer-project-plan.md` covers the paid AI Production
+> Roadmap ($25k, 3 weeks); `05-reality-check-spec.md` covers the free AI Reality Check that
+> feeds it. Neither blocks on the positioning decision — only their copy specificity does.
+> Decisions pending: eight in `04` §10, seven in `05` §12.
+>
+> The free tier was redesigned 2026-08-11: collapsed from "self-serve scorecard + call" into a
+> single one-hour call whose transcript plus deep research produces the report. §6 and §7 of
+> `04` are superseded accordingly; the scorecard is deferred to v2.
 
 | | |
 |---|---|
@@ -42,6 +47,7 @@ actively trying to do less of it.
 | Case-study rebuild (6, metric-led) | Calvin | Not started |
 | Website rebuild (7 items) | Calvin | Not started |
 | The offer as a product (Roadmap page + booking flow) | Calvin | **Plan drafted — awaiting team alignment** |
+| The free offer (AI Reality Check + report pipeline) | Calvin | **Spec'd — build starts week of Aug 11** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |
 | Monthly targeting playbook | Calvin | Defined, not yet running as a cadence |

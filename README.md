@@ -30,6 +30,7 @@ Two standing caveats before acting on anything here:
 | [docs/02-audit-and-growth-plan.md](docs/02-audit-and-growth-plan.md) | The full audit & growth plan — 11 sections + evidence appendix | 2026-07-22 |
 | [docs/03-targeting-report.md](docs/03-targeting-report.md) | Competitive density check, 50+ referral partners, 66-account ABM list, monthly playbook | 2026-07-22 |
 | [docs/04-offer-project-plan.md](docs/04-offer-project-plan.md) | Project plan for the AI Production Roadmap offer — deliverables, production process, website flow, copy, unit economics, 8-week phasing | 2026-08-10 |
+| [docs/05-reality-check-spec.md](docs/05-reality-check-spec.md) | Spec for the free AI Reality Check — qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build | 2026-08-11 |
 
 Read them in that order. `00` tells you what's live, `01` is the decision surface, `02` and
 `03` are the evidence base you go to when a recommendation needs defending.
