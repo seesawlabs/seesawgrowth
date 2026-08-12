@@ -48,7 +48,8 @@ actively trying to do less of it.
 | Website rebuild (7 items) | Calvin | Not started |
 | The offer as a product (Roadmap page + booking flow) | Calvin | **Plan drafted — awaiting team alignment** |
 | The free offer (AI Reality Check + report pipeline) | Calvin | **Spec'd — build starts week of Aug 11** |
-| └ Qualifier form | Calvin | **Spec'd + prototyped. Scoring validated against 11 personas** |
+| └ Qualifier form | Calvin | **Spec'd + prototyped. Scoring validated against 14 personas** |
+| └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |
 | Monthly targeting playbook | Calvin | Defined, not yet running as a cadence |

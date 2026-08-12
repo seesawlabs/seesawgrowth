@@ -32,6 +32,7 @@ Two standing caveats before acting on anything here:
 | [docs/04-offer-project-plan.md](docs/04-offer-project-plan.md) | Project plan for the AI Production Roadmap offer — deliverables, production process, website flow, copy, unit economics, 8-week phasing | 2026-08-10 |
 | [docs/05-reality-check-spec.md](docs/05-reality-check-spec.md) | Spec for the free AI Reality Check — qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build | 2026-08-11 |
 | [docs/06-qualifier-spec.md](docs/06-qualifier-spec.md) | Build spec for the qualifier form — exact copy, fields, validation, scoring, gates, routing, the three outcome screens | 2026-08-11 |
+| [docs/07-interview-guide.md](docs/07-interview-guide.md) | The one-hour call — prep, timeboxed blocks, question bank, technique, outlier branches, fit assessment, report variants | 2026-08-11 |
 
 Read them in that order. `00` tells you what's live, `01` is the decision surface, `02` and
 `03` are the evidence base you go to when a recommendation needs defending.

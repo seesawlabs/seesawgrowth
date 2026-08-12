@@ -23,6 +23,7 @@ parts=(
   docs/04-offer-project-plan.md
   docs/05-reality-check-spec.md
   docs/06-qualifier-spec.md
+  docs/07-interview-guide.md
 )
 
 for p in "${parts[@]}"; do
@@ -46,6 +47,7 @@ Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains ${#parts[@]}
 5. **The offer project plan** (2026-08-10) — AI Production Roadmap: deliverables, production process, website flow, copy, unit economics, 8-week phasing
 6. **The Reality Check spec** (2026-08-11) — the free offer: qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build
 7. **The qualifier form spec** (2026-08-11) — exact copy, fields, validation, scoring, gates, routing, the three outcome screens
+8. **The interview guide** (2026-08-11) — the one-hour call: prep, timeboxed blocks, question bank, technique, outlier branches, fit assessment, report variants
 HEADER
 
   for p in "${parts[@]}"; do
