@@ -15,9 +15,9 @@ here, on the booking step, where it's earned.
 | | |
 |---|---|
 | Steps | 3 |
-| Questions | 5 + contact |
-| Target time | **60 seconds** |
-| Required fields | 7 |
+| Questions | 4 + company block |
+| Target time | **60–75 seconds** |
+| Required fields | 9 |
 | Outcome | Auto-book · manual review · Office Hours |
 | Score shown to user | **Never** |
 
@@ -37,7 +37,7 @@ meaningful completion-rate hit for leads that are worthless without a story atta
 > One hour with our team. A written assessment in three business days — yours to keep whether
 > or not we ever work together.
 >
-> *Five quick things about your situation. Takes about a minute.*
+> *A few quick things about your situation. Takes about a minute.*
 
 ---
 
@@ -88,15 +88,69 @@ try?"*
 > tried"), and it hands the call its opening. It is also the highest-weighted scoring input,
 > and the raw text goes to whoever reviews — never just the score.
 
-### Step 3 — Contact
+### Step 3 — About you and the company
 
 | Field | Type | Notes |
 |---|---|---|
 | Full name | `text, required` | |
 | Work email | `email, required` | Validate format. Do **not** block free providers — some legitimate small-co buyers use them |
 | Company | `text, required` | |
-| Company website | `url, conditional` | **Only shown if the email domain is a free provider.** Otherwise derive it from the domain — zero friction, and the research pipeline needs it |
+| **Company website** | `url, required` | **Always asked, pre-filled from the email domain.** See below |
+| **Industry** | `select, required` | Grouped, wedge-first. See below |
 | Anyone we should thank for the intro? | `text, optional` | Referral attribution for the #1 historical channel that currently has none |
+
+#### Company website — always ask, pre-fill from the domain
+
+Helper text: *So we can do our homework before the call.*
+
+Deriving it silently from the email domain was the wrong call. In care operations especially —
+roll-ups, PE portfolio companies, acquired brands — the email domain routinely isn't the
+company's actual site: `@corp.parentco.com`, a legacy brand domain, a shared holding-company
+tenant. A wrong or missing website degrades the research on **every** report, and research
+quality is a core part of what makes the free deliverable worth an hour of their time.
+
+So: pre-fill from the domain when it isn't a free provider, leave it editable, and require it.
+Usually a glance-and-continue; occasionally a correction that saves the report.
+
+#### Industry — grouped, wedge-first
+
+`[WEDGE]` The grouping and the first four options depend on Decision #1. Swap the groups if
+positioning lands elsewhere; the field itself stays.
+
+> **Care operations**
+> - Pharmacy / PBM / medication management
+> - Hospice, palliative & post-acute
+> - Dialysis & renal
+> - Care management / value-based care
+>
+> **Healthcare, other**
+> - Payer / health plan / insurtech
+> - Provider group / health system
+> - Health tech / digital health
+> - Other healthcare
+>
+> **Other industries**
+> - Financial services / fintech
+> - Insurance (non-health)
+> - Logistics & supply chain
+> - Manufacturing / industrial
+> - Professional services
+> - Something else → reveals `text, required`
+
+Three jobs, one tap:
+
+1. **Proof-matching.** The report's matched case study is only as good as the segment we can
+   place them in. "Healthcare" doesn't distinguish a specialty pharmacy from a health system;
+   these options do.
+2. **Research targeting.** Regulatory surface, vendor landscape, and comparable deployments
+   differ enormously between hospice pharmacy and dialysis. The pipeline needs the sub-vertical,
+   not the sector.
+3. **It signals specialisation at peak intent.** A hospice pharmacy CTO opens the dropdown, sees
+   their exact niche named first under a heading that describes them, and concludes we work with
+   companies like theirs. Positioning, delivered through a form field.
+
+Use a native `<select>` with `<optgroup>` — fourteen options as radio rows is a wall, and native
+select is better on mobile, where most LinkedIn traffic lives.
 
 Then, as visible copy above the button:
 
@@ -164,6 +218,25 @@ story scores 7/8 on merit and would auto-book — precisely the anti-ICP.
 
 The override matters: someone whose pilot has stalled and who can describe it precisely is the
 exact buyer, and making them wait a day for review loses hot leads.
+
+### Industry is captured, not scored
+
+Deliberate, for two reasons.
+
+The audit is explicit that we're healthcare-first in *proof and content*, not healthcare-only in
+*sales* — "we still take the Bacardis and the Kountables." A wedge bonus would push an
+equally-qualified fintech CTO to manual review while a weaker care-ops lead auto-books, which
+inverts the strategy rather than encoding it.
+
+More importantly, **positioning is still open.** Scoring the wedge now would bake Decision #1
+into the routing logic before it's been made. Capturing without scoring keeps the model
+positioning-independent — the same property preserved everywhere else in these docs.
+
+Revisit once positioning locks *and* there is real conversion data by segment. Until then
+industry drives proof-matching, research targeting, and the segment dataset behind the future
+benchmark asset — not routing.
+
+> The 11-persona validation below is therefore unaffected by adding this field.
 
 ### Scoring Q4
 
@@ -260,7 +333,8 @@ Every submission creates a contact and an opportunity, regardless of route.
 
 ```
 contact        name · email · company · website · title · role_bucket
-firm           revenue_band · email_domain
+firm           revenue_band · industry · industry_group · email_domain
+               website_source        <- prefilled | user_corrected
 qualification  where_they_are · tried_raw_text · tried_score
                budget_ack · total_score · route · gate_applied
 attribution    utm_* · referrer · landing_page · click_id
