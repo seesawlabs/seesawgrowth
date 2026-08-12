@@ -24,6 +24,7 @@ parts=(
   docs/05-reality-check-spec.md
   docs/06-qualifier-spec.md
   docs/07-interview-guide.md
+  docs/08-website-build-runbook.md
 )
 
 for p in "${parts[@]}"; do
@@ -48,6 +49,7 @@ Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains ${#parts[@]}
 6. **The Reality Check spec** (2026-08-11) — the free offer: qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build
 7. **The qualifier form spec** (2026-08-11) — exact copy, fields, validation, scoring, gates, routing, the three outcome screens
 8. **The interview guide** (2026-08-11) — the one-hour call: prep, timeboxed blocks, question bank, technique, outlier branches, fit assessment, report variants
+9. **The website build runbook** (2026-08-11) — ten steps to ship the messaging, CTA, qualifier, and scheduler: stack choices, endpoint architecture, test matrix
 HEADER
 
   for p in "${parts[@]}"; do
