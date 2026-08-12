@@ -15,9 +15,10 @@ here, on the booking step, where it's earned.
 | | |
 |---|---|
 | Steps | 3 |
-| Questions | 4 + company block |
-| Target time | **60–75 seconds** |
-| Required fields | 9 |
+| Questions | 3 taps + 1 optional text + company block |
+| Target time | **45–75 seconds** |
+| Required fields | 8 |
+| Free-text required? | **No** |
 | Outcome | Auto-book · manual review · Office Hours |
 | Score shown to user | **Never** |
 
@@ -67,26 +68,47 @@ meaningful completion-rate hit for leads that are worthless without a story atta
 
 **Q3 · Where are you with this?** `radio, required`
 
-- Something's stalled and we need to unblock it
-- We're starting something this quarter
-- Sometime this year
-- Just exploring for now
+- We tried something and it stalled
+- Something's live but it isn't delivering
+- We're scoping a build now
+- Planning for later this year
+- Still exploring
 
-> Option one is a self-identifying ICP flag. Timeline and trigger in a single tap.
+> **This tap carries the ICP detection**, which is why it's the heaviest-weighted input.
+>
+> The first two options are the two flavours of burned buyer, and separating them matters: a
+> stalled pilot and a shipped-but-ignored system are different conversations that need the same
+> intervention. "Live but isn't delivering" is literally what *"95% show no measurable P&L
+> impact"* looks like from the inside.
+>
+> An earlier draft folded trigger and timeline into one question, which meant someone with a
+> stalled pilot *and* a Q4 restart had two true answers. State belongs here; timeline is
+> implicit in it.
 
-### Step 2 — The question that matters
+### Step 2 — An invitation, not a toll gate
 
-**Q4 · What have you already tried with AI — and where did it get stuck?** `textarea, required`
+**Q4 · What have you tried so far?** `textarea, optional`
 
-Helper text: *A sentence or two is plenty. We read every one of these.*
+Helper text: *A sentence is plenty. Skip it if you'd rather just talk — we'll cover it on the
+call.*
 
-Validation: 10-word floor. On failure — *"A little more detail helps us prepare. What did you
-try?"*
+**No minimum length. No validation. Not required.** No word counter.
 
-> This one question does three jobs: it identifies the burned buyer, it gives permission for
-> things to have gone wrong (which is why "where did it get stuck" beats "what have you
-> tried"), and it hands the call its opening. It is also the highest-weighted scoring input,
-> and the raw text goes to whoever reviews — never just the score.
+> **Why this got loosened.** The first draft made this required with a 10-word floor, and both
+> were wrong.
+>
+> A CTO who types *"Pilot stalled at integration"* — four words — has given us the highest-signal
+> answer in the form, and a word floor rejects it and asks them to pad. Length is a bad proxy for
+> substance, and senior people write terse.
+>
+> Worse, the original phrasing presumed prior attempts. A well-qualified buyer who hasn't tried
+> anything yet was forced to type filler to clear the floor — polluting our most valuable field
+> and then scoring zero on it, which pushed a good lead toward manual review. That's a systematic
+> misroute against a whole segment, not an edge case.
+>
+> So the trigger detection moved to Q3, where a tap does it reliably, and this field became what
+> it should always have been: an open door for people who want to tell us now. The raw text always
+> reaches the human reviewer — never just its score.
 
 ### Step 3 — About you and the company
 
@@ -195,29 +217,36 @@ story scores 7/8 on merit and would auto-book — precisely the anti-ICP.
 | Revenue under $10M | **Office Hours**, always | Cannot clear a $50k build floor |
 | Revenue $10M–$50M | **Capped at manual review** | Secondary ICP — the $10–20k/mo tier, not the growth engine |
 
-### Score — 8 points
+### Score — 9 points
 
 | Input | Points |
 |---|---|
 | Revenue $50M+ (any band above the gates) | 1 |
 | Role: CTO/VP Eng · CEO/COO/Owner · Chief AI/Data/Digital | 2 |
 | Role: Product leadership · Something else | 1 |
-| Where: something's stalled · starting this quarter | 2 |
-| Where: sometime this year | 1 |
-| Where: just exploring | 0 |
-| Q4 names a system, a workflow, or what actually happened | 2 |
-| Q4 describes real intent without specifics | 1 |
-| Q4 vague, aspirational, or under 10 words | 0 |
+| **Where: tried something and it stalled · live but not delivering** | **3** |
+| Where: scoping a build now | 2 |
+| Where: planning for later this year | 1 |
+| Where: still exploring | 0 |
 | Budget acknowledged | 1 |
+| **Q4 bonus** — names a system, a workflow, or what actually happened | +2 |
+| **Q4 bonus** — real intent without specifics | +1 |
+| **Q4 blank or vague** | **0 — never negative** |
+
+Q4 is a **bonus, not a requirement.** Leaving it empty costs nothing it could have earned; it
+never subtracts. That single property is what stops the form from punishing people who'd rather
+talk than type.
 
 ### Routing
 
-- **Auto-book** — score ≥ 6, **or** the ICP override: `stalled` + a specific Q4, at any score
+- **Auto-book** — score ≥ 6, **or** the ICP override
 - **Manual review** — score 3–5, or gated at $10–50M
 - **Office Hours** — score < 3, or gated under $10M
 
-The override matters: someone whose pilot has stalled and who can describe it precisely is the
-exact buyer, and making them wait a day for review loses hot leads.
+**The ICP override now keys off Q3 alone:** anyone answering *"tried something and it stalled"*
+or *"live but it isn't delivering"* auto-books once they clear the gates, whatever the total.
+That's the exact buyer, identified by a tap rather than by how well they write, and making them
+wait a business day loses hot leads.
 
 ### Industry is captured, not scored
 
@@ -238,27 +267,39 @@ benchmark asset — not routing.
 
 > The 11-persona validation below is therefore unaffected by adding this field.
 
-### Scoring Q4
+### Scoring Q4 — length is not a criterion
 
-LLM-scored against the three criteria above. The rubric must be explicit, and the raw text is
-always surfaced to the human alongside the score. Never let a model's read of a sentence be
-the only thing between a real buyer and a booking.
+LLM-scored against the three criteria above, and the prompt must say so explicitly:
+
+> *"Pilot stalled at integration"* is **specific** — it names where it broke. Four words is
+> enough. Score on whether the answer identifies a system, a workflow, or an outcome — never on
+> how long it is.
+
+The raw text always reaches the human reviewer alongside the score. Never let a model's read of
+one sentence be the only thing between a real buyer and a booking.
 
 ### Validated against personas
 
 | Persona | Score | Route |
 |---|---|---|
-| CTO, $180M dialysis operator, pilot stalled, specific, ack | 8 | Auto-book |
+| CTO, $180M dialysis operator, stalled, specific, ack | 9 | Auto-book |
 | CTO, $6M startup, stalled, specific, ack | — | Office Hours *(gate)* |
-| CEO, $30M, stalled, specific, ack | 8 | Manual review *(gate)* |
-| VP Eng, $80M, this quarter, real plan, ack | 7 | Auto-book |
-| Chief AI Officer, $600M, stalled, specific, no ack | 7 | Auto-book |
-| CMO ("something else"), $400M system, stalled, specific, ack | 7 | Auto-book |
-| VP Eng, $150M, this year, general, ack | 6 | Auto-book |
-| Product, $120M, exploring, vague, no ack | 2 | Office Hours |
-| CTO, $500M, exploring, nothing tried, ack | 4 | Manual review |
-| Product, $150M, this year, general, no ack | 4 | Manual review |
-| CTO, $2B, stalled, specific, ack | 8 | Auto-book |
+| CEO, $30M, stalled, specific, ack | 9 | Manual review *(gate)* |
+| VP Eng, $80M, scoping now, general, ack | 7 | Auto-book |
+| Chief AI Officer, $600M, stalled, specific, no ack | 8 | Auto-book |
+| CMO ("something else"), $400M system, stalled, specific, ack | 8 | Auto-book |
+| **Terse: CTO, $200M, "Pilot stalled at integration", ack** | **9** | **Auto-book** |
+| **Skipped the box: CTO, $150M, stalled, blank, ack** | **7** | **Auto-book** |
+| **Hasn't tried anything: VP Eng, $90M, scoping, blank, ack** | **6** | **Auto-book** |
+| **Live but flat: Product lead, $70M, blank, no ack** | **5** | **Auto-book** *(override)* |
+| Product, $120M, exploring, blank, no ack | 2 | Office Hours |
+| CTO, $500M, exploring, blank, ack | 4 | Manual review |
+| Product, $150M, planning, general, no ack | 4 | Manual review |
+| CTO, $2B, stalled, specific, ack | 9 | Auto-book |
+
+The four bold rows are the cases the first draft got wrong. The terse answer was **blocked from
+submitting at all**; the other three lost 2 points for an empty box and slid toward manual
+review.
 
 ---
 
@@ -361,8 +402,11 @@ the audit said to track instead of traffic.
   by source.
 - **Accessibility:** real `<fieldset>`/`<legend>` per question, visible focus states, errors
   tied by `aria-describedby`, no colour-only error signalling.
-- **Never block on the LLM.** If Q4 scoring is slow or errors, route to manual review and
-  carry on. The form must never hang on a model call.
+- **Never block on the LLM.** If Q4 scoring is slow or errors, treat the bonus as 0 and route on
+  the rest of the score. The form must never hang on a model call — and since Q4 is a bonus, a
+  scoring failure degrades gracefully instead of misrouting.
+- **Watch the Q4 skip rate.** If more than ~70% leave it blank, the prompt is the problem, not
+  the optionality. Reword it — don't reinstate a requirement.
 
 ---
 
@@ -372,6 +416,6 @@ the audit said to track instead of traffic.
 |---|---|---|
 | 1 | Who owns the one-business-day manual review SLA? | **Jeff** — it's a relationship call. Calvin as backup |
 | 2 | Auto-book threshold at 6, or tighten to 7? | **6**, with the ICP override. We have capacity headroom; a missed hot lead costs more than a wasted hour |
-| 3 | Hard 10-word floor on Q4, or score-only? | **Keep the floor.** Friendly copy, and it stops one-word submissions reaching review |
+| 3 | ~~Hard 10-word floor on Q4?~~ | **Resolved — no floor, field optional.** Length isn't substance, and requiring it misroutes anyone who hasn't tried something yet |
 | 4 | Show Office Hours date inline, or ask them to register? | **Inline with a date** — a specific date converts far better than "monthly" |
 | 5 | Is `referred_by` free text or a picklist of named partners? | **Free text in v1.** Picklist once the referral programme has actual partners in it |
