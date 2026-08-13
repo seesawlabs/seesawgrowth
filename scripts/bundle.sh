@@ -25,6 +25,7 @@ parts=(
   docs/06-qualifier-spec.md
   docs/07-interview-guide.md
   docs/08-website-build-runbook.md
+  docs/09-program-outline.md
 )
 
 for p in "${parts[@]}"; do
@@ -50,6 +51,7 @@ Generated $(date -u +%Y-%m-%d) from the seesawgrowth repo. Contains ${#parts[@]}
 7. **The qualifier form spec** (2026-08-11) — exact copy, fields, validation, scoring, gates, routing, the three outcome screens
 8. **The interview guide** (2026-08-11) — the one-hour call: prep, timeboxed blocks, question bank, technique, outlier branches, fit assessment, report variants
 9. **The website build runbook** (2026-08-11) — ten steps to ship the messaging, CTA, qualifier, and scheduler: stack choices, endpoint architecture, test matrix
+10. **The program outline** (2026-08-11) — the whole Reality Check as 11 discrete projects: owners, outputs, done-whens, sequence, prerequisites, non-goals
 HEADER
 
   for p in "${parts[@]}"; do

@@ -51,6 +51,7 @@ actively trying to do less of it.
 | └ Qualifier form | Calvin | **Spec'd + prototyped. Scoring validated against 14 personas** |
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric** |
 | └ Website build (page, form, scheduler) | Calvin + fractional | **Runbook written. Stack decision due Week 2** |
+| └ Program breakdown (11 projects) | Calvin | **Outlined. Awaiting owner + capacity assignment** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |
 | Monthly targeting playbook | Calvin | Defined, not yet running as a cadence |
