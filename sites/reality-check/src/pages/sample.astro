@@ -1,0 +1,250 @@
+---
+import Base from '../layouts/Base.astro';
+
+/* ---------------------------------------------------------------------------
+   The report walkthrough.
+
+   Deliberately the STRUCTURE, not a filled-in example. We have not delivered a
+   Reality Check yet, and fabricating a sample would mean inventing metrics —
+   the one thing these assessments must never contain.
+
+   Replaced by the real thing once the dry run on SeeSaw's own AI operations is
+   complete. "We ran it on ourselves first" is a stronger artifact than any
+   invented example, and it doubles as the internal AI-ops case study.
+--------------------------------------------------------------------------- */
+
+const sections = [
+  {
+    n: '01',
+    name: 'What we heard',
+    what: 'Your situation written back to you — what you tried, when it stopped, and what the internal story about it is. With at least one direct quote from the call.',
+    why: 'If we misheard something, you find out on page one rather than page eight. It also proves the hour was spent listening.',
+  },
+  {
+    n: '02',
+    name: 'Where the value is',
+    what: 'Every candidate workflow we found, plotted on two axes: value at stake, and time to production. Four quadrants — start here, phase two, background, park.',
+    why: 'Most AI shortlists are ordered by enthusiasm. This one is ordered by what would actually pay off soonest.',
+  },
+  {
+    n: '03',
+    name: 'Where to start',
+    what: 'A ranked shortlist of three to six opportunities, with the reasoning for the order made explicit.',
+    why: 'A list without an order is a list you have to argue about internally. This one has our argument already in it.',
+  },
+  {
+    n: '04',
+    name: 'The opportunities in detail',
+    what: 'One card each: value at stake, what it takes to build, and adoption risk — who has to change how they work, and whether anyone sponsors that.',
+    why: 'Adoption risk is the column nobody else fills in. It is also the most common reason these initiatives quietly die.',
+  },
+  {
+    n: '05',
+    name: 'Your first 30 days',
+    what: 'Four weeks of concrete steps, sequenced. At least one item requires nobody from SeeSaw.',
+    why: 'You should be able to make progress on Monday whether or not you hire anyone.',
+  },
+  {
+    n: '06',
+    name: 'The path to production',
+    what: 'Three phases beyond the first month, with the condition that has to be true before each one starts.',
+    why: 'Turns "we should do AI" into a sequence with gates, which is what a board can approve.',
+  },
+  {
+    n: '07',
+    name: 'The numbers',
+    what: 'Estimated annual value at stake and investment required. Every figure carries its arithmetic inline and its source assumption.',
+    why: 'A number your CFO can check beats a number they have to trust. Anything we estimated is labelled as an estimate, and we say where it came from.',
+  },
+  {
+    n: '08',
+    name: "What we couldn't determine",
+    what: 'The honest list of questions an hour could not resolve — whether your data supports the use case, whether the integration is tractable, whether users will adopt it.',
+    why: 'Usually the most useful page in the document, and the one that tells you what a deeper engagement would actually buy you.',
+  },
+];
+---
+
+<Base
+  title="What's in the assessment — AI Reality Check — SeeSaw Labs"
+  description="A section-by-section walkthrough of the written assessment you get three business days after the call."
+>
+  <section class="s-hero">
+    <div class="wrap">
+      <p class="eyebrow">The deliverable</p>
+      <h1 class="s-hero__h">What's actually in the assessment</h1>
+      <p class="lede">
+        Eight sections, three business days after the call. Built from the
+        conversation plus our own research into your market, your systems, and
+        what your competitors have shipped.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="note">
+        <p>
+          <strong>This is the structure, not a filled-in example.</strong>
+          We're not going to mock up a fake company with invented numbers to
+          show you — an assessment whose whole discipline is "never state a
+          figure you can't defend" shouldn't open with a fabricated one.
+        </p>
+        <p>
+          We're running the assessment on our own AI operations first. When
+          that's done, the real thing goes here — including the parts that
+          didn't flatter us.
+        </p>
+      </div>
+
+      <ol class="rep">
+        {sections.map((s) => (
+          <li class="rep__item">
+            <div class="rep__head">
+              <span class="rep__n">{s.n}</span>
+              <h2 class="rep__name">{s.name}</h2>
+            </div>
+            <div class="rep__body">
+              <div class="rep__cell">
+                <p class="rep__lab">What's on the page</p>
+                <p class="rep__text">{s.what}</p>
+              </div>
+              <div class="rep__cell">
+                <p class="rep__lab">Why it's there</p>
+                <p class="rep__text">{s.why}</p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section section--sunk">
+    <div class="wrap-narrow">
+      <p class="eyebrow">Two rules we hold ourselves to</p>
+      <div class="rules">
+        <div class="rule-card">
+          <h3>Every number shows its arithmetic</h3>
+          <p>
+            No bare figures. If we say a workflow costs you six figures a year,
+            the page shows the volume, the time per unit, the rate, and which of
+            those came from you rather than from us. Anything estimated is
+            marked as an estimate.
+          </p>
+        </div>
+        <div class="rule-card">
+          <h3>At least three things only you could have told us</h3>
+          <p>
+            A named system, a direct quote, the actual story of what went wrong.
+            You gave us an hour — a template with your logo dropped on it would
+            be worse than sending nothing.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--deep">
+    <div class="wrap-narrow close">
+      <h2 class="close__h">One hour. You keep the assessment.</h2>
+      <p class="lede">
+        A few quick questions about your situation, then pick a time.
+      </p>
+      <div class="close__cta">
+        <a href="/book" class="btn btn--on-deep">Book my Reality Check</a>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    .s-hero {
+      padding-block: clamp(var(--sp-12), 9vw, var(--sp-24));
+      background:
+        radial-gradient(110% 80% at 88% -20%, var(--primary-50) 0%, transparent 62%),
+        var(--bg);
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .s-hero__h {
+      font-size: clamp(2rem, 5.6vw, 3.6rem);
+      letter-spacing: var(--ls-tighter);
+      margin-bottom: var(--sp-5);
+    }
+
+    .note {
+      border-left: 3px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      padding: var(--sp-6);
+      max-width: var(--measure);
+      margin-bottom: var(--sp-16);
+    }
+    .note p { color: var(--ink-2); font-size: var(--text-md); }
+    .note p + p { margin-top: var(--sp-4); }
+
+    .rep { list-style: none; margin: 0; padding: 0; }
+    .rep__item {
+      border-top: 1px solid var(--rule);
+      padding-block: var(--sp-8);
+    }
+    .rep__item:last-child { border-bottom: 1px solid var(--rule); }
+    .rep__head {
+      display: flex;
+      align-items: baseline;
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-5);
+    }
+    .rep__n {
+      font-family: var(--font-accent);
+      font-size: var(--text-md);
+      color: var(--accent);
+      flex: none;
+    }
+    .rep__name { font-size: clamp(var(--text-xl), 2.6vw, var(--text-3xl)); }
+    .rep__body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: var(--sp-6) var(--sp-10);
+      padding-left: calc(var(--sp-4) + 2.2rem);
+    }
+    @media (max-width: 640px) {
+      .rep__body { padding-left: 0; }
+    }
+    .rep__lab {
+      font-family: var(--font-accent);
+      font-size: var(--text-xs);
+      letter-spacing: var(--ls-wider);
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: var(--sp-2);
+    }
+    .rep__text {
+      font-size: var(--text-md);
+      color: var(--ink-2);
+      line-height: var(--lh-relaxed);
+    }
+
+    .rules {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--sp-5);
+      margin-top: var(--sp-8);
+    }
+    .rule-card {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-xl);
+      padding: var(--sp-6);
+    }
+    .rule-card h3 { font-size: var(--text-lg); margin-bottom: var(--sp-3); }
+    .rule-card p { font-size: var(--text-md); color: var(--ink-2); }
+
+    .close__h {
+      font-size: clamp(var(--text-2xl), 4.4vw, var(--text-4xl));
+      color: #fff;
+      margin-bottom: var(--sp-5);
+    }
+    .close .lede { color: var(--primary-100); }
+    .close__cta { margin-top: var(--sp-8); }
+  </style>
+</Base>

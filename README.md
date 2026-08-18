@@ -4,8 +4,9 @@ Working repository for SeeSaw Labs growth planning: the lead-generation audit, t
 positioning / offer / proof recommendations, the decision brief written for Jeff, and the
 targeting research behind them.
 
-This is a **planning repo — documents, not code.** It exists so this context survives
+Mostly a **planning repo** — `docs/` is the plan, and it exists so this context survives
 between working sessions instead of living in a file that has to be re-uploaded each time.
+`sites/reality-check/` is the one piece of real code: the standalone site for the free offer.
 
 ## Status as of 2026-08-17
 
@@ -37,7 +38,19 @@ Two standing caveats before acting on anything here:
 | [docs/09-program-outline.md](docs/09-program-outline.md) | **Start here for the build.** The whole Reality Check as 11 discrete projects with owners, outputs, done-whens, and sequence | 2026-08-17 |
 
 Read them in that order. `00` tells you what's live, `01` is the decision surface, `02` and
-`03` are the evidence base you go to when a recommendation needs defending.
+`03` are the evidence base you go to when a recommendation needs defending, and `09` is where
+the build starts.
+
+## The site
+
+`sites/reality-check/` — the standalone Astro site for the free offer: pitch page, report
+walkthrough, working qualifier with live scoring, privacy policy. Brand tokens lifted from
+production seesawlabs.com. See its [README](sites/reality-check/README.md) for deploy, the
+scheduler setup, and the pre-launch checklist.
+
+```bash
+cd sites/reality-check && npm install && npm run dev
+```
 
 ## The one-line thesis
 

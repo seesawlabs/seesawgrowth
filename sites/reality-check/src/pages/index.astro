@@ -1,0 +1,456 @@
+---
+import Base from '../layouts/Base.astro';
+
+const title = 'AI Reality Check — SeeSaw Labs';
+const description =
+  'One hour with our team, and a written assessment of whether your AI initiative can reach production. Free, and yours to keep.';
+
+/* The report's ten sections, per docs/05-reality-check-spec.md §6. */
+const deliverables = [
+  {
+    name: 'What we heard',
+    body: 'Your situation written back to you, in your words. If we misunderstood something, you\'ll know immediately.',
+  },
+  {
+    name: 'Where the value is',
+    body: 'Every candidate workflow we found, plotted on value at stake against time to production. Including the ones we\'d tell you to park.',
+  },
+  {
+    name: 'Where to start',
+    body: 'A ranked shortlist of three to six opportunities, with the reasoning for the order.',
+  },
+  {
+    name: 'The opportunities in detail',
+    body: 'Per opportunity: value at stake, what it takes, and adoption risk. That last one is the part nobody else assesses.',
+  },
+  {
+    name: 'Your first 30 days',
+    body: 'Four weeks of concrete steps. At least one of them needs nobody from SeeSaw.',
+  },
+  {
+    name: 'The path to production',
+    body: 'Three phases beyond the first month, with what has to be true before each one starts.',
+  },
+  {
+    name: 'The numbers',
+    body: 'Estimated annual value at stake and investment required — with the arithmetic shown inline, so your CFO can check it rather than trust it.',
+  },
+  {
+    name: "What we couldn't determine",
+    body: 'The honest list of open questions an hour couldn\'t resolve. Usually the most useful page in the document.',
+  },
+];
+
+const hour = [
+  { clock: '0:00', name: 'How this works', body: 'Two minutes of framing, and we ask permission to record. Then we stop talking.' },
+  { clock: '0:04', name: 'What you already tried', body: 'What you attempted, when it stopped moving, and what the conversation was when it did.' },
+  { clock: '0:14', name: 'The workflow', body: 'End to end, as it actually happens rather than as it\'s documented. The longest stretch, because this is where the numbers come from.' },
+  { clock: '0:30', name: 'Data and systems', body: 'Which systems hold what, who controls access, and what the compliance surface looks like.' },
+  { clock: '0:39', name: 'People and adoption', body: 'Who would use this, what changes in their day, and who sponsors that change.' },
+  { clock: '0:49', name: 'Constraints', body: 'Budget reality, timeline, who else decides, and what happens if nothing changes.' },
+  { clock: '0:56', name: 'The sketch', body: 'Our designer has been drawing your workflow the whole time. You get it, corrections and all.' },
+];
+
+const faqs = [
+  {
+    q: 'What does this cost?',
+    a: 'Nothing. The Reality Check is free and the assessment is yours to keep. If we go on to build together, roadmap engagements are $25,000 and build engagements start at $50,000 — typically $40,000–$50,000 a month as an embedded team.',
+  },
+  {
+    q: 'What if the answer is that we shouldn\'t build it?',
+    a: 'Then we say so, in writing, with the reasoning. It happens. Finding out in a week is considerably cheaper than finding out in a quarter.',
+  },
+  {
+    q: 'Who\'s actually on the call?',
+    a: 'Two people from our team — the person who\'d lead the work and a product designer who sketches your workflow live. Not a salesperson, and not a research associate.',
+  },
+  {
+    q: 'Why do you record it?',
+    a: 'The assessment is built from the transcript plus our own research. We ask permission at the start of the call, and you can decline — it just means the report takes an extra day.',
+  },
+  {
+    q: 'Is this a sales call?',
+    a: 'We say at minute two that we won\'t pitch you, and we don\'t. The report ends with what we couldn\'t figure out, which is the honest version of a next step. If there\'s a fit you\'ll see it; if there isn\'t we\'ll tell you.',
+  },
+  {
+    q: 'Do you work with our existing engineering team?',
+    a: 'Yes, and usually that\'s the point. The build plan separates what your team should own from what we\'d do.',
+  },
+  {
+    q: 'Do you have healthcare experience?',
+    a: 'Yes — pharmacy and medication workflows, hospice and post-acute, dialysis, care management, and clinical data interoperability. We built the HIPAA-compliant platform that cut medication approval times 5x at Hospice Pharmacy Solutions.',
+  },
+];
+---
+
+<Base title={title} description={description}>
+  <!-- ------------------------------ hero ------------------------------ -->
+  <section class="hero">
+    <div class="wrap hero__in">
+      <p class="eyebrow">Free · One hour · Report in three business days</p>
+      <h1 class="hero__h">
+        Your AI pilot stalled.<br />
+        <span class="hero__em">It probably wasn't the model.</span>
+      </h1>
+      <p class="lede hero__lede">
+        Spend an hour with us and you'll get a written assessment of whether
+        your AI initiative can actually reach production — where the value is,
+        what to do first, and what we couldn't figure out. Yours to keep
+        whether or not we ever work together.
+      </p>
+      <div class="hero__cta">
+        <a href="/book" class="btn">Book my Reality Check</a>
+        <a href="/sample" class="btn btn--ghost">See what you get</a>
+      </div>
+      <p class="hero__fine">
+        No charge, no obligation, and we won't pitch you on the call.
+      </p>
+    </div>
+  </section>
+
+  <!-- ----------------------------- problem ---------------------------- -->
+  <section class="section section--sunk">
+    <div class="wrap-narrow">
+      <p class="eyebrow">Why this exists</p>
+      <h2 class="h2">
+        95% of enterprise AI pilots never show measurable P&amp;L impact.
+      </h2>
+      <div class="prose">
+        <p>
+          Not because the technology doesn't work — it does. Because the thing
+          that got built didn't fit how anyone actually works, nobody owned it
+          after launch, or the data underneath it was never ready.
+        </p>
+        <p>
+          The same research found something more useful: builds done with an
+          outside partner reach production about <strong>twice as often</strong>
+          as internal ones. Not because outsiders are smarter. Because they're
+          structurally forced to talk to the people who'll use the thing.
+        </p>
+        <p><strong>That's what this hour is.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------- what you get ------------------------ -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The deliverable</p>
+        <h2 class="h2">What you walk away with</h2>
+        <p class="lede">
+          A written assessment, in three business days. Built from the
+          conversation plus our own research into your market, your systems, and
+          what your competitors have shipped.
+        </p>
+      </div>
+
+      <ol class="deliv">
+        {deliverables.map((d, i) => (
+          <li class="deliv__item">
+            <span class="deliv__n">{String(i + 1).padStart(2, '0')}</span>
+            <div>
+              <h3 class="deliv__name">{d.name}</h3>
+              <p class="deliv__body">{d.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div class="callout">
+        <p>
+          <strong>The adoption question is the one nobody else asks.</strong>
+          Model quality is rarely why these fail. We assess whether the people
+          whose work changes will actually use what gets built — and who has to
+          sponsor that change.
+        </p>
+      </div>
+
+      <p class="sec-foot">
+        <a href="/sample" class="btn btn--ghost">Walk through the report →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ----------------------------- the hour --------------------------- -->
+  <section class="section section--sunk">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">The call</p>
+        <h2 class="h2">How the hour works</h2>
+        <p class="lede">
+          Structured, so it doesn't wander and doesn't run over. Bring one
+          person who knows the workflow end to end — it makes the hour roughly
+          twice as useful.
+        </p>
+      </div>
+
+      <ol class="hour">
+        {hour.map((h) => (
+          <li class="hour__row">
+            <span class="hour__clock tabular">{h.clock}</span>
+            <div>
+              <h3 class="hour__name">{h.name}</h3>
+              <p class="hour__body">{h.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div class="callout">
+        <p>
+          <strong>We end at the hour.</strong> Even mid-sentence. Respecting the
+          box is part of the product.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------ fit ------------------------------- -->
+  <section class="section">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Fit</p>
+        <h2 class="h2">Who this is for, and who it isn't</h2>
+      </div>
+      <div class="fit">
+        <div class="fit__col fit__col--yes">
+          <h3 class="fit__h">This is built for you if</h3>
+          <ul class="fit__list">
+            <li>You've run an AI pilot that stalled before production</li>
+            <li>Something's live but it isn't delivering what you hoped</li>
+            <li>You're a $50M–$1B operator, or a PE-backed portfolio company</li>
+            <li>Someone on your board is asking for visible AI ROI this year</li>
+            <li>You have a workflow that's expensive because it's manual</li>
+          </ul>
+          <p class="fit__note">
+            Most of our work is in pharmacy and medication workflows, hospice
+            and post-acute, dialysis and renal, and care management.
+          </p>
+        </div>
+        <div class="fit__col fit__col--no">
+          <h3 class="fit__h">It isn't for you if</h3>
+          <ul class="fit__list">
+            <li>You want a proof of concept rather than something that ships</li>
+            <li>Your data isn't accessible and nobody internally owns fixing that</li>
+            <li>You're looking for developers to add to an existing team</li>
+            <li>You're pre-product — there's no workflow for us to assess yet</li>
+          </ul>
+          <p class="fit__note">
+            We'll tell you in the first call rather than the fourth week.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------ FAQ ------------------------------- -->
+  <section class="section section--sunk">
+    <div class="wrap-narrow">
+      <div class="sec-head">
+        <p class="eyebrow">Questions</p>
+        <h2 class="h2">Before you book</h2>
+      </div>
+      <div class="faq">
+        {faqs.map((f) => (
+          <details class="faq__item">
+            <summary>{f.q}</summary>
+            <p>{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------ close ----------------------------- -->
+  <section class="section section--deep">
+    <div class="wrap-narrow close">
+      <p class="eyebrow">One hour</p>
+      <h2 class="close__h">You keep the assessment either way.</h2>
+      <p class="lede">
+        A few quick questions about your situation, then pick a time. Takes
+        about a minute.
+      </p>
+      <div class="close__cta">
+        <a href="/book" class="btn btn--on-deep">Book my Reality Check</a>
+      </div>
+    </div>
+  </section>
+
+  <style>
+    /* -- hero -- */
+    .hero {
+      padding-block: clamp(var(--sp-16), 11vw, var(--sp-32));
+      background:
+        radial-gradient(120% 90% at 12% -10%, var(--primary-50) 0%, transparent 60%),
+        var(--bg);
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .hero__in { max-width: 900px; }
+    .hero__h {
+      font-size: clamp(2.2rem, 6.6vw, 4.2rem);
+      line-height: 1.04;
+      letter-spacing: var(--ls-tighter);
+      margin-bottom: var(--sp-6);
+    }
+    .hero__em { color: var(--accent); }
+    .hero__lede { font-size: clamp(var(--text-lg), 2.4vw, var(--text-2xl)); }
+    .hero__cta {
+      display: flex;
+      gap: var(--sp-3);
+      flex-wrap: wrap;
+      margin-top: var(--sp-10);
+    }
+    .hero__fine {
+      margin-top: var(--sp-5);
+      font-size: var(--text-md);
+      color: var(--muted);
+    }
+
+    /* -- shared -- */
+    .h2 {
+      font-size: clamp(var(--text-2xl), 4vw, var(--text-4xl));
+      margin-bottom: var(--sp-5);
+    }
+    .sec-head { max-width: var(--measure); margin-bottom: var(--sp-12); }
+    .sec-foot { margin-top: var(--sp-10); }
+    .prose { max-width: var(--measure); }
+    .prose p { margin-bottom: var(--sp-5); color: var(--ink-2); }
+    .prose p:last-child { margin-bottom: 0; color: var(--ink); }
+
+    .callout {
+      border-left: 3px solid var(--accent);
+      background: var(--accent-soft);
+      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      padding: var(--sp-5) var(--sp-6);
+      margin-top: var(--sp-10);
+      max-width: var(--measure);
+    }
+    .callout p { color: var(--ink-2); font-size: var(--text-md); }
+    .section--sunk .callout { background: #fff; }
+
+    /* -- deliverables -- */
+    .deliv {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: var(--sp-8) var(--sp-10);
+    }
+    .deliv__item { display: flex; gap: var(--sp-4); }
+    .deliv__n {
+      font-family: var(--font-accent);
+      font-size: var(--text-sm);
+      color: var(--accent);
+      padding-top: 0.4rem;
+      flex: none;
+    }
+    .deliv__name {
+      font-size: var(--text-lg);
+      margin-bottom: var(--sp-2);
+    }
+    .deliv__body {
+      font-size: var(--text-md);
+      color: var(--ink-2);
+      line-height: var(--lh-relaxed);
+    }
+
+    /* -- the hour -- */
+    .hour { list-style: none; margin: 0; padding: 0; }
+    .hour__row {
+      display: grid;
+      grid-template-columns: 68px 1fr;
+      gap: var(--sp-5);
+      padding-block: var(--sp-5);
+      border-bottom: 1px solid var(--rule);
+      align-items: baseline;
+    }
+    .hour__row:last-child { border-bottom: 0; }
+    .hour__clock {
+      font-family: var(--font-accent);
+      font-size: var(--text-md);
+      color: var(--accent);
+    }
+    .hour__name { font-size: var(--text-lg); margin-bottom: var(--sp-1); }
+    .hour__body {
+      font-size: var(--text-md);
+      color: var(--ink-2);
+      max-width: 60ch;
+    }
+    @media (max-width: 560px) {
+      .hour__row { grid-template-columns: 1fr; gap: var(--sp-2); }
+    }
+
+    /* -- fit -- */
+    .fit {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--sp-5);
+    }
+    .fit__col {
+      padding: var(--sp-6) var(--sp-6) var(--sp-8);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--rule);
+      background: var(--surface);
+    }
+    .fit__col--yes { border-color: var(--primary-200); background: var(--primary-25); }
+    .fit__h { font-size: var(--text-lg); margin-bottom: var(--sp-4); }
+    .fit__list { margin: 0 0 var(--sp-5); padding-left: var(--sp-5); }
+    .fit__list li {
+      margin-bottom: var(--sp-3);
+      font-size: var(--text-md);
+      color: var(--ink-2);
+    }
+    .fit__col--yes .fit__list li::marker { color: var(--accent); }
+    .fit__col--no .fit__list li::marker { color: var(--neutral-400); }
+    .fit__note {
+      font-size: var(--text-sm);
+      color: var(--muted);
+      border-top: 1px solid var(--rule);
+      padding-top: var(--sp-4);
+    }
+    .fit__col--yes .fit__note { border-top-color: var(--primary-200); }
+
+    /* -- faq -- */
+    .faq { border-top: 1px solid var(--rule); }
+    .faq__item { border-bottom: 1px solid var(--rule); }
+    .faq__item summary {
+      padding: var(--sp-5) var(--sp-8) var(--sp-5) 0;
+      font-size: var(--text-lg);
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+      position: relative;
+    }
+    .faq__item summary::-webkit-details-marker { display: none; }
+    .faq__item summary::after {
+      content: '+';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+      font-weight: 400;
+      font-size: var(--text-2xl);
+      line-height: 1;
+    }
+    .faq__item[open] summary::after { content: '–'; }
+    .faq__item p {
+      padding-bottom: var(--sp-5);
+      color: var(--ink-2);
+      font-size: var(--text-md);
+      max-width: var(--measure);
+    }
+
+    /* -- close -- */
+    .close { text-align: left; }
+    .close__h {
+      font-size: clamp(var(--text-2xl), 4.4vw, var(--text-5xl));
+      margin-bottom: var(--sp-5);
+      color: #fff;
+    }
+    .close .lede { color: var(--primary-100); }
+    .close__cta { margin-top: var(--sp-8); }
+  </style>
+</Base>

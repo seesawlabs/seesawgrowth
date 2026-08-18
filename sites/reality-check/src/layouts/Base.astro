@@ -1,0 +1,192 @@
+---
+import '@fontsource-variable/outfit';
+import '@fontsource/pixelify-sans/400.css';
+import '../styles/tokens.css';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Keep out of the index — used only for the confirmation page. */
+  noindex?: boolean;
+}
+
+const { title, description, noindex = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content="SeeSaw Labs" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script is:inline>
+      // Attribution must be captured on FIRST page view, not at submit.
+      // Someone who lands on an ad, reads the page, wanders off to another
+      // page and comes back would otherwise arrive with no source — which
+      // would defeat the whole point of fixing attribution.
+      (function () {
+        try {
+          var KEY = 'ssl_attr';
+          if (sessionStorage.getItem(KEY)) return;
+          var p = new URLSearchParams(location.search);
+          var keep = [
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_content',
+            'utm_term', 'gclid', 'li_fat_id', 'fbclid',
+          ];
+          var attr = { landing_page: location.pathname, referrer: document.referrer || '' };
+          keep.forEach(function (k) {
+            var v = p.get(k);
+            if (v) attr[k] = v;
+          });
+          sessionStorage.setItem(KEY, JSON.stringify(attr));
+        } catch (e) {
+          /* private mode — attribution is best-effort, never block the form */
+        }
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a href="#main" class="skip">Skip to content</a>
+
+    <header class="site-head">
+      <div class="wrap site-head__in">
+        <a href="/" class="site-head__brand" aria-label="SeeSaw Labs — AI Reality Check">
+          <span class="site-head__mark" aria-hidden="true"></span>
+          <span class="site-head__name">SeeSaw&nbsp;Labs</span>
+          <span class="site-head__sep" aria-hidden="true">/</span>
+          <span class="site-head__offer">AI Reality Check</span>
+        </a>
+        <nav class="site-head__nav">
+          <a href="/sample">The report</a>
+          <a href="/book" class="btn btn--ghost site-head__cta">Book yours</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main"><slot /></main>
+
+    <footer class="site-foot">
+      <div class="wrap site-foot__in">
+        <div>
+          <p class="site-foot__name">SeeSaw Labs</p>
+          <p class="site-foot__note">
+            A design-led product studio. We design and ship AI products people
+            actually use.
+          </p>
+        </div>
+        <nav class="site-foot__nav" aria-label="Footer">
+          <a href="https://seesawlabs.com">seesawlabs.com</a>
+          <a href="/sample">The report</a>
+          <a href="/book">Book a Reality Check</a>
+          <a href="/privacy">Privacy</a>
+        </nav>
+      </div>
+    </footer>
+
+    <style>
+      .skip {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        background: var(--accent);
+        color: #fff;
+        padding: var(--sp-3) var(--sp-4);
+        z-index: 100;
+      }
+      .skip:focus { left: var(--sp-4); top: var(--sp-4); }
+
+      .site-head {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: rgb(255 255 255 / 0.92);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--rule-soft);
+      }
+      .site-head__in {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sp-4);
+        min-height: 68px;
+      }
+      .site-head__brand {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-2);
+        text-decoration: none;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: var(--text-md);
+      }
+      .site-head__mark {
+        width: 22px;
+        height: 22px;
+        flex: none;
+        border-radius: var(--radius-sm);
+        background: var(--accent);
+        /* Placeholder for the primary logo mark — swap for the SVG from the
+           brand folder once it's in /public. */
+      }
+      .site-head__sep { color: var(--neutral-300); }
+      .site-head__offer {
+        font-family: var(--font-accent);
+        font-size: var(--text-sm);
+        letter-spacing: var(--ls-wide);
+        color: var(--accent);
+      }
+      .site-head__nav {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-5);
+        font-size: var(--text-md);
+      }
+      .site-head__nav a { color: var(--ink-2); text-decoration: none; }
+      .site-head__nav a:hover { color: var(--accent-deep); }
+      .site-head__cta { padding: var(--sp-2) var(--sp-4); }
+      @media (max-width: 620px) {
+        .site-head__name, .site-head__sep { display: none; }
+        .site-head__nav a:not(.site-head__cta) { display: none; }
+      }
+
+      .site-foot {
+        border-top: 1px solid var(--rule);
+        padding-block: var(--sp-12);
+        background: var(--bg-sunk);
+      }
+      .site-foot__in {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--sp-8);
+        flex-wrap: wrap;
+      }
+      .site-foot__name { font-weight: 600; margin-bottom: var(--sp-2); }
+      .site-foot__note {
+        color: var(--muted);
+        font-size: var(--text-md);
+        max-width: 42ch;
+      }
+      .site-foot__nav {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-2);
+        font-size: var(--text-md);
+      }
+      .site-foot__nav a { color: var(--ink-2); text-decoration: none; }
+      .site-foot__nav a:hover { color: var(--accent-deep); }
+    </style>
+  </body>
+</html>

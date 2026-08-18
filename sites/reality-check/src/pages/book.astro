@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+import Qualifier from '../components/Qualifier.astro';
+---
+
+<Base
+  title="Book your AI Reality Check — SeeSaw Labs"
+  description="A few quick questions, then pick a time. One hour with our team and a written assessment in three business days."
+>
+  <div class="book">
+    <Qualifier />
+  </div>
+
+  <style>
+    .book { padding-block: clamp(var(--sp-12), 8vw, var(--sp-20)); }
+  </style>
+</Base>

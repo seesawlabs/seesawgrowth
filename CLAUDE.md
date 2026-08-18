@@ -2,9 +2,13 @@
 
 ## What this repo is
 
-SeeSaw Labs growth planning. **Documents, not code** — there is nothing to build, test, or
-lint here. Work in this repo means writing, revising, and researching against the plan in
-`docs/`.
+SeeSaw Labs growth planning. `docs/` is **documents, not code** — nothing there to build,
+test, or lint. Work in `docs/` means writing, revising, and researching against the plan.
+
+**One exception:** `sites/reality-check/` is a real Astro site for the free AI Reality Check
+offer. It has its own README, `npm run build` must pass, and it is meant to move to its own
+repo (or into `seesawlabs/website`) once it ships. Brand tokens there are lifted verbatim
+from production seesawlabs.com CSS — don't invent colour values.
 
 Read in this order before doing anything substantive:
 
@@ -45,6 +49,9 @@ move forward anyway, flag the dependency once, then proceed under a stated assum
   fine.
 - `docs/` is the source of truth. `scripts/bundle.sh` regenerates the single-file version for
   uploading elsewhere — generated output, gitignored, never edited by hand.
+- **The qualifier's scoring lives in exactly one place**: `sites/reality-check/src/lib/qualifier.ts`.
+  The form and the endpoint both import it. Never fork that logic, and re-run the persona
+  checks in `docs/06-qualifier-spec.md` §5 if you change a weight or a gate.
 
 ## Named people
 

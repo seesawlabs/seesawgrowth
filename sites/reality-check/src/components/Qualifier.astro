@@ -1,0 +1,590 @@
+---
+import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier';
+---
+
+<section class="q" id="qualifier" aria-labelledby="q-title">
+  <div class="q__head">
+    <h2 id="q-title">Book your AI Reality Check</h2>
+    <p class="lede">
+      One hour with our team. A written assessment in three business days —
+      yours to keep whether or not we ever work together.
+    </p>
+    <p class="q__micro">A few quick things about your situation. Takes about a minute.</p>
+  </div>
+
+  <form class="q__form" id="q-form" novalidate>
+    <!-- ---------------- step 1 ---------------- -->
+    <div class="q__step is-on" data-step="1">
+      <p class="q__stepline">Step 1 of 3</p>
+
+      <fieldset class="q__set">
+        <legend>What's your role?</legend>
+        <div class="q__opts" id="q-roles">
+          {ROLES.map((r) => (
+            <label class="q__opt">
+              <input type="radio" name="role" value={r.value} />
+              <span>{r.label}</span>
+            </label>
+          ))}
+        </div>
+        <div class="q__row" id="q-title-row" hidden>
+          <label class="q__lab" for="q-role-title">What's your title?</label>
+          <input type="text" id="q-role-title" name="roleTitle" placeholder="e.g. Chief Medical Officer" />
+        </div>
+        <p class="q__err" id="q-err-role" role="alert">Pick the closest one.</p>
+      </fieldset>
+
+      <fieldset class="q__set">
+        <legend>Roughly, what's your annual revenue?</legend>
+        <div class="q__opts">
+          {REVENUE_BANDS.map((b) => (
+            <label class="q__opt">
+              <input type="radio" name="revenue" value={b.value} />
+              <span>{b.label}</span>
+            </label>
+          ))}
+        </div>
+        <p class="q__err" id="q-err-revenue" role="alert">
+          We need a rough band to prepare properly.
+        </p>
+      </fieldset>
+
+      <fieldset class="q__set">
+        <legend>Where are you with this?</legend>
+        <div class="q__opts">
+          {STAGES.map((s) => (
+            <label class="q__opt">
+              <input type="radio" name="stage" value={s.value} />
+              <span>{s.label}</span>
+            </label>
+          ))}
+        </div>
+        <p class="q__err" id="q-err-stage" role="alert">Pick whichever is closest.</p>
+      </fieldset>
+
+      <div class="q__btns">
+        <button type="button" class="btn" data-go="2">Continue</button>
+      </div>
+    </div>
+
+    <!-- ---------------- step 2 ---------------- -->
+    <div class="q__step" data-step="2">
+      <p class="q__stepline">Step 2 of 3</p>
+
+      <fieldset class="q__set">
+        <legend>
+          What have you tried so far?
+          <span class="q__optional">Optional</span>
+        </legend>
+        <p class="q__hint">
+          A sentence is plenty. Skip it if you'd rather just talk — we'll cover
+          it on the call.
+        </p>
+        <textarea id="q-tried" name="tried" rows="5"
+          placeholder="Pilot stalled at integration."></textarea>
+      </fieldset>
+
+      <div class="q__btns">
+        <button type="button" class="btn" data-go="3">Continue</button>
+        <button type="button" class="btn btn--ghost" data-go="1">Back</button>
+      </div>
+    </div>
+
+    <!-- ---------------- step 3 ---------------- -->
+    <div class="q__step" data-step="3">
+      <p class="q__stepline">Step 3 of 3</p>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-name">Full name</label>
+        <input type="text" id="q-name" name="name" autocomplete="name" />
+      </div>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-email">Work email</label>
+        <input type="email" id="q-email" name="email" autocomplete="email"
+          placeholder="you@company.com" />
+      </div>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-company">Company</label>
+        <input type="text" id="q-company" name="company" autocomplete="organization" />
+      </div>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-website">Company website</label>
+        <input type="text" id="q-website" name="website" placeholder="company.com" />
+        <p class="q__hint" id="q-website-hint">So we can do our homework before the call.</p>
+      </div>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-industry">Industry</label>
+        <select id="q-industry" name="industry">
+          <option value="">Select one…</option>
+          {INDUSTRY_GROUPS.map((g) => (
+            <optgroup label={g.group}>
+              {g.options.map((o) => <option value={o.value}>{o.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        <div class="q__row" id="q-ind-other-row" hidden style="margin-top:var(--sp-3)">
+          <input type="text" id="q-ind-other" name="industryOther" placeholder="What industry?" />
+        </div>
+      </div>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-ref">
+          Anyone we should thank for the intro?
+          <span class="q__optional">Optional</span>
+        </label>
+        <input type="text" id="q-ref" name="referredBy" />
+      </div>
+
+      <p class="q__err" id="q-err-contact" role="alert">
+        We need your name, work email, company, website, and industry.
+      </p>
+
+      <div class="q__ack">
+        <p>
+          The Reality Check is free and yours to keep. If we end up building
+          together, engagements start at $50k.
+        </p>
+        <label class="q__check">
+          <input type="checkbox" id="q-ack" name="budgetAck" />
+          <span>Makes sense</span>
+        </label>
+      </div>
+
+      <div class="q__btns">
+        <button type="submit" class="btn" id="q-submit">Book my Reality Check</button>
+        <button type="button" class="btn btn--ghost" data-go="2">Back</button>
+      </div>
+
+      <p class="q__privacy">
+        We'll only use this to prepare for your call. No list, no sequence you
+        didn't ask for. <a href="/privacy">Privacy</a>.
+      </p>
+    </div>
+  </form>
+
+  <!-- ---------------- outcomes ---------------- -->
+
+  <div class="q__out" data-out="auto_book" hidden>
+    <h3>Let's talk.</h3>
+    <p>
+      Pick a time below. You'll be talking to the two people who'd actually do
+      the work — not a salesperson.
+    </p>
+    <p class="q__lab-sm">What to expect</p>
+    <ul class="q__list">
+      <li>One hour. We'll ask about the workflow, the systems, and what happened last time.</li>
+      <li><strong>Bring one person who knows the process end to end.</strong> It makes the hour twice as useful.</li>
+      <li>We record the call so we can build your assessment — you'll have it within <strong>three business days</strong>.</li>
+    </ul>
+    <div class="q__sched" id="q-sched">
+      <p class="q__sched-note">
+        Scheduler embed — Cal.com, collective on Jeff + Calvin.
+        <br />Set <code>PUBLIC_CAL_LINK</code> to go live.
+      </p>
+    </div>
+  </div>
+
+  <div class="q__out" data-out="manual_review" hidden>
+    <h3>Got it — thanks for the detail.</h3>
+    <p>
+      We read every one of these properly. You'll hear back by end of day
+      tomorrow with times — or with a straight answer if we don't think we're
+      the right fit for this.
+    </p>
+    <p>Either way you'll hear from a person, not an autoresponder.</p>
+  </div>
+
+  <div class="q__out" data-out="not_yet" hidden>
+    <h3>Here's what we'd suggest instead.</h3>
+    <p>
+      Based on where you are, an hour with us probably isn't the most useful
+      thing we could give you yet — we'd be guessing, and you'd get a thin
+      report. We'd rather say that than take the hour.
+    </p>
+    <p class="q__lab-sm">More useful right now</p>
+    <ul class="q__list">
+      <li>
+        <a href="/sample">Read what's in the assessment</a> — the six things
+        that determine whether an AI initiative reaches production. Most of it
+        you can work through yourself.
+      </li>
+      <li>
+        We're standing up a small monthly group session. Leave your email on the
+        form and we'll tell you when the first one is.
+      </li>
+    </ul>
+    <p>
+      And if something changes — a project stalls, or your board asks for a
+      number — <a href="/book">come straight back</a>.
+    </p>
+  </div>
+
+  <div class="q__out" data-out="error" hidden>
+    <h3>That didn't go through.</h3>
+    <p>
+      Something on our end failed, not yours. Email
+      <a href="mailto:hello@seesawlabs.com">hello@seesawlabs.com</a> and we'll
+      sort it out — or try again in a minute.
+    </p>
+  </div>
+</section>
+
+<style>
+  .q {
+    max-width: var(--page-narrow);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .q__head { margin-bottom: var(--sp-10); }
+  .q__head h2 {
+    font-size: clamp(var(--text-3xl), 4.5vw, var(--text-5xl));
+    margin-bottom: var(--sp-4);
+  }
+  .q__micro { color: var(--muted); font-size: var(--text-md); margin-top: var(--sp-3); }
+
+  .q__step { display: none; }
+  .q__step.is-on { display: block; }
+
+  .q__stepline {
+    font-family: var(--font-accent);
+    font-size: var(--text-sm);
+    letter-spacing: var(--ls-wide);
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: var(--sp-6);
+  }
+
+  .q__set { border: 0; margin: 0 0 var(--sp-8); padding: 0; }
+  .q__set legend {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    padding: 0;
+    margin-bottom: var(--sp-2);
+    line-height: var(--lh-snug);
+  }
+  .q__optional {
+    font-weight: 400;
+    font-size: var(--text-md);
+    color: var(--muted);
+    margin-left: var(--sp-2);
+  }
+  .q__hint {
+    font-size: var(--text-md);
+    color: var(--muted);
+    margin-bottom: var(--sp-4);
+  }
+
+  .q__opts { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .q__opt { position: relative; display: block; }
+  .q__opt input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .q__opt span {
+    display: block;
+    padding: var(--sp-4) var(--sp-5);
+    min-height: 48px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-md);
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+  .q__opt span:hover { border-color: var(--neutral-300); }
+  .q__opt input:checked + span {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .q__opt input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .q__row { margin-bottom: var(--sp-5); }
+  .q__lab {
+    display: block;
+    font-size: var(--text-md);
+    font-weight: 600;
+    margin-bottom: var(--sp-2);
+  }
+  .q__form input[type='text'],
+  .q__form input[type='email'],
+  .q__form textarea,
+  .q__form select {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    line-height: var(--lh-normal);
+  }
+  .q__form textarea { resize: vertical; min-height: 132px; }
+  .q__form select { cursor: pointer; }
+  .q__form input:focus,
+  .q__form textarea:focus,
+  .q__form select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: var(--accent);
+  }
+  .q__form input.is-prefilled { border-style: dashed; }
+
+  .q__err {
+    display: none;
+    font-size: var(--text-md);
+    font-weight: 600;
+    color: var(--red-700);
+    margin-top: var(--sp-3);
+  }
+  .q__err.is-on { display: block; }
+
+  .q__ack {
+    background: var(--bg-sunk);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-5);
+    margin-bottom: var(--sp-6);
+  }
+  .q__ack p {
+    font-size: var(--text-md);
+    color: var(--ink-2);
+    margin-bottom: var(--sp-4);
+  }
+  .q__check {
+    display: flex;
+    gap: var(--sp-3);
+    align-items: center;
+    font-size: var(--text-md);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .q__check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    flex: none;
+    cursor: pointer;
+  }
+
+  .q__btns {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+    margin-top: var(--sp-8);
+  }
+  .q__privacy {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-top: var(--sp-5);
+  }
+
+  /* -- outcomes -- */
+  .q__out h3 {
+    font-size: clamp(var(--text-2xl), 3.6vw, var(--text-4xl));
+    margin-bottom: var(--sp-4);
+  }
+  .q__out p { color: var(--ink-2); margin-bottom: var(--sp-4); }
+  .q__lab-sm {
+    font-family: var(--font-accent);
+    font-size: var(--text-sm);
+    letter-spacing: var(--ls-wide);
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: var(--sp-6) 0 var(--sp-3);
+  }
+  .q__list { margin: 0 0 var(--sp-6); padding-left: var(--sp-5); color: var(--ink-2); }
+  .q__list li { margin-bottom: var(--sp-3); }
+  .q__list li::marker { color: var(--accent); }
+
+  .q__sched {
+    border: 1px dashed var(--rule);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-10) var(--sp-5);
+    text-align: center;
+    background: var(--bg-sunk);
+  }
+  .q__sched-note {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin: 0;
+  }
+  .q__sched iframe { width: 100%; min-height: 640px; border: 0; }
+</style>
+
+<script>
+  import { evaluate, emailDomain, isFreeEmail } from '../lib/qualifier';
+  import type { Answers, Route } from '../lib/qualifier';
+
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
+  const form = $<HTMLFormElement>('#q-form');
+  if (form) {
+    const pick = (name: string): string | null => {
+      const el = form.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`);
+      return el ? el.value : null;
+    };
+    const val = (id: string): string => {
+      const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
+      return el ? el.value.trim() : '';
+    };
+
+    /* Website is required but pre-filled from the email domain when we can.
+       websiteSource tells us later how often the guess was wrong. */
+    let websiteSource: 'blank' | 'prefilled' | 'user_corrected' = 'blank';
+    const website = $<HTMLInputElement>('#q-website');
+    const websiteHint = $<HTMLParagraphElement>('#q-website-hint');
+
+    const prefillWebsite = () => {
+      const d = emailDomain(val('q-email'));
+      const usable = d && d.includes('.') && !isFreeEmail(d);
+      if (usable && (website.value === '' || websiteSource === 'prefilled')) {
+        website.value = d;
+        website.classList.add('is-prefilled');
+        websiteSource = 'prefilled';
+        websiteHint.textContent = 'Pre-filled from your email — correct it if that’s not right.';
+      } else if (!usable && websiteSource === 'prefilled') {
+        website.value = '';
+        website.classList.remove('is-prefilled');
+        websiteSource = 'blank';
+        websiteHint.textContent = 'So we can do our homework before the call.';
+      }
+    };
+
+    $<HTMLInputElement>('#q-email').addEventListener('blur', prefillWebsite);
+    $<HTMLInputElement>('#q-email').addEventListener('change', prefillWebsite);
+
+    website.addEventListener('input', () => {
+      if (websiteSource === 'prefilled') {
+        websiteSource = 'user_corrected';
+        website.classList.remove('is-prefilled');
+        websiteHint.textContent = 'So we can do our homework before the call.';
+      }
+    });
+
+    /* conditional reveals */
+    $<HTMLDivElement>('#q-roles').addEventListener('change', () => {
+      $<HTMLDivElement>('#q-title-row').hidden = pick('role') !== 'other';
+    });
+    const industry = $<HTMLSelectElement>('#q-industry');
+    industry.addEventListener('change', () => {
+      $<HTMLDivElement>('#q-ind-other-row').hidden = industry.value !== 'ind_other';
+    });
+
+    /* steps */
+    const clearErrs = () =>
+      form.querySelectorAll('.q__err').forEach((e) => e.classList.remove('is-on'));
+    const showErr = (id: string) => document.getElementById(id)?.classList.add('is-on');
+
+    const show = (n: number) => {
+      form.querySelectorAll<HTMLElement>('.q__step').forEach((s) => {
+        s.classList.toggle('is-on', s.dataset.step === String(n));
+      });
+      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+
+    form.querySelectorAll<HTMLButtonElement>('[data-go]').forEach((b) => {
+      b.addEventListener('click', () => {
+        clearErrs();
+        const target = Number(b.dataset.go);
+        if (target === 2) {
+          let bad = false;
+          if (!pick('role')) { showErr('q-err-role'); bad = true; }
+          if (!pick('revenue')) { showErr('q-err-revenue'); bad = true; }
+          if (!pick('stage')) { showErr('q-err-stage'); bad = true; }
+          if (bad) return;
+        }
+        // Step 2 has no validation — the text box is optional by design.
+        show(target);
+      });
+    });
+
+    const collect = (): Answers => ({
+      role: pick('role') as Answers['role'],
+      roleTitle: val('q-role-title') || undefined,
+      revenue: pick('revenue') as Answers['revenue'],
+      stage: pick('stage') as Answers['stage'],
+      tried: val('q-tried') || undefined,
+      name: val('q-name'),
+      email: val('q-email'),
+      company: val('q-company'),
+      website: val('q-website'),
+      websiteSource,
+      industry: industry.value === 'ind_other' ? val('q-ind-other') : industry.value,
+      referredBy: val('q-ref') || undefined,
+      budgetAck: $<HTMLInputElement>('#q-ack').checked,
+    });
+
+    const reveal = (route: Route | 'error', bookingUrl?: string) => {
+      form.hidden = true;
+      $<HTMLDivElement>('.q__head').hidden = true;
+      const out = document.querySelector<HTMLElement>(`[data-out="${route}"]`);
+      if (out) out.hidden = false;
+      if (route === 'auto_book' && bookingUrl) {
+        const slot = $<HTMLDivElement>('#q-sched');
+        slot.innerHTML = '';
+        const f = document.createElement('iframe');
+        f.src = bookingUrl;
+        f.title = 'Pick a time for your AI Reality Check';
+        f.loading = 'lazy';
+        slot.appendChild(f);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrs();
+
+      const a = collect();
+      if (!a.name || !a.email || !a.company || !a.website || !a.industry) {
+        showErr('q-err-contact');
+        return;
+      }
+
+      const submit = $<HTMLButtonElement>('#q-submit');
+      submit.disabled = true;
+      submit.textContent = 'Sending…';
+
+      let attribution = {};
+      try {
+        attribution = JSON.parse(sessionStorage.getItem('ssl_attr') || '{}');
+      } catch { /* best-effort */ }
+
+      try {
+        const res = await fetch('/api/reality-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...a, attribution }),
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        reveal(data.route as Route, data.bookingUrl);
+      } catch {
+        /* No adapter yet, or the endpoint is down. The routing logic is
+           deterministic and shared, so we can still show the right outcome
+           rather than dead-ending the visitor. The submission is lost, which
+           is why the error copy names an email address. */
+        const v = evaluate(a);
+        if (v.route) {
+          reveal(v.route);
+        } else {
+          reveal('error');
+        }
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Book my Reality Check';
+      }
+    });
+  }
+</script>
