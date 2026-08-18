@@ -43,18 +43,18 @@ currently renders a blue square placeholder (`.site-head__mark`).
 
 ## Deploy
 
-The site builds as static today. **The qualifier endpoint needs a server
-adapter:**
+**Ready to deploy.** The Vercel adapter is installed and `npm run build` emits
+Vercel's Build Output API format with `/api/reality-check` mapped to a serverless
+function. See [DEPLOY.md](DEPLOY.md) — it's `npx vercel` from this directory.
 
-```bash
-npx astro add vercel      # or: npx astro add netlify
-# then in astro.config.mjs: output: 'hybrid'
-```
+Every integration degrades to a log line when its token is unset, so the site is
+deployable and pokeable before any accounts exist. The one consequence: with
+`HUBSPOT_TOKEN` unset, submissions live only in the function logs.
 
-Until then `/api/reality-check` isn't built, the form's fetch 404s, and it falls
-back to client-side routing. That fallback shows the visitor the correct outcome
-— the logic is shared and deterministic — **but the submission is lost.** So the
-adapter is the first thing to do once a host is picked.
+If the endpoint is ever unreachable, the form falls back to client-side routing —
+it shows the visitor the correct outcome, since the logic is shared and
+deterministic, **but the submission is lost.** DEPLOY.md's verification step 6
+is how you confirm the endpoint is actually being hit.
 
 ### Subdomain now, path later
 
@@ -114,7 +114,8 @@ and it doubles as the internal AI-ops case study the audit asked for.
 
 ## Before launch
 
-- [ ] Server adapter added, endpoint reachable, a real submission lands
+- [ ] Deployed, and the `[reality-check] submission` log line confirms the
+      endpoint is being hit rather than the client-side fallback
 - [ ] `PUBLIC_CAL_LINK` set; collective scheduling verified per above
 - [ ] Logo SVG replacing the header placeholder
 - [ ] OG image (this page gets forwarded into Slacks)

@@ -1,18 +1,17 @@
 import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/vercel';
 
-// Hybrid rendering: pages are static, but /api/* runs on the server so the
-// qualifier's scoring and routing live in our own endpoint rather than a
-// third-party form product.
+// Static by default, with the qualifier endpoint rendered on demand.
 //
-// Deploy: add the adapter for your host and set `adapter` below.
-//   Vercel  — npx astro add vercel   → import vercel from '@astrojs/vercel/serverless'
-//   Netlify — npx astro add netlify  → import netlify from '@astrojs/netlify'
-//
-// Until an adapter is added, `output: 'static'` keeps `npm run build` working
-// and the qualifier falls back to client-side routing (see src/lib/submit.ts).
+// Astro 5 removed `output: 'hybrid'` — with an adapter present, `output: 'static'`
+// prerenders everything except routes that opt out via `export const prerender = false`.
+// That is exactly the shape we want: four static pages, one server function.
 export default defineConfig({
   site: 'https://realitycheck.seesawlabs.com',
   output: 'static',
+  adapter: vercel({
+    webAnalytics: { enabled: false },
+  }),
   build: { inlineStylesheets: 'auto' },
   devToolbar: { enabled: false },
 });
