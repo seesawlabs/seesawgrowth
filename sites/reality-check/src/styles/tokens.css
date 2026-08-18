@@ -48,9 +48,25 @@
   --red-500: #e01d10;
   --red-700: #870c03;
 
+  /* -- dot grid ---------------------------------------------------------
+     The parent site's dot texture, verbatim: a 1.5px radial dot stepped on
+     a 40px lattice. Production pairs the light variant (neutral-200 dots)
+     with a neutral-100 surface — that's the treatment behind the main
+     site's menu overlay. Source rules:
+       --gradients-grid-dot-light + .hHwvjP [data-modal-bg]
+  ------------------------------------------------------------------------ */
+  --dot: var(--neutral-200);
+  --dot-grid: radial-gradient(
+    1.5px at center,
+    var(--dot) 0%,
+    var(--dot) 99%,
+    transparent 100%
+  );
+  --dot-step: 40px 40px;
+
   /* -- roles ----------------------------------------------------------- */
   --bg: #ffffff;
-  --bg-sunk: var(--neutral-25);
+  --bg-sunk: var(--neutral-100);
   --bg-deep: var(--primary-900);
   --surface: #ffffff;
   --ink: var(--neutral-900);
@@ -206,7 +222,12 @@ button { font: inherit; }
 }
 
 .section { padding-block: clamp(var(--sp-16), 9vw, var(--sp-24)); }
-.section--sunk { background: var(--bg-sunk); }
+.section--sunk {
+  background-color: var(--bg-sunk);
+  background-image: var(--dot-grid);
+  background-size: var(--dot-step);
+  background-repeat: repeat;
+}
 .section--deep { background: var(--bg-deep); color: #fff; }
 
 .eyebrow {

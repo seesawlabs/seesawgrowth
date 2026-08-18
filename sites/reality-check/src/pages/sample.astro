@@ -85,10 +85,10 @@ const sections = [
     <div class="wrap">
       <div class="note">
         <p>
-          <strong>This is the structure, not a filled-in example.</strong>
-          We're not going to mock up a fake company with invented numbers to
-          show you — an assessment whose whole discipline is "never state a
-          figure you can't defend" shouldn't open with a fabricated one.
+          <strong>This is the structure, not a filled-in example.</strong> We're
+          not going to mock up a fake company with invented numbers to show
+          you — an assessment whose whole discipline is "never state a figure
+          you can't defend" shouldn't open with a fabricated one.
         </p>
         <p>
           We're running the assessment on our own AI operations first. When
@@ -160,10 +160,13 @@ const sections = [
   <style>
     .s-hero {
       padding-block: clamp(var(--sp-12), 9vw, var(--sp-24));
-      background:
+      background-color: var(--bg-sunk);
+      background-image:
         radial-gradient(110% 80% at 88% -20%, var(--primary-50) 0%, transparent 62%),
-        var(--bg);
-      border-bottom: 1px solid var(--rule-soft);
+        var(--dot-grid);
+      background-size: auto, var(--dot-step);
+      background-repeat: no-repeat, repeat;
+      border-bottom: 1px solid var(--rule);
     }
     .s-hero__h {
       font-size: clamp(2rem, 5.6vw, 3.6rem);

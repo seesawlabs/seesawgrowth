@@ -1,6 +1,6 @@
 # Current status
 
-*Last updated 2026-08-17.*
+*Last updated 2026-08-18.*
 
 > **In progress:** the offer work. `04-offer-project-plan.md` covers the paid AI Production
 > Roadmap ($25k, 3 weeks); `05-reality-check-spec.md` covers the free AI Reality Check that
@@ -10,6 +10,11 @@
 > The free tier was redesigned 2026-08-17: collapsed from "self-serve scorecard + call" into a
 > single one-hour call whose transcript plus deep research produces the report. §6 and §7 of
 > `04` are superseded accordingly; the scorecard is deferred to v2.
+>
+> **The Reality Check site is deployed** (`sites/reality-check/`, on Vercel, SeeSaw-owned) and
+> in walkthrough. Not launchable yet — the scheduler is unwired, so a qualified visitor reaches
+> the auto-book screen and finds a placeholder. That plus the logo, the OG image, and a legal
+> read of the privacy policy are the gap. Full list in the site README's pre-launch checklist.
 
 | | |
 |---|---|
@@ -50,7 +55,7 @@ actively trying to do less of it.
 | The free offer (AI Reality Check + report pipeline) | Calvin | **Spec'd — build starts week of Aug 17** |
 | └ Qualifier form | Calvin | **Spec'd + prototyped. Scoring validated against 14 personas** |
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric** |
-| └ Website build (page, form, scheduler) | Calvin + fractional | **Runbook written. Stack decision due Week 2** |
+| └ Website build (page, form, scheduler) | Calvin | **Built and deployed to Vercel (SeeSaw-owned). Stack landed: Astro. Scheduler not yet wired** |
 | └ Program breakdown (11 projects) | Calvin | **Outlined. Awaiting owner + capacity assignment** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |

@@ -123,8 +123,8 @@ const faqs = [
         </p>
         <p>
           The same research found something more useful: builds done with an
-          outside partner reach production about <strong>twice as often</strong>
-          as internal ones. Not because outsiders are smarter. Because they're
+          outside partner reach production about <strong>twice as often</strong> as
+          internal ones. Not because outsiders are smarter. Because they're
           structurally forced to talk to the people who'll use the thing.
         </p>
         <p><strong>That's what this hour is.</strong></p>
@@ -159,9 +159,9 @@ const faqs = [
 
       <div class="callout">
         <p>
-          <strong>The adoption question is the one nobody else asks.</strong>
-          Model quality is rarely why these fail. We assess whether the people
-          whose work changes will actually use what gets built — and who has to
+          <strong>The adoption question is the one nobody else asks.</strong> Model
+          quality is rarely why these fail. We assess whether the people whose
+          work changes will actually use what gets built — and who has to
           sponsor that change.
         </p>
       </div>
@@ -281,10 +281,13 @@ const faqs = [
     /* -- hero -- */
     .hero {
       padding-block: clamp(var(--sp-16), 11vw, var(--sp-32));
-      background:
+      background-color: var(--bg-sunk);
+      background-image:
         radial-gradient(120% 90% at 12% -10%, var(--primary-50) 0%, transparent 60%),
-        var(--bg);
-      border-bottom: 1px solid var(--rule-soft);
+        var(--dot-grid);
+      background-size: auto, var(--dot-step);
+      background-repeat: no-repeat, repeat;
+      border-bottom: 1px solid var(--rule);
     }
     .hero__in { max-width: 900px; }
     .hero__h {

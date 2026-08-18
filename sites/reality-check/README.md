@@ -10,7 +10,26 @@ Specs live in this repo: `docs/05-reality-check-spec.md` (the offer),
 npm install
 npm run dev      # http://localhost:4321
 npm run build
+npm run check:prose   # after a build — see below
 ```
+
+## Editing prose: the spacing trap
+
+Astro trims the whitespace between an inline tag and a following newline, so
+this — which looks completely fine — ships without the space:
+
+```astro
+reach production about <strong>twice as often</strong>
+as internal ones.
+```
+
+It renders as "twice as often**as** internal ones". Invisible in the source,
+obvious to a visitor. Five instances of it shipped in the first build.
+
+Keep the closing tag off the end of the line. `npm run check:prose` scans the
+built HTML for the pattern and exits non-zero if any come back — run it after
+`npm run build` whenever you've touched copy. It isn't wired into `build`, so it
+can't break a deploy on a false positive.
 
 ## Pages
 
@@ -37,6 +56,24 @@ Light-only, matching the parent site. Every colour is painted explicitly.
 
 **Don't invent values here.** If you need a colour that isn't on a scale in
 `tokens.css`, take it from the parent site rather than eyeballing one.
+
+### The dot grid
+
+The page texture is the parent site's, lifted the same way: a 1.5px radial dot
+on a 40px lattice (`--dot-grid` / `--dot-step`), `neutral-200` dots on a
+`neutral-100` surface. That pairing is production's — it's the treatment behind
+the main site's menu overlay (`--gradients-grid-dot-light` over
+`[data-modal-bg]`).
+
+It carries `--bg-sunk`, so it lands on the alternating sections and on both page
+heroes, where the hero's blue wash layers over the top. `/book` deliberately
+stays plain white: it's the conversion surface, and the ack and scheduler boxes
+inside the form use `--bg-sunk` themselves, so they'd disappear on it.
+
+Worth knowing if it looks off next to the parent site: `neutral-100` is
+`#EDEDED`, a neutral grey. It reads warm against the main site's dark navy, but
+there is no cream in the brand scales — the amber ramp is the only warm one, and
+it isn't used for surfaces.
 
 **Still to drop in:** the primary logo SVG from the brand folder. The header
 currently renders a blue square placeholder (`.site-head__mark`).
@@ -114,6 +151,7 @@ and it doubles as the internal AI-ops case study the audit asked for.
 
 ## Before launch
 
+- [ ] `npm run check:prose` clean against the final build
 - [ ] Deployed, and the `[reality-check] submission` log line confirms the
       endpoint is being hit rather than the client-side fallback
 - [ ] `PUBLIC_CAL_LINK` set; collective scheduling verified per above
