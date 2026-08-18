@@ -72,7 +72,7 @@ hygiene (not sponsorship). Skip broad paid ads. Hire a fractional growth lead, n
 
 ### 1b. SEO reality (DataForSEO, US)
 
-> **Stale as of 2026-08-10.** These volumes, difficulties, and CPCs were pulled 2026-07-22.
+> **Stale as of 2026-08-17.** These volumes, difficulties, and CPCs were pulled 2026-07-22.
 > Re-pull before committing SEO spend. The competitive and positioning findings hold.
 
 | Domain | Est. organic visits/mo | Notes |

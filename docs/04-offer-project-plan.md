@@ -1,6 +1,6 @@
 # Project Plan — The AI Production Roadmap (the compelling offer)
 
-*Drafted 2026-08-10 · Owner: Calvin · Status: for team alignment, not yet approved*
+*Drafted 2026-08-17 · Owner: Calvin · Status: for team alignment, not yet approved*
 
 This is the build plan for Step 1 of the offer ladder — the paid entry product — plus the free
 consult above it and the website flow that feeds both. It covers what the customer walks away
@@ -254,7 +254,7 @@ heroic. Without these, roadmap #2 costs as much to produce as roadmap #1.
 
 ## 6. The website flow
 
-> **Superseded 2026-08-11 by `05-reality-check-spec.md`.** The free tier collapsed from
+> **Superseded 2026-08-17 by `05-reality-check-spec.md`.** The free tier collapsed from
 > "self-serve scorecard + call" into a single motion: a 60-second qualifier, a one-hour
 > scripted call, and a report built from the transcript plus deep research. The scorecard is
 > deferred to v2, to be built once ~20 real reports exist to calibrate its scoring against.
@@ -358,7 +358,7 @@ one of them.** The audit's measurement gap was that we track traffic instead of 
 Drafted for review, not final. `[WEDGE]` marks lines whose specificity depends on Decision #1 —
 if positioning lands somewhere other than care operations, swap those and the rest stands.
 
-> **Partially superseded 2026-08-11.** The Roadmap offer-page copy below stands. The scorecard
+> **Partially superseded 2026-08-17.** The Roadmap offer-page copy below stands. The scorecard
 > entry and result-page copy are deferred with the scorecard itself; the free offer's copy now
 > leads with *"One hour with our team. You keep the assessment."* See
 > `05-reality-check-spec.md` §10 for the ad hooks and the promise framing.
@@ -583,7 +583,7 @@ beautiful funnel with nothing in it. Worth saying plainly in the alignment meeti
 Eight weeks from alignment to first paid roadmap sold. Roles are archetypes — assign real
 names in the kickoff.
 
-### Phase 0 · Decide and define — Week 1 (Aug 10–14)
+### Phase 0 · Decide and define — Week 1 (Aug 17–21)
 
 | Task | Owner |
 |---|---|
@@ -595,7 +595,7 @@ names in the kickoff.
 **Done when:** price, terms, scope box, and rubric v1 exist as written artifacts, and three
 named people have capacity blocked.
 
-### Phase 1 · Build the production machine — Weeks 2–3 (Aug 17–28)
+### Phase 1 · Build the production machine — Weeks 2–3 (Aug 24 – Sep 4)
 
 | Task | Owner |
 |---|---|
@@ -608,7 +608,7 @@ named people have capacity blocked.
 
 **Done when:** a new roadmap can start without anyone inventing a document.
 
-### Phase 2 · Build the front door — Weeks 3–5 (Aug 24 – Sep 11)
+### Phase 2 · Build the front door — Weeks 3–5 (Aug 31 – Sep 18)
 
 | Task | Owner |
 |---|---|
@@ -626,7 +626,7 @@ in the CRM with a source attached — without anyone touching it manually.
 > start now. If that hire slips, Phase 2 slips or Calvin absorbs it — flag it early rather
 > than discovering it in week four.
 
-### Phase 3 · Dry run — Weeks 5–6 (Sep 7–18)
+### Phase 3 · Dry run — Weeks 5–6 (Sep 14–25)
 
 | Task | Owner |
 |---|---|
@@ -637,7 +637,7 @@ in the CRM with a source attached — without anyone touching it manually.
 
 **Done when:** we've delivered one end to end, know the real hours, and have fixed what broke.
 
-### Phase 4 · Sell — Weeks 6–8 (Sep 14 – Oct 2) and onward
+### Phase 4 · Sell — Weeks 6–8 (Sep 21 – Oct 9) and onward
 
 | Task | Owner |
 |---|---|

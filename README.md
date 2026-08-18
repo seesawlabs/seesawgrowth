@@ -7,7 +7,7 @@ targeting research behind them.
 This is a **planning repo — documents, not code.** It exists so this context survives
 between working sessions instead of living in a file that has to be re-uploaded each time.
 
-## Status as of 2026-08-10
+## Status as of 2026-08-17
 
 **Blocked on Decision #1 (positioning), open since 2026-07-22.** All six other workstreams
 depend on it. If that conversation with Jeff hasn't happened, that is the whole bottleneck —
@@ -16,7 +16,7 @@ not the case studies. Full detail in [docs/00-status.md](docs/00-status.md).
 Two standing caveats before acting on anything here:
 
 1. **Re-pull the keyword data before spending on SEO.** The DataForSEO volumes,
-   difficulties, and CPCs in the audit were pulled 2026-07-22 and are ~3 weeks stale. The
+   difficulties, and CPCs in the audit were pulled 2026-07-22 and are ~4 weeks stale. The
    competitive and positioning findings still hold.
 2. **Nothing downstream has started** — case-study rebuilds, the Roadmap offer page, the
    Anthropic Select application, and the fractional growth hire are all not-yet-begun.
@@ -25,16 +25,16 @@ Two standing caveats before acting on anything here:
 
 | Doc | What it is | Dated |
 |---|---|---|
-| [docs/00-status.md](docs/00-status.md) | Living status — where this stands, what it's blocked on, source inputs, company context | 2026-08-10 |
+| [docs/00-status.md](docs/00-status.md) | Living status — where this stands, what it's blocked on, source inputs, company context | 2026-08-17 |
 | [docs/01-decision-brief.md](docs/01-decision-brief.md) | The 30-minute version: four decisions written for Jeff, ~7 min each | 2026-08-05 |
 | [docs/02-audit-and-growth-plan.md](docs/02-audit-and-growth-plan.md) | The full audit & growth plan — 11 sections + evidence appendix | 2026-07-22 |
 | [docs/03-targeting-report.md](docs/03-targeting-report.md) | Competitive density check, 50+ referral partners, 66-account ABM list, monthly playbook | 2026-07-22 |
-| [docs/04-offer-project-plan.md](docs/04-offer-project-plan.md) | Project plan for the AI Production Roadmap offer — deliverables, production process, website flow, copy, unit economics, 8-week phasing | 2026-08-10 |
-| [docs/05-reality-check-spec.md](docs/05-reality-check-spec.md) | Spec for the free AI Reality Check — qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build | 2026-08-11 |
-| [docs/06-qualifier-spec.md](docs/06-qualifier-spec.md) | Build spec for the qualifier form — exact copy, fields, validation, scoring, gates, routing, the three outcome screens | 2026-08-11 |
-| [docs/07-interview-guide.md](docs/07-interview-guide.md) | The one-hour call — prep, timeboxed blocks, question bank, technique, outlier branches, fit assessment, report variants | 2026-08-11 |
-| [docs/08-website-build-runbook.md](docs/08-website-build-runbook.md) | Ten steps to ship the messaging, CTA, qualifier, and scheduler — stack choices, endpoint architecture, 20-case test matrix | 2026-08-11 |
-| [docs/09-program-outline.md](docs/09-program-outline.md) | **Start here for the build.** The whole Reality Check as 11 discrete projects with owners, outputs, done-whens, and sequence | 2026-08-11 |
+| [docs/04-offer-project-plan.md](docs/04-offer-project-plan.md) | Project plan for the AI Production Roadmap offer — deliverables, production process, website flow, copy, unit economics, 8-week phasing | 2026-08-17 |
+| [docs/05-reality-check-spec.md](docs/05-reality-check-spec.md) | Spec for the free AI Reality Check — qualifier, call script, extraction schema, report pipeline, guardrails, ad tests, 5-week build | 2026-08-17 |
+| [docs/06-qualifier-spec.md](docs/06-qualifier-spec.md) | Build spec for the qualifier form — exact copy, fields, validation, scoring, gates, routing, the three outcome screens | 2026-08-17 |
+| [docs/07-interview-guide.md](docs/07-interview-guide.md) | The one-hour call — prep, timeboxed blocks, question bank, technique, outlier branches, fit assessment, report variants | 2026-08-17 |
+| [docs/08-website-build-runbook.md](docs/08-website-build-runbook.md) | Ten steps to ship the messaging, CTA, qualifier, and scheduler — stack choices, endpoint architecture, 20-case test matrix | 2026-08-17 |
+| [docs/09-program-outline.md](docs/09-program-outline.md) | **Start here for the build.** The whole Reality Check as 11 discrete projects with owners, outputs, done-whens, and sequence | 2026-08-17 |
 
 Read them in that order. `00` tells you what's live, `01` is the decision surface, `02` and
 `03` are the evidence base you go to when a recommendation needs defending.

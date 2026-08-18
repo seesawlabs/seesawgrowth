@@ -1,6 +1,6 @@
 # Program outline — the Reality Check, as discrete projects
 
-*Drafted 2026-08-11 · Owner: Calvin · For team alignment*
+*Drafted 2026-08-17 · Owner: Calvin · For team alignment*
 
 Eleven projects. Each has one owner, one output, and a done-when you can argue about.
 
@@ -116,11 +116,11 @@ pipeline and the internal AI-ops case study the audit already asked for.
 
 | Week | Projects |
 |---|---|
-| **1** · Aug 11–15 | 1 · 3 · 4, and start 2 |
-| **2** · Aug 18–22 | 2 finishes · 5 · start 8 |
-| **3** · Aug 25–29 | 6 · 7 · 8 continues |
-| **4** · Sep 1–5 | 8 finishes · 9 · 10 |
-| **5** · Sep 8–12 | 11 |
+| **1** · Aug 17–21 | 1 · 3 · 4, and start 2 |
+| **2** · Aug 24–28 | 2 finishes · 5 · start 8 |
+| **3** · Aug 31 – Sep 4 | 6 · 7 · 8 continues |
+| **4** · Sep 7–11 | 8 finishes · 9 · 10 |
+| **5** · Sep 14–18 | 11 |
 
 **≈20.5 person-days.** Feasible across two to three people in five weeks — with the two caveats
 below.
@@ -134,7 +134,7 @@ a sketcher who actually exist and aren't fully booked on client work. This is th
 common way a plan like this quietly doesn't happen.
 
 **The fractional growth hire.** Projects 6 and 7 are largely theirs. If that hire hasn't started
-by Aug 22, decide now whether Week 3 slips or Calvin absorbs a reduced version.
+by Aug 28, decide now whether Week 3 slips or Calvin absorbs a reduced version.
 
 **One owner for the manual-review SLA.** Still unassigned. It's likely the largest routing bucket,
 and without a name, hot leads sit for a day.

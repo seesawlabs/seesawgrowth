@@ -1,6 +1,6 @@
 # Spec — The AI Reality Check (the free offer)
 
-*Drafted 2026-08-11 · Owner: Calvin · Companion to `04-offer-project-plan.md`*
+*Drafted 2026-08-17 · Owner: Calvin · Companion to `04-offer-project-plan.md`*
 
 One free offer, one motion. A 60-second qualifier, a one-hour scripted call, and a report
 built from the transcript plus deep research, delivered in three business days.
@@ -281,12 +281,12 @@ case study writing itself.
 
 | Week | Phase | Work | Owner |
 |---|---|---|---|
-| **1** · Aug 11–15 | Define | Qualifier questions + routing logic locked · call script v1 · extraction schema · report outline approved · recording tool and consent language chosen | Calvin |
-| **2** · Aug 18–22 | The machine | Report template re-cut at new altitude · Megamine research playbook · extraction prompt + opportunity scoring · ROI calculator | Calvin · designer · AI engineer |
-| **3** · Aug 25–29 | The front door | Offer page · qualifier form · scheduler + routing · confirmation and nurture emails · Office Hours page · CRM stages | Fractional hire · designer |
-| **4** · Sep 1–5 | Rehearse | Two dry-run calls with friendly past clients · full pipeline end to end · QA gate defined · fix what broke | Delivery pair |
-| **5** · Sep 8–12 | Go live | First 5 Reality Checks from referrals · retargeting on · Office Hours #1 scheduled | Jeff · Calvin |
-| **6–10** · Sep 15 – Oct 17 | Calibrate | LinkedIn ABM test · reach 10 completed reports · replace modeled rates with observed · size ad spend · decide on scorecard v2 | Fractional hire · Calvin |
+| **1** · Aug 17–21 | Define | Qualifier questions + routing logic locked · call script v1 · extraction schema · report outline approved · recording tool and consent language chosen | Calvin |
+| **2** · Aug 24–28 | The machine | Report template re-cut at new altitude · Megamine research playbook · extraction prompt + opportunity scoring · ROI calculator | Calvin · designer · AI engineer |
+| **3** · Aug 31 – Sep 4 | The front door | Offer page · qualifier form · scheduler + routing · confirmation and nurture emails · Office Hours page · CRM stages | Fractional hire · designer |
+| **4** · Sep 7–11 | Rehearse | Two dry-run calls with friendly past clients · full pipeline end to end · QA gate defined · fix what broke | Delivery pair |
+| **5** · Sep 14–18 | Go live | First 5 Reality Checks from referrals · retargeting on · Office Hours #1 scheduled | Jeff · Calvin |
+| **6–10** · Sep 21 – Oct 23 | Calibrate | LinkedIn ABM test · reach 10 completed reports · replace modeled rates with observed · size ad spend · decide on scorecard v2 | Fractional hire · Calvin |
 
 ### Owners
 

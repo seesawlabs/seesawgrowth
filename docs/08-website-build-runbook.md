@@ -1,6 +1,6 @@
 # Runbook — getting the offer live on the site
 
-*Drafted 2026-08-11 · Owner: Calvin · Week 3 of `05-reality-check-spec.md` §11*
+*Drafted 2026-08-17 · Owner: Calvin · Week 3 of `05-reality-check-spec.md` §11*
 
 Step-by-step for shipping the messaging, CTA, qualifier, and scheduler. Ten steps, roughly
 9 person-days, ~5 calendar days across two people.
@@ -302,11 +302,11 @@ Tests 17, 19, and 20 are the ones that get skipped and shouldn't be.
 | 9 · Test | 0.5 | All | 3–8 |
 | 10 · Ship | 0.25 | Calvin | 9 |
 
-**≈9.25 person-days ≈ 5 calendar days across two people.** It fits Week 3 (Aug 25–29) only if
+**≈9.25 person-days ≈ 5 calendar days across two people.** It fits Week 3 (Aug 31 – Sep 4) only if
 Step 0 lands in Week 2 and the fractional hire has started.
 
 **The standing risk:** steps 4–8 are mostly the fractional hire. If that hire hasn't started by
-Aug 22, either Week 3 slips or Calvin absorbs a reduced version — decide which now rather than
+Aug 28, either Week 3 slips or Calvin absorbs a reduced version — decide which now rather than
 in the middle of it.
 
 ---

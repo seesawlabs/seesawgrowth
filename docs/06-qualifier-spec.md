@@ -1,6 +1,6 @@
 # Spec — The qualifier form
 
-*Drafted 2026-08-11 · Owner: Calvin · Build spec for `/ai-reality-check`*
+*Drafted 2026-08-17 · Owner: Calvin · Build spec for `/ai-reality-check`*
 
 The booking-page form for the free AI Reality Check. Supersedes §2 of
 `05-reality-check-spec.md`, which sketched this at outline level.

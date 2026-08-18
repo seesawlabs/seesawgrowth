@@ -1,6 +1,6 @@
 # Interview guide — the AI Reality Check call
 
-*Drafted 2026-08-11 · Owner: Calvin · Week 1 deliverable · Companion to `05-reality-check-spec.md`*
+*Drafted 2026-08-17 · Owner: Calvin · Week 1 deliverable · Companion to `05-reality-check-spec.md`*
 
 The one-hour call that produces the Reality Check report. Written to be run by someone who
 isn't Calvin or Jeff — that's the point of writing it down.
