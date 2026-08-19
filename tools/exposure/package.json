@@ -1,0 +1,12 @@
+{
+  "name": "seesaw-exposure",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Scripts that generate an AI Exposure Report for a company from public evidence",
+  "scripts": {
+    "test": "node --experimental-strip-types --test src/test.ts",
+    "prototype": "node --experimental-strip-types src/cli.ts prototype",
+    "report": "node --experimental-strip-types src/cli.ts report"
+  }
+}

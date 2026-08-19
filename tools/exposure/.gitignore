@@ -1,0 +1,12 @@
+# Credentials
+.env
+
+# Raw API responses. Large, and they contain third parties' page content —
+# useful locally as the provenance trail, not something to commit.
+cache/
+
+# Per-run artifacts and generated reports. Reports about real companies stay
+# out of the repo; regenerate them from the cache instead.
+runs/
+
+node_modules/

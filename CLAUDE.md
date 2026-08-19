@@ -5,10 +5,17 @@
 SeeSaw Labs growth planning. `docs/` is **documents, not code** — nothing there to build,
 test, or lint. Work in `docs/` means writing, revising, and researching against the plan.
 
-**One exception:** `sites/reality-check/` is a real Astro site for the free AI Reality Check
-offer. It has its own README, `npm run build` must pass, and it is meant to move to its own
-repo (or into `seesawlabs/website`) once it ships. Brand tokens there are lifted verbatim
-from production seesawlabs.com CSS — don't invent colour values.
+**Two exceptions, both real code:**
+
+- `sites/reality-check/` — an Astro site for the free AI Reality Check offer. It has its own
+  README, `npm run build` must pass, and it is meant to move to its own repo (or into
+  `seesawlabs/website`) once it ships. Brand tokens there are lifted verbatim from production
+  seesawlabs.com CSS — don't invent colour values. After touching copy, run
+  `npm run check:prose` (see that README: Astro silently eats the space before a newline).
+- `tools/exposure/` — scripts that generate the AI Exposure Report from public evidence.
+  `npm test` must pass. **The never-invent-a-metric rule is enforced in code here**, in
+  `src/lib/claim.ts`: a numeral must carry a source or be a declared `[blank]`. Don't weaken
+  `validateClaim()` to get a claim to render — fix the claim or drop it.
 
 Read in this order before doing anything substantive:
 
