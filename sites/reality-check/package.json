@@ -9,7 +9,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "check:prose": "node scripts/check-prose.mjs"
+    "check:prose": "node scripts/check-prose.mjs",
+    "release": "node --experimental-strip-types scripts/release-report.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.6",

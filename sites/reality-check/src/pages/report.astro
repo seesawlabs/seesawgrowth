@@ -1,6 +1,12 @@
 ---
 /* ---------------------------------------------------------------------------
-   /exposure — the AI Exposure Report offer.
+   /report — the free AI report offer.
+
+   NOT /exposure. The route was that first and it read as fear-mongering: the
+   URL is the first words a visitor sees, and leading with a threat sets up a
+   document that is actually about orientation. The report does say where a
+   company is exposed — one of its six sections, next to where they are strong —
+   but that is a finding inside a balanced analysis, not the pitch.
 
    TOP OF THE LADDER, and a different promise from the Reality Check. This one
    is free and automated: we read your public surface, find what comparable
@@ -27,25 +33,26 @@
 import Base from '../layouts/Base.astro';
 import ExposureRequest from '../components/ExposureRequest.astro';
 
-const title = 'AI Exposure Report — SeeSaw Labs';
+const title = 'Your free AI report — SeeSaw Labs';
 const description =
-  'A free, sourced analysis of what AI is doing to your category and where it touches your operation. Every number carries a source or is left blank for you to fill in.';
+  'A free, sourced analysis of where your company stands on AI: what comparable companies have actually done, and what it puts in front of you. Every number carries a source, or is left blank for you to fill in.';
 ---
 
 <Base title={title} description={description}>
   <!-- ------------------------------ hero ------------------------------ -->
   <section class="hero">
     <div class="wrap hero__in">
-      <p class="eyebrow">Free · Automated · Yours in about a day</p>
+      <p class="eyebrow">Free · Sourced · Yours to keep</p>
       <h1 class="hero__h">
-        Your competitors are shipping AI.<br />
-        <span class="hero__em">Here's what they actually did.</span>
+        Most AI advice could be about anyone.<br />
+        <span class="hero__em">This one's about you.</span>
       </h1>
       <p class="lede hero__lede">
         We read your public surface, find every dated AI move by companies in
-        and around your category, and write you an analysis: where you stand,
-        where you're exposed, and what to weigh. Every number carries a source
-        you can open — or we leave it blank rather than guess.
+        and around your category, and write you a straight analysis: where you
+        stand, what your competitors actually did, and what it puts in front of
+        you. Every number carries a source you can open — or we leave it blank
+        rather than guess.
       </p>
       <div class="hero__cta">
         <a href="#request" class="btn">Get my report</a>
@@ -62,8 +69,8 @@ const description =
     <div class="wrap-narrow">
       <p class="eyebrow">Why this exists</p>
       <h2 class="h2">
-        Everyone can tell you AI matters. Almost nobody will tell you what it's
-        doing to <em>your</em> category.
+        Everyone can tell you AI matters. Almost nobody will tell you what it
+        means for <em>your</em> operation.
       </h2>
       <p class="body">
         The generic answer is free and worthless — you have already read it. The

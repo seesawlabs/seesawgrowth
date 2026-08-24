@@ -101,12 +101,11 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
 </form>
 
 <div class="xr__done" id="xr-done" hidden tabindex="-1">
-  <p class="xr__doneKicker" id="xr-doneKicker">Building your report</p>
-  <h3 id="xr-doneHead">We&rsquo;re reading your site now</h3>
+  <p class="xr__doneKicker" id="xr-doneKicker">Request received</p>
+  <h3 id="xr-doneHead">We&rsquo;ll email you a link shortly</h3>
   <p id="xr-doneBody">
-    A person reads every report before it goes out, so this takes about a
-    business day rather than a minute. You&rsquo;ll get one email with one private
-    link.
+    We&rsquo;re reading your site now, then every comparable company we can find.
+    One email, one private link — you don&rsquo;t need to keep this page open.
   </p>
 
   <div class="xr__while">
@@ -361,25 +360,11 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
       if (done) {
         done.hidden = false;
 
-        const head = document.getElementById('xr-doneHead');
-        const copy = document.getElementById('xr-doneBody');
-        const kicker = document.getElementById('xr-doneKicker');
-        if (body.mode === 'instant') {
-          if (kicker) kicker.textContent = 'Building your report';
-          if (head) head.textContent = 'This takes about two minutes';
-          if (copy)
-            copy.textContent =
-              'We are reading your site, then every comparable company we can find. We will email the link the moment it is ready — you do not need to keep this page open.';
-        } else {
-          if (kicker) kicker.textContent = 'Request received';
-          if (head) head.textContent = 'Your link will arrive within a business day';
-          if (copy)
-            copy.textContent =
-              body.eta
-                ? `A person reads every report before it goes out, so this takes about ${body.eta} rather than a minute. One email, one private link.`
-                : 'A person reads every report before it goes out. One email, one private link.';
-        }
-
+        /* One line for both delivery modes. Promising "two minutes" or "a
+           business day" invites a visitor to time us, and the honest answer
+           varies with whether a person is still reading each report before it
+           goes out. "Shortly" is true either way, and the email is the
+           contract. */
         const link = document.getElementById('xr-bookLink');
         if (body.bookingUrl && link instanceof HTMLAnchorElement) link.href = body.bookingUrl;
 

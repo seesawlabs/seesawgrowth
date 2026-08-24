@@ -6,3 +6,6 @@ dist/
 .vercel/
 .netlify/
 .DS_Store
+
+# Released reports, staged for the magic-link route. Contains client documents.
+.reports/
