@@ -2,24 +2,28 @@
 /* ---------------------------------------------------------------------------
    The Exposure Report request form.
 
-   Four fields. Every one of them is used: the domain is what we crawl, the
-   company name is what we call them, the email is where the link goes, and the
-   trigger is the one line that shapes the report's opening. Nothing is
-   collected to be scored — that is the Reality Check qualifier's job, and
-   asking a stranger eleven questions for a free automated report would be
-   trading their patience for data we do not need yet.
+   FOUR REQUIRED FIELDS, THREE OPTIONAL, and every one of them changes the
+   output — see src/lib/exposure-intake.ts for why each exists and what the live
+   runs said about it. The short version: the one-liner and the competitors are
+   the two fields that decide whether the report is sharp or generic. Naming two
+   competitors took a real run from one peer with dated evidence to three, and
+   from 90% coverage to 100%.
 
-   The "also want to talk" checkbox is why the page has one form rather than two
-   competing calls to action. Someone who wants both should not have to pick,
-   and someone who only wants the call still gives us their domain on the way
-   past.
+   WE DO NOT ASK FOR VOLUMES. Case counts, cycle times, headcount. Those are the
+   blanks the report leaves open on purpose; they are the agenda for the call.
 
-   Progressive enhancement: the form posts JSON to /api/exposure-request and
-   swaps in a confirmation. With no JavaScript, or if the endpoint is missing
-   because the adapter is not deployed, the visitor sees an honest fallback that
-   tells them to email us — never a silent failure, which is what the qualifier
-   learned the hard way.
+   THE CONFIRMATION IS WHERE THE WAIT GETS SPENT. A run takes about two minutes
+   measured end to end, which is an awkward amount of time to stare at — so the
+   confirmation puts the booking calendar in front of them immediately rather
+   than after. Someone who books while the report builds is the outcome we want
+   anyway, and someone who doesn't has lost nothing.
+
+   Validation is shared with the endpoint rather than duplicated, so the message
+   a visitor sees and the rule the server enforces cannot drift.
 --------------------------------------------------------------------------- */
+import { MAX_COMPETITORS, ONE_LINER_MAX, TRIGGER_MAX } from '../lib/exposure-intake';
+
+const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
 ---
 
 <form class="xr" id="xr-form" novalidate>
@@ -31,6 +35,7 @@
     <label class="xr__field">
       <span class="xr__label">Work email</span>
       <input name="email" type="email" autocomplete="email" inputmode="email" required />
+      <span class="xr__help">Where the private link goes.</span>
     </label>
   </div>
 
@@ -45,49 +50,89 @@
     </label>
   </div>
 
-  <label class="xr__field">
+  <label class="xr__field xr__field--wide">
+    <span class="xr__label">In one line, what does your company do?</span>
+    <textarea name="oneLiner" rows="2" maxlength={ONE_LINER_MAX} required
+      placeholder="Specialty pharmacy handling prior authorization and patient onboarding for prescribers"></textarea>
+    <span class="xr__help">
+      This is what we search on to find comparable companies, and it&rsquo;s the one
+      thing we can&rsquo;t reliably get from your website — most homepages describe a
+      feeling rather than a business. Your words, however blunt.
+    </span>
+  </label>
+
+  <fieldset class="xr__field xr__field--wide xr__fieldset">
+    <legend class="xr__label">
+      Who are your closest competitors?
+      <span class="xr__opt">optional, up to {MAX_COMPETITORS}</span>
+    </legend>
+    <div class="xr__comps">
+      <input name="competitor" type="text" placeholder="competitor.com" aria-label="Competitor 1" />
+      <input name="competitor" type="text" placeholder="competitor.com" aria-label="Competitor 2" />
+      <input name="competitor" type="text" placeholder="competitor.com" aria-label="Competitor 3" />
+    </div>
+    <span class="xr__help">
+      You know your market better than our search does. Anyone you name here, we
+      research directly.
+    </span>
+  </fieldset>
+
+  <label class="xr__field xr__field--wide">
     <span class="xr__label">
       What&rsquo;s driving this right now?
       <span class="xr__opt">optional</span>
     </span>
-    <textarea name="trigger" rows="3" placeholder="A board question, a competitor announcement, a process that keeps breaking — one line is plenty."></textarea>
+    <textarea name="trigger" rows="3" maxlength={TRIGGER_MAX}
+      placeholder="A board question, a competitor announcement, a process that keeps breaking — one line is plenty."></textarea>
+    <span class="xr__help">Steers what the report leads with.</span>
   </label>
 
   <label class="xr__check">
     <input name="wantsCall" type="checkbox" />
-    <span>Also put an hour in the diary to walk through it together.</span>
+    <span>
+      Also put an hour in the diary to go through it — including where we got it
+      wrong.
+    </span>
   </label>
 
-  <button class="btn btn--primary xr__submit" type="submit">Send me the report</button>
-
-  <p class="xr__fine">
-    We read every report before it goes out, so this takes about a business day rather than a
-    minute. One email, one private link. No sequence, no newsletter.
-  </p>
+  <button class="btn xr__submit" type="submit">Send me the report</button>
 
   <p class="xr__error" id="xr-error" hidden role="alert"></p>
 </form>
 
-<div class="xr__done" id="xr-done" hidden>
-  <p class="xr__doneKicker">Request received</p>
-  <h3 id="xr-doneHead">We&rsquo;ll email your link within a business day</h3>
+<div class="xr__done" id="xr-done" hidden tabindex="-1">
+  <p class="xr__doneKicker" id="xr-doneKicker">Building your report</p>
+  <h3 id="xr-doneHead">We&rsquo;re reading your site now</h3>
   <p id="xr-doneBody">
-    A person reads every Exposure Report before it goes out. If the public evidence on your
-    company turns out to be too thin to be worth your time, we&rsquo;ll tell you that instead of
-    sending you a padded document.
+    A person reads every report before it goes out, so this takes about a
+    business day rather than a minute. You&rsquo;ll get one email with one private
+    link.
   </p>
-  <p class="xr__doneBook" id="xr-doneBook" hidden>
-    <a class="btn btn--primary" id="xr-bookLink" href="#">Pick a time now</a>
+
+  <div class="xr__while">
+    <p class="xr__whileH">While that happens</p>
+    <p class="xr__whileB">
+      The report is built entirely from the outside, so parts of it will be
+      wrong. The hour is where you correct it — and where the blanks get filled
+      in with numbers only you have.
+    </p>
+    <a class="btn" id="xr-bookLink" href={calLink}>Book the hour</a>
+  </div>
+
+  <p class="xr__thin" id="xr-thin" hidden>
+    If the public evidence on your company turns out to be too thin to be worth
+    your time, we&rsquo;ll tell you that instead of sending a padded document.
   </p>
 </div>
 
 <style>
-  .xr { display: grid; gap: var(--sp-5); max-width: 40rem; }
+  .xr { display: grid; gap: var(--sp-5); max-width: 44rem; }
   .xr__row { display: grid; gap: var(--sp-5); }
   @media (min-width: 34rem) {
     .xr__row { grid-template-columns: 1fr 1fr; }
   }
   .xr__field { display: grid; gap: var(--sp-2); }
+  .xr__fieldset { border: 0; padding: 0; margin: 0; }
   .xr__label {
     font-size: var(--text-sm);
     font-weight: 500;
@@ -95,12 +140,15 @@
     display: flex;
     align-items: baseline;
     gap: var(--sp-2);
+    flex-wrap: wrap;
+    padding: 0;
   }
-  .xr__opt {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
+  .xr__opt { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); font-weight: 400; }
+  .xr__help {
+    font-size: var(--text-sm);
+    line-height: var(--lh-snug);
     color: var(--muted);
-    font-weight: 400;
+    max-width: 60ch;
   }
   .xr input[type='text'],
   .xr input[type='email'],
@@ -122,8 +170,12 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
-  .xr input[aria-invalid='true'],
-  .xr textarea[aria-invalid='true'] { border-color: var(--red-500); }
+  .xr [aria-invalid='true'] { border-color: var(--red-500); }
+
+  .xr__comps { display: grid; gap: var(--sp-3); }
+  @media (min-width: 34rem) {
+    .xr__comps { grid-template-columns: repeat(3, 1fr); }
+  }
 
   .xr__check {
     display: flex;
@@ -135,18 +187,11 @@
     padding: var(--sp-4);
     background: var(--bg-sunk);
     border-radius: var(--radius-md);
+    max-width: 60ch;
   }
   .xr__check input { margin-top: 0.15rem; accent-color: var(--accent); flex: none; }
 
   .xr__submit { justify-self: start; }
-
-  .xr__fine {
-    font-size: var(--text-sm);
-    line-height: var(--lh-snug);
-    color: var(--muted);
-    margin: 0;
-    max-width: 44ch;
-  }
 
   .xr__error {
     margin: 0;
@@ -155,15 +200,11 @@
     background: var(--red-50);
     border-radius: var(--radius-md);
     padding: var(--sp-3) var(--sp-4);
+    max-width: 60ch;
   }
 
-  .xr__done {
-    max-width: 40rem;
-    padding: var(--sp-8);
-    background: var(--bg-sunk);
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--rule);
-  }
+  .xr__done { max-width: 44rem; }
+  .xr__done:focus-visible { outline: none; }
   .xr__doneKicker {
     font-family: var(--font-accent);
     font-size: var(--text-sm);
@@ -173,20 +214,48 @@
     margin: 0 0 var(--sp-3);
   }
   .xr__done h3 {
-    font-size: var(--text-2xl);
+    font-size: clamp(var(--text-2xl), 3.4vw, var(--text-3xl));
     font-weight: 600;
     letter-spacing: var(--ls-tight);
     line-height: var(--lh-tight);
     margin: 0 0 var(--sp-4);
     text-wrap: balance;
   }
-  .xr__done p:not(.xr__doneKicker) {
-    margin: 0 0 var(--sp-4);
+  .xr__done > p:not(.xr__doneKicker) {
+    margin: 0 0 var(--sp-6);
+    color: var(--ink-2);
+    font-size: var(--text-lg);
+    line-height: var(--lh-relaxed);
+    max-width: 58ch;
+  }
+  .xr__while {
+    padding: var(--sp-6);
+    background: var(--bg-sunk);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--rule);
+    display: grid;
+    gap: var(--sp-3);
+    justify-items: start;
+  }
+  .xr__whileH {
+    font-family: var(--font-accent);
+    font-size: var(--text-sm);
+    letter-spacing: var(--ls-wide);
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+  .xr__whileB {
+    margin: 0;
     color: var(--ink-2);
     line-height: var(--lh-relaxed);
-    max-width: 52ch;
+    max-width: 54ch;
   }
-  .xr__doneBook { margin-bottom: 0 !important; }
+  .xr__thin {
+    margin: var(--sp-6) 0 0 !important;
+    font-size: var(--text-sm) !important;
+    color: var(--muted) !important;
+  }
 </style>
 
 <script>
@@ -194,9 +263,7 @@
   const done = document.getElementById('xr-done');
   const errorBox = document.getElementById('xr-error');
   const submit = form?.querySelector('button[type="submit"]');
-
-  const MAILTO =
-    'mailto:calvin@seesawlabs.com?subject=AI%20Exposure%20Report%20request';
+  const MAILTO = 'mailto:calvin@seesawlabs.com?subject=AI%20Exposure%20Report%20request';
 
   function fail(message, withMailto) {
     if (!errorBox) return;
@@ -208,10 +275,14 @@
       errorBox.appendChild(a);
     }
     errorBox.hidden = false;
+    if (submit instanceof HTMLButtonElement) {
+      submit.disabled = false;
+      submit.textContent = 'Send me the report';
+    }
   }
 
-  function markInvalid(field, invalid) {
-    const el = form?.elements.namedItem(field);
+  function setInvalid(name, invalid) {
+    const el = form?.querySelector(`[name="${name}"]`);
     if (el instanceof HTMLElement) el.setAttribute('aria-invalid', invalid ? 'true' : 'false');
   }
 
@@ -226,19 +297,24 @@
       email: String(data.get('email') ?? '').trim(),
       company: String(data.get('company') ?? '').trim(),
       website: String(data.get('website') ?? '').trim(),
+      oneLiner: String(data.get('oneLiner') ?? '').trim(),
+      competitors: data.getAll('competitor').map((c) => String(c).trim()).filter(Boolean),
       trigger: String(data.get('trigger') ?? '').trim(),
       wantsCall: data.get('wantsCall') === 'on',
       attribution: {},
     };
 
-    let missing = false;
-    for (const field of ['name', 'email', 'company', 'website']) {
+    /* Client-side check mirrors the server's required set. The server validates
+       again and its messages win — this only saves a round trip. */
+    let firstBad = null;
+    for (const field of ['name', 'email', 'company', 'website', 'oneLiner']) {
       const empty = !payload[field];
-      markInvalid(field, empty);
-      if (empty) missing = true;
+      setInvalid(field, empty);
+      if (empty && !firstBad) firstBad = field;
     }
-    if (missing) {
-      fail('Name, email, company and website are all needed before we can crawl anything.', false);
+    if (firstBad) {
+      fail('Name, email, company, website and the one-liner are all needed before we can start.', false);
+      form.querySelector(`[name="${firstBad}"]`)?.focus();
       return;
     }
 
@@ -261,40 +337,60 @@
       });
 
       if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 422 && Array.isArray(body.errors) && body.errors.length) {
+          for (const e of body.errors) setInvalid(e.field, true);
+          fail(body.errors[0].message, false);
+          form.querySelector(`[name="${body.errors[0].field}"]`)?.focus();
+          return;
+        }
         /* 404 means the server adapter is not deployed. Say so plainly rather
            than pretending the request landed — the qualifier lost submissions
            to exactly this silence. */
-        const reason =
+        fail(
           res.status === 404
             ? 'Our form endpoint is not reachable right now, so this did not send.'
-            : 'Something went wrong at our end, so this did not send.';
-        fail(reason, true);
-        if (submit instanceof HTMLButtonElement) {
-          submit.disabled = false;
-          submit.textContent = 'Send me the report';
-        }
+            : 'Something went wrong at our end, so this did not send.',
+          true
+        );
         return;
       }
 
       const body = await res.json().catch(() => ({}));
       form.hidden = true;
-      if (done) done.hidden = false;
+      if (done) {
+        done.hidden = false;
 
-      if (body.bookingUrl) {
-        const wrap = document.getElementById('xr-doneBook');
-        const link = document.getElementById('xr-bookLink');
-        if (wrap && link instanceof HTMLAnchorElement) {
-          link.href = body.bookingUrl;
-          wrap.hidden = false;
+        const head = document.getElementById('xr-doneHead');
+        const copy = document.getElementById('xr-doneBody');
+        const kicker = document.getElementById('xr-doneKicker');
+        if (body.mode === 'instant') {
+          if (kicker) kicker.textContent = 'Building your report';
+          if (head) head.textContent = 'This takes about two minutes';
+          if (copy)
+            copy.textContent =
+              'We are reading your site, then every comparable company we can find. We will email the link the moment it is ready — you do not need to keep this page open.';
+        } else {
+          if (kicker) kicker.textContent = 'Request received';
+          if (head) head.textContent = 'Your link will arrive within a business day';
+          if (copy)
+            copy.textContent =
+              body.eta
+                ? `A person reads every report before it goes out, so this takes about ${body.eta} rather than a minute. One email, one private link.`
+                : 'A person reads every report before it goes out. One email, one private link.';
         }
+
+        const link = document.getElementById('xr-bookLink');
+        if (body.bookingUrl && link instanceof HTMLAnchorElement) link.href = body.bookingUrl;
+
+        const thin = document.getElementById('xr-thin');
+        if (thin) thin.hidden = false;
+
+        done.focus();
+        done.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      done?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch {
       fail('That did not send — you may be offline.', true);
-      if (submit instanceof HTMLButtonElement) {
-        submit.disabled = false;
-        submit.textContent = 'Send me the report';
-      }
     }
   });
 </script>

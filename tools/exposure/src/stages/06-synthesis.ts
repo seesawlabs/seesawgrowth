@@ -285,7 +285,8 @@ export function buildUserPrompt(
   company: string,
   domain: string,
   claims: Claim[],
-  facts: ComputedFacts
+  facts: ComputedFacts,
+  trigger?: string
 ): string {
   const lines = claims.map((c) => {
     const bits = [
@@ -298,8 +299,16 @@ export function buildUserPrompt(
     return `- [${bits.join(' ')}] ${c.statement}`;
   });
 
-  return `COMPANY: ${company} (${domain})
+  /* What they said is driving this. One line from the intake form, and the only
+     thing in the prompt that did not come from our own research — so it is
+     labelled as their words and the model is told not to treat it as evidence.
+     It steers emphasis, not conclusions. */
+  const context = trigger?.trim()
+    ? `\nWHAT THEY TOLD US IS DRIVING THIS (their words, not evidence — use it to decide what to lead with, never as a fact to assert):\n"${trigger.trim()}"\n`
+    : '';
 
+  return `COMPANY: ${company} (${domain})
+${context}
 COMPUTED FACTS — you may state these figures freely:
 ${JSON.stringify(facts, null, 2)}
 
@@ -331,6 +340,8 @@ export async function runSynthesisStage(
     subject: SubjectArtifact;
     peers: PeersArtifact | null;
     evidence: PeerEvidenceArtifact | null;
+    /** Free text from the intake form: what's driving this right now. */
+    trigger?: string;
   },
   now: string,
   opts: { model?: string } = {}
@@ -338,7 +349,13 @@ export async function runSynthesisStage(
   const notes: string[] = [];
   const model = opts.model ?? process.env.EXPOSURE_SYNTHESIS_MODEL ?? DEFAULT_MODEL;
   const facts = computeFacts(args.claims, args.subject, args.peers, args.evidence);
-  const userPrompt = buildUserPrompt(args.company, args.subject.domain, args.claims, facts);
+  const userPrompt = buildUserPrompt(
+    args.company,
+    args.subject.domain,
+    args.claims,
+    facts,
+    args.trigger
+  );
 
   const request = { model, system: SYSTEM_PROMPT, user: userPrompt };
 

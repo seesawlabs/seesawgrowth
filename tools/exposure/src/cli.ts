@@ -20,6 +20,10 @@
 
    Flags:
      --refresh            bypass cache reads for this run
+     --company "..."      display name for the company
+     --peer <domain>      a competitor they named. Repeatable, and the single
+                          highest-value thing an intake form can collect
+     --no-synthesis       skip the analyst (debugging the evidence stages)
      --trigger "..."      what the prospect said is driving this
      --category "..."     override the derived category query (stage 02's input)
      --budget <usd>       override EXPOSURE_RUN_BUDGET_USD
@@ -34,7 +38,7 @@ import { join } from 'node:path';
 import { scoreCoverage, summarizeCoverage, partitionClaims } from './lib/claim.ts';
 import { initRun, writeArtifact } from './lib/run.ts';
 import { Ledger } from './lib/budget.ts';
-import { loadDotEnv, checkStage, formatCredentialReport } from './lib/env.ts';
+import { loadDotEnv, checkStage, formatCredentialReport, missingCredentials } from './lib/env.ts';
 import type { CacheOptions } from './lib/cache.ts';
 import { assembleReport } from './stages/05-assemble.ts';
 import { runSubjectStage } from './stages/01-subject.ts';
@@ -42,6 +46,8 @@ import { runPeersStage, type PeersArtifact } from './stages/02-peers.ts';
 import { runPeerEvidenceStage, type PeerEvidenceArtifact } from './stages/03-peer-evidence.ts';
 import { runDemandStage, type DemandArtifact } from './stages/04-demand.ts';
 import { buildClaims, coverageFrom } from './stages/claims.ts';
+import { runSynthesisStage, type SynthesisArtifact } from './stages/06-synthesis.ts';
+import { renderReportHtml } from './render/report-html.ts';
 import { registrableDomain } from './lib/domain.ts';
 import { FIXTURE_CLAIMS, FIXTURE_META } from './fixtures/prototype.ts';
 
@@ -87,19 +93,37 @@ interface Args {
   refresh: boolean;
   trigger?: string;
   category?: string;
+  company?: string;
   budget?: number;
   peers?: number;
   peerCrawl: boolean;
   quiet: boolean;
+  /** Competitors named on the intake form. Repeatable: --peer a.com --peer b.com */
+  namedPeers: string[];
+  /** Skip the analyst. Only useful when debugging the evidence stages. */
+  noSynthesis: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { domain: '', refresh: false, peerCrawl: true, quiet: false };
+  const args: Args = {
+    domain: '',
+    refresh: false,
+    peerCrawl: true,
+    quiet: false,
+    namedPeers: [],
+    noSynthesis: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--refresh') args.refresh = true;
     else if (a === '--no-peer-crawl') args.peerCrawl = false;
     else if (a === '--quiet') args.quiet = true;
+    else if (a === '--no-synthesis') args.noSynthesis = true;
+    else if (a === '--peer') {
+      const v = argv[++i];
+      if (v) args.namedPeers.push(v);
+    }
+    else if (a === '--company') args.company = argv[++i];
     else if (a === '--trigger') args.trigger = argv[++i];
     else if (a === '--category') args.category = argv[++i];
     else if (a === '--budget') args.budget = Number(argv[++i]);
@@ -170,7 +194,7 @@ async function report(argv: string[]): Promise<void> {
     console.error(`Stage 01 cannot run: ${gate01.missing.join(', ')} missing. This stage is mandatory.`);
     process.exit(3);
   }
-  console.error('[01/05] subject — mapping and scraping their own surface');
+  console.error('[01/06] subject — mapping and scraping their own surface');
   const subject = await runSubjectStage(cache, ledger, domain, now, {
     categoryQueryOverride: args.category,
   });
@@ -189,12 +213,12 @@ async function report(argv: string[]): Promise<void> {
   const gate02 = checkStage('02-peers');
   if (!gate02.ok) {
     stageNotes.push(`stage 02 skipped: ${gate02.missing.join(', ')} missing`);
-    console.error(`[02/05] peers — SKIPPED (${gate02.missing.join(', ')} missing)`);
+    console.error(`[02/06] peers — SKIPPED (${gate02.missing.join(', ')} missing)`);
   } else if (subject.pagesCrawled === 0) {
     stageNotes.push('stage 02 skipped: no subject pages crawled, so no category description to search with');
-    console.error('[02/05] peers — SKIPPED (no subject content to derive a category from)');
+    console.error('[02/06] peers — SKIPPED (no subject content to derive a category from)');
   } else {
-    console.error('[02/05] peers — Exa category search plus find-similar');
+    console.error('[02/06] peers — Exa category search plus find-similar');
     try {
       peers = await runPeersStage(
         cache,
@@ -202,7 +226,8 @@ async function report(argv: string[]): Promise<void> {
         domain,
         subject.categoryQuery.query,
         subject.pages.find((p) => p.category === 'home')?.title,
-        now
+        now,
+        { namedPeers: args.namedPeers }
       );
       await writeArtifact(dir, '02-peers', peers);
       console.error(`        ${peers.peers.length} peer(s) kept, ${peers.rejected.length} rejected`);
@@ -227,12 +252,12 @@ async function report(argv: string[]): Promise<void> {
   const gate03 = checkStage('03-peer-evidence');
   if (!gate03.ok) {
     stageNotes.push(`stage 03 skipped: ${gate03.missing.join(', ')} missing`);
-    console.error(`[03/05] peer evidence — SKIPPED (${gate03.missing.join(', ')} missing)`);
+    console.error(`[03/06] peer evidence — SKIPPED (${gate03.missing.join(', ')} missing)`);
   } else if (!peers || peers.peers.length === 0) {
     stageNotes.push('stage 03 skipped: no peers to research');
-    console.error('[03/05] peer evidence — SKIPPED (no peers)');
+    console.error('[03/06] peer evidence — SKIPPED (no peers)');
   } else {
-    console.error('[03/05] peer evidence — Perplexity, citation-resolved, plus peer sites');
+    console.error('[03/06] peer evidence — Perplexity, citation-resolved, plus peer sites');
     try {
       evidence = await runPeerEvidenceStage(cache, ledger, domain, peers.peers, now, {
         maxPeers: args.peers ?? 6,
@@ -266,9 +291,9 @@ async function report(argv: string[]): Promise<void> {
   const gate04 = checkStage('04-demand');
   if (!gate04.ok) {
     stageNotes.push(`stage 04 skipped: ${gate04.missing.join(', ')} missing`);
-    console.error(`[04/05] demand — SKIPPED (${gate04.missing.join(', ')} missing)`);
+    console.error(`[04/06] demand — SKIPPED (${gate04.missing.join(', ')} missing)`);
   } else {
-    console.error('[04/05] demand — DataForSEO Labs, pull date stamped inline');
+    console.error('[04/06] demand — DataForSEO Labs, pull date stamped inline');
     try {
       demand = await runDemandStage(cache, ledger, domain, subject.categoryQuery.query, now, {
         // Body text from the crawl, so a seed term has to be attested on the
@@ -292,17 +317,64 @@ async function report(argv: string[]): Promise<void> {
   }
   mark('04 demand');
 
-  /* claims + stage 05 — deterministic, no network. */
-  console.error('[05/05] claims and assembly — deterministic, no model');
+  /* claims — deterministic, no network, no model. */
+  console.error('[05/06] claims — deterministic, no model');
   const input = { subject, peers, evidence, demand };
   const claims = buildClaims(input);
   const { renderable, rejected } = partitionClaims(claims);
   const coverage = scoreCoverage(coverageFrom(input, renderable));
+  const company = args.company?.trim() || subject.pages.find((p) => p.category === 'home')?.title || domain;
+  mark('05 claims');
+
+  /* stage 06 — the analyst. Without this the document is a list of sourced
+     facts, which is what the first live report was and why it read as a dump. */
+  let synthesis: SynthesisArtifact | null = null;
+  if (args.noSynthesis) {
+    stageNotes.push('stage 06 skipped: --no-synthesis');
+    console.error('[06/06] analysis — SKIPPED (--no-synthesis)');
+  } else if (missingCredentials(['ANTHROPIC_API_KEY']).length > 0) {
+    stageNotes.push('stage 06 skipped: ANTHROPIC_API_KEY missing');
+    console.error('[06/06] analysis — SKIPPED (ANTHROPIC_API_KEY missing)');
+  } else {
+    console.error('[06/06] analysis — every figure checked against the claims it cites');
+    try {
+      synthesis = await runSynthesisStage(
+        cache,
+        ledger,
+        { company, claims: renderable, subject, peers, evidence, trigger: args.trigger },
+        now
+      );
+      await writeArtifact(dir, '06-synthesis', synthesis);
+      const s = synthesis.synthesis;
+      console.error(
+        `        ${s.strengths.length} strength(s), ${s.weaknesses.length} exposure(s), ` +
+          `${s.considerations.length} consideration(s) — ${synthesis.model}`
+      );
+      for (const note of synthesis.notes) console.error(`        - ${note}`);
+      for (const p of synthesis.problems) console.error(`        REJECTED ${p.field}: ${p.detail}`);
+    } catch (error) {
+      stageNotes.push(`stage 06 failed: ${(error as Error).message.slice(0, 200)}`);
+      console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
+    }
+  }
 
   const { markdown } = assembleReport({
     meta: { runId, domain, startedAt: now, trigger: args.trigger },
     claims,
     coverage,
+  });
+
+  /* The deliverable a lead actually opens. */
+  const html = renderReportHtml({
+    meta: { runId, domain, startedAt: now, trigger: args.trigger },
+    claims,
+    coverage,
+    subject,
+    peers,
+    companyName: company,
+    bookingUrl: process.env.PUBLIC_CAL_LINK || undefined,
+    synthesis: synthesis?.synthesis ?? null,
+    synthesisModel: synthesis?.model,
   });
 
   await writeArtifact(dir, 'claims', claims);
@@ -317,6 +389,7 @@ async function report(argv: string[]): Promise<void> {
     entries: ledger.entries,
   });
   await writeFile(join(dir, 'report.md'), markdown);
+  await writeFile(join(dir, 'report.html'), html);
 
   if (!args.quiet) console.log(markdown);
 
@@ -331,14 +404,14 @@ async function report(argv: string[]): Promise<void> {
       `peersWithDatedAiEvidence=${coverage.peersWithDatedAiEvidence} ` +
       `observedClaims=${coverage.observedClaims} comparativeClaims=${coverage.comparativeClaims}`
   );
-  mark('05 claims + assembly');
+  mark('06 analysis + render');
   console.error('\nTime per stage:');
   for (const t of timings) {
     console.error(`  ${t.stage.padEnd(22)} ${(t.ms / 1000).toFixed(1)}s`);
   }
   console.error(`  ${'TOTAL'.padEnd(22)} ${((Date.now() - runStart) / 1000).toFixed(1)}s`);
   console.error(`\n${ledger.format()}`);
-  console.error(`\nwrote ${join(dir, 'report.md')}`);
+  console.error(`\nwrote ${join(dir, 'report.html')}  (and report.md)`);
 }
 
 const [command, ...rest] = process.argv.slice(2);

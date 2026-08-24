@@ -1,0 +1,324 @@
+---
+/* ---------------------------------------------------------------------------
+   /exposure — the AI Exposure Report offer.
+
+   TOP OF THE LADDER, and a different promise from the Reality Check. This one
+   is free and automated: we read your public surface, find what comparable
+   companies have actually done, and write you an analysis. The Reality Check is
+   the hour that follows.
+
+   THE COPY SELLS THE ANALYSIS, NOT THE CITATIONS. The first version of this
+   report led with sourced facts and a reader's verdict was "a dump of press
+   release headlines — ChatGPT could have spit this out". They were right, and
+   the fix was upstream. So this page promises what the report now answers:
+   where you stand, where you're strong, where you're exposed, what companies
+   like you did and whether it worked, and what to weigh. Sourcing is the proof,
+   not the pitch.
+
+   The call is framed as course-correcting the report rather than as a sales
+   call, because that is what it honestly is: the document is built entirely
+   from outside, the boundary section lists what we could not see, and the
+   fastest way to fix that is an hour with the people who know.
+
+   Positioning: written to the recommended position in docs/01 — design-led AI
+   product studio with a care-operations wedge — and deliberately naming no
+   vertical, so landing Decision #1 does not invalidate the page.
+--------------------------------------------------------------------------- */
+import Base from '../layouts/Base.astro';
+import ExposureRequest from '../components/ExposureRequest.astro';
+
+const title = 'AI Exposure Report — SeeSaw Labs';
+const description =
+  'A free, sourced analysis of what AI is doing to your category and where it touches your operation. Every number carries a source or is left blank for you to fill in.';
+---
+
+<Base title={title} description={description}>
+  <!-- ------------------------------ hero ------------------------------ -->
+  <section class="hero">
+    <div class="wrap hero__in">
+      <p class="eyebrow">Free · Automated · Yours in about a day</p>
+      <h1 class="hero__h">
+        Your competitors are shipping AI.<br />
+        <span class="hero__em">Here's what they actually did.</span>
+      </h1>
+      <p class="lede hero__lede">
+        We read your public surface, find every dated AI move by companies in
+        and around your category, and write you an analysis: where you stand,
+        where you're exposed, and what to weigh. Every number carries a source
+        you can open — or we leave it blank rather than guess.
+      </p>
+      <div class="hero__cta">
+        <a href="#request" class="btn">Get my report</a>
+        <a href="#inside" class="btn btn--ghost">What's in it</a>
+      </div>
+      <p class="hero__fine">
+        No charge, no sequence, no newsletter. One email with one private link.
+      </p>
+    </div>
+  </section>
+
+  <!-- ---------------------------- the problem ------------------------- -->
+  <section class="section section--sunk">
+    <div class="wrap-narrow">
+      <p class="eyebrow">Why this exists</p>
+      <h2 class="h2">
+        Everyone can tell you AI matters. Almost nobody will tell you what it's
+        doing to <em>your</em> category.
+      </h2>
+      <p class="body">
+        The generic answer is free and worthless — you have already read it. The
+        specific answer takes real research: reading what your competitors have
+        actually announced and when, reading your own public surface the way a
+        buyer reads it, and being honest about the difference between the two.
+      </p>
+      <p class="body">
+        So we built the research as a repeatable pipeline and we give the report
+        away. It is the cheapest way for us to prove we do this well, and the
+        cheapest way for you to find out whether there is anything here worth a
+        conversation.
+      </p>
+    </div>
+  </section>
+
+  <!-- --------------------------- what's inside ------------------------ -->
+  <section class="section" id="inside">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">What's in it</p>
+        <h2 class="h2">Six questions, answered about you specifically</h2>
+        <p class="lede">
+          Not a list of links. An analysis, with the evidence attached
+          underneath so you can check every line of it.
+        </p>
+      </div>
+
+      <ol class="cards">
+        <li class="card">
+          <h3 class="card__h">Where you stand</h3>
+          <p class="card__b">
+            What we think is actually going on, in a paragraph, based on what
+            your own site says about how the work gets done.
+          </p>
+        </li>
+        <li class="card">
+          <h3 class="card__h">Where you're strong</h3>
+          <p class="card__b">
+            The things you already have that most of your category does not —
+            usually less obvious from inside than from outside.
+          </p>
+        </li>
+        <li class="card">
+          <h3 class="card__h">Where you're exposed</h3>
+          <p class="card__b">
+            What we would worry about in your position, and which of it a
+            competitor has already moved on.
+          </p>
+        </li>
+        <li class="card">
+          <h3 class="card__h">Which way your category is moving</h3>
+          <p class="card__b">
+            Direction, computed from real search-demand series rather than
+            asserted — including when the honest answer is "shrinking".
+          </p>
+        </li>
+        <li class="card">
+          <h3 class="card__h">What companies like you did</h3>
+          <p class="card__b">
+            Every AI or automation move we can tie to a dated, published source,
+            and whether the evidence says it worked. If the field is quiet, we
+            say that too — quiet is useful information.
+          </p>
+        </li>
+        <li class="card">
+          <h3 class="card__h">What to weigh</h3>
+          <p class="card__b">
+            The two or three decisions this actually puts in front of you, and
+            the one measurement that would settle each one.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ------------------------ the honesty promise --------------------- -->
+  <section class="section section--sunk">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">The rule we hold ourselves to</p>
+        <h2 class="h2">Every number is sourced, or it's a blank</h2>
+      </div>
+
+      <div class="two">
+        <div>
+          <p class="body">
+            A report full of invented percentages is easy to write and worse
+            than nothing. So a figure in your report either carries a source you
+            can click, or it appears as
+            a <span class="blankdemo">blank</span> with a note about what we
+            would need from you to fill it in.
+          </p>
+          <p class="body">
+            That is not an editorial habit — it is enforced in our code. A claim
+            whose numbers we cannot trace is dropped before you see it, and the
+            same check runs over the analysis, not just the evidence.
+          </p>
+        </div>
+        <div>
+          <p class="body">
+            The last section is the one we are proudest of: <strong>what we
+            couldn't determine</strong>. Case volumes, cycle times, which of
+            your manual steps is actually expensive rather than merely visible —
+            none of that is public, and we will not pretend otherwise.
+          </p>
+          <p class="body">
+            Those blanks are the whole reason to talk to us, and they are also
+            how you can tell this report was written about you rather than
+            generated at you.
+          </p>
+        </div>
+      </div>
+
+      <p class="samplelink">
+        <a href="/sample">See a real report end to end &rarr;</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ------------------------------ request ---------------------------- -->
+  <section class="section" id="request">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Four questions we can't research</p>
+        <h2 class="h2">Tell us where to look</h2>
+        <p class="lede">
+          We can read your website. We can't reliably tell what you'd say you do
+          in one line, or who you actually consider a competitor — and those two
+          answers are what make the difference between a sharp report and a
+          generic one.
+        </p>
+      </div>
+      <ExposureRequest />
+    </div>
+  </section>
+
+  <!-- ------------------------------- close ---------------------------- -->
+  <section class="section section--deep">
+    <div class="wrap-narrow close">
+      <p class="eyebrow">And then</p>
+      <h2 class="close__h">Tell us where we got it wrong.</h2>
+      <p class="lede">
+        The report is built entirely from the outside, so parts of it will be
+        wrong or out of date. An hour with us is where you correct it — and
+        where the blanks get filled in with numbers only you have. That hour is
+        the AI Reality Check, it's also free, and you keep the written
+        assessment either way.
+      </p>
+      <a href="/book" class="btn btn--on-deep">Book the hour</a>
+    </div>
+  </section>
+
+  <style>
+    /* Local to this page. Shared primitives live in styles/tokens.css. */
+    .hero { padding-block: clamp(var(--sp-16), 10vw, var(--sp-24)) var(--sp-16); }
+    .hero__in { display: grid; gap: var(--sp-5); }
+    .hero__h {
+      font-size: clamp(var(--text-4xl), 6.5vw, var(--text-6xl));
+      font-weight: 600;
+      line-height: var(--lh-tight);
+      letter-spacing: var(--ls-tight);
+      margin: 0;
+      text-wrap: balance;
+    }
+    .hero__em { color: var(--accent); }
+    .hero__lede { max-width: 56ch; margin: 0; }
+    .hero__cta { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); }
+    .hero__fine { font-size: var(--text-sm); color: var(--muted); margin: 0; }
+
+    .h2 {
+      font-size: clamp(var(--text-2xl), 3.6vw, var(--text-4xl));
+      font-weight: 600;
+      line-height: var(--lh-tight);
+      letter-spacing: var(--ls-tight);
+      margin: var(--sp-3) 0 var(--sp-5);
+      text-wrap: balance;
+    }
+    .h2 em { font-style: italic; color: var(--accent); }
+    .section--deep .h2 { color: #fff; }
+
+    .head { max-width: 60ch; margin-bottom: var(--sp-10); }
+    .head .lede { margin: 0; }
+
+    .body {
+      font-size: var(--text-lg);
+      line-height: var(--lh-relaxed);
+      color: var(--ink-2);
+      max-width: 60ch;
+      margin: 0 0 var(--sp-5);
+    }
+    .body:last-child { margin-bottom: 0; }
+
+    .cards {
+      list-style: none;
+      counter-reset: card;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: var(--sp-5);
+      grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    }
+    .card {
+      counter-increment: card;
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-6);
+    }
+    .card::before {
+      content: counter(card, decimal-leading-zero);
+      font-family: var(--font-accent);
+      font-size: var(--text-sm);
+      color: var(--accent);
+      letter-spacing: var(--ls-wide);
+    }
+    .card__h {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      letter-spacing: var(--ls-tight);
+      line-height: var(--lh-snug);
+      margin: var(--sp-2) 0 var(--sp-3);
+    }
+    .card__b { font-size: var(--text-md); line-height: var(--lh-relaxed); color: var(--ink-2); margin: 0; }
+
+    .two { display: grid; gap: var(--sp-8); }
+    @media (min-width: 48rem) {
+      .two { grid-template-columns: 1fr 1fr; gap: var(--sp-10); }
+    }
+
+    /* Mirrors how a declared blank renders inside the report itself. */
+    .blankdemo {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      color: var(--accent-deep);
+      background: var(--accent-soft);
+      border-bottom: 2px solid var(--accent);
+      padding: 0.05rem 0.3rem;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      white-space: nowrap;
+    }
+
+    .samplelink { margin: var(--sp-10) 0 0; font-size: var(--text-lg); }
+    .samplelink a { color: var(--accent-deep); font-weight: 500; }
+
+    .close { display: grid; gap: var(--sp-5); justify-items: start; }
+    .close__h {
+      font-size: clamp(var(--text-3xl), 5vw, var(--text-5xl));
+      font-weight: 600;
+      line-height: var(--lh-tight);
+      letter-spacing: var(--ls-tight);
+      margin: 0;
+      color: #fff;
+      text-wrap: balance;
+    }
+  </style>
+</Base>

@@ -2,43 +2,36 @@
    POST /api/exposure-request
 
    Someone asks for an Exposure Report on their own company. This endpoint
-   records the request, tells a human, and answers honestly about timing. It
-   does NOT generate the report.
+   validates the intake, records it, tells a human, and answers honestly about
+   timing. It does not generate the report.
 
-   WHY NOT GENERATE IT HERE. The pipeline crawls a site, calls four paid APIs,
-   takes two to three minutes and costs about $0.12 a run. None of that belongs
-   in a request handler: the visitor would stare at a spinner past most
-   serverless timeouts, a retry would double-charge, and an unattended crawler
-   fired by an unvalidated form is a way to get our IP blocked by a company we
-   want to sell to.
+   WHY NOT GENERATE IT HERE. A measured run is about two minutes and calls five
+   paid APIs. None of that belongs in a request handler: the visitor would wait
+   past most serverless timeouts, a retry would double-charge, and an unattended
+   crawler fired by an unvalidated form is a way to get our IP blocked by a
+   company we want to sell to.
 
    The stronger reason is the review gate. tools/exposure/README.md commits to a
    human read before every send, dropped only after twenty consecutive reports
-   with zero fabricated figures. We are on run one. So a request lands in Slack,
-   an operator runs the pipeline and reads the output, and only then releases a
-   link. Automating this end to end is a deliberate later change — see
-   `scripts/release-report.mjs` for the step a human currently performs.
+   with zero fabricated figures. We are early in that count, and the last two
+   defects we found were exactly the kind a person catches and a pipeline does
+   not — a job advert quoted as a process, a disclaimer counted as evidence. So
+   a request lands in Slack with the exact command to fulfil it, an operator runs
+   it and reads the output, and only then is a link released.
 
    Mirrors the shape of ./reality-check.ts on purpose: same JSON helper, same
    log-before-anything-else rule, same env-guarded integrations that no-op
    loudly rather than failing a submission.
+
+   Validation lives in ../../lib/exposure-intake and is shared with the form, so
+   the message a visitor sees and the rule we enforce cannot drift.
 --------------------------------------------------------------------------- */
 
 import type { APIRoute } from 'astro';
 
-export const prerender = false;
+import { validate, normalise, fulfilCommand, type Intake } from '../../lib/exposure-intake';
 
-interface Payload {
-  name?: string;
-  email?: string;
-  company?: string;
-  website?: string;
-  /** Free text: what's driving this right now. Feeds the report's opening. */
-  trigger?: string;
-  /** Whether they also want a call, chosen on the same form. */
-  wantsCall?: boolean;
-  attribution?: Record<string, string>;
-}
+export const prerender = false;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -46,8 +39,8 @@ const json = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json' },
   });
 
-/* Same best-effort double-click guard as the qualifier: serverless instances
-   are short-lived, so real idempotency has to live in the CRM. */
+/* Best-effort double-click guard, as in the qualifier: serverless instances are
+   short-lived, so real idempotency has to live in the CRM. */
 const recent = new Map<string, number>();
 const DEDUPE_MS = 20_000;
 
@@ -59,26 +52,10 @@ function isDuplicate(key: string): boolean {
   return false;
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-/** Bare registrable-looking host, or nothing. Rejects paths and junk early. */
-export function normaliseSite(raw: string): string | null {
-  const t = raw
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/[/?#].*$/, '');
-  if (!t || t.length > 253) return null;
-  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(t)) return null;
-  if (!/\.[a-z]{2,}$/.test(t)) return null;
-  return t;
-}
-
 /**
- * Free-mail domains. Not a rejection — a plumber with a Gmail address is still
- * a person — but the report is about a *company*, so a free-mail request
- * whose website we cannot corroborate goes to a human rather than the queue.
+ * Free-mail domains. Not a rejection — a founder with a Gmail address is still
+ * a founder — but the report is about a *company*, so a free-mail request whose
+ * website we cannot corroborate is flagged for a human before we crawl anything.
  */
 const FREE_MAIL = new Set([
   'gmail.com', 'googlemail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
@@ -89,57 +66,75 @@ const FREE_MAIL = new Set([
 export function needsHumanFirst(email: string, site: string): boolean {
   const domain = email.split('@')[1] ?? '';
   if (!FREE_MAIL.has(domain)) return false;
-  // A free-mail address that at least matches the site's brand is plausible.
   const brand = site.split('.')[0] ?? '';
   return !(brand.length >= 4 && email.split('@')[0].includes(brand));
 }
 
+/**
+ * How a report gets produced, and therefore what the confirmation promises.
+ *
+ * `reviewed` is the default and the honest one today — a person runs the
+ * pipeline and reads the output before a link is released. `instant` is the same
+ * flow with the human step removed, and it is a deliberate switch rather than a
+ * drift: set EXPOSURE_DELIVERY=instant once the review gate is retired.
+ *
+ * A run is about two minutes end to end, so `instant` promises minutes and
+ * `reviewed` promises a business day. Only the confirmation copy changes.
+ */
+export type DeliveryMode = 'instant' | 'reviewed';
+
+export function deliveryMode(): DeliveryMode {
+  return import.meta.env.EXPOSURE_DELIVERY === 'instant' ? 'instant' : 'reviewed';
+}
+
 export const POST: APIRoute = async ({ request }) => {
-  let p: Payload;
+  let raw: Partial<Intake>;
   try {
-    p = (await request.json()) as Payload;
+    raw = (await request.json()) as Partial<Intake>;
   } catch {
     return json({ error: 'bad_json' }, 400);
   }
 
-  const email = (p.email ?? '').trim().toLowerCase();
-  const site = normaliseSite(p.website ?? '');
-
-  if (!p.name?.trim() || !email || !p.company?.trim()) {
-    return json({ error: 'missing_fields' }, 422);
+  const errors = validate(raw);
+  if (errors.length > 0) {
+    console.log('[exposure-request] rejected', JSON.stringify({ errors, email: raw.email }));
+    return json({ error: 'invalid', errors }, 422);
   }
-  if (!EMAIL.test(email)) return json({ error: 'bad_email' }, 422);
-  if (!site) return json({ error: 'bad_website' }, 422);
 
-  /* Log the raw request before any judgement, so a bug in the routing below
-     never loses a lead. */
-  console.log('[exposure-request] submission', JSON.stringify({ ...p, email, site }));
+  const intake = normalise(raw as Intake);
+
+  /* Log before any judgement, so a bug in the routing below never loses a lead. */
+  console.log('[exposure-request] submission', JSON.stringify(intake));
 
   const record = {
     contact: {
-      name: p.name.trim(),
-      email,
-      company: p.company.trim(),
-      website: `https://${site}`,
-      domain: site,
+      name: intake.name,
+      email: intake.email,
+      company: intake.company,
+      website: intake.website,
+      domain: intake.domain,
     },
     intake: {
-      trigger: p.trigger?.trim() || null,
-      wants_call: Boolean(p.wantsCall),
-      email_domain: email.split('@')[1] ?? '',
-      free_mail_mismatch: needsHumanFirst(email, site),
+      one_liner: intake.oneLiner,
+      competitors: intake.competitors,
+      competitor_domains: intake.competitorDomains,
+      trigger: intake.trigger ?? null,
+      wants_call: Boolean(intake.wantsCall),
+      email_domain: intake.email.split('@')[1] ?? '',
+      free_mail_mismatch: needsHumanFirst(intake.email, intake.domain),
     },
-    attribution: p.attribution ?? {},
+    attribution: intake.attribution ?? {},
     requested_at: new Date().toISOString(),
   };
 
-  const duplicate = isDuplicate(`${email}|${site}`);
+  const duplicate = isDuplicate(`${intake.email}|${intake.domain}`);
+  const mode = deliveryMode();
 
   if (!duplicate) {
     /* Fan out without blocking. A Slack outage must never stop the visitor
        seeing their confirmation — the request is already logged above. */
     void Promise.allSettled([
-      alertOperator(record),
+      alertOperator(record, intake),
       pushToCrm(record),
       acknowledge(record),
     ]).then((rs) =>
@@ -152,9 +147,12 @@ export const POST: APIRoute = async ({ request }) => {
   return json({
     ok: true,
     duplicate,
-    /* Honest, and deliberately not a promise of minutes. The gate is a person. */
-    eta: 'one business day',
-    bookingUrl: p.wantsCall ? bookingUrl() : undefined,
+    mode,
+    eta: mode === 'instant' ? 'two minutes' : 'one business day',
+    /* Returned to everyone, not only those who ticked the box: a run is long
+       enough that the wait may as well be spent booking the hour that fixes
+       the report. */
+    bookingUrl: bookingUrl(),
   });
 };
 
@@ -167,27 +165,34 @@ function bookingUrl(): string | undefined {
 
 /**
  * The human gate. This message IS the queue until there is a real one, so it
- * carries the exact command an operator runs — a Slack alert that needs you to
- * go and look something up is an alert that gets ignored.
+ * carries the exact command to fulfil the request — built by `fulfilCommand`
+ * from the same intake spec the form collects, so a field we ask for and a
+ * field the pipeline receives cannot diverge. An alert that needs you to go and
+ * look something up is an alert that gets ignored.
  */
-async function alertOperator(record: {
-  contact: { name: string; email: string; company: string; domain: string };
-  intake: { trigger: string | null; wants_call: boolean; free_mail_mismatch: boolean };
-}): Promise<void> {
+async function alertOperator(
+  record: {
+    contact: { name: string; email: string; company: string; domain: string };
+    intake: { trigger: string | null; wants_call: boolean; free_mail_mismatch: boolean };
+  },
+  intake: ReturnType<typeof normalise>
+): Promise<void> {
   const hook = import.meta.env.SLACK_WEBHOOK;
-  const { contact, intake } = record;
+  const { contact, intake: meta } = record;
   const lines = [
     `*Exposure Report requested* — ${contact.company} (${contact.domain})`,
-    `${contact.name} · ${contact.email}${intake.wants_call ? ' · also asked for a call' : ''}`,
-    intake.trigger ? `> ${intake.trigger}` : null,
-    intake.free_mail_mismatch
+    `${contact.name} · ${contact.email}${meta.wants_call ? ' · also asked for a call' : ''}`,
+    `> ${intake.oneLiner}`,
+    meta.trigger ? `Driving it: ${meta.trigger}` : null,
+    intake.competitors.length ? `Named competitors: ${intake.competitors.join(', ')}` : null,
+    meta.free_mail_mismatch
       ? ':warning: free-mail address that does not match the site — confirm the company before crawling'
       : null,
     '',
-    'To fulfil:',
+    'To fulfil — about two minutes, then read it before releasing:',
     '```',
-    `cd tools/exposure && npm run report -- ${contact.domain}`,
-    '# read it. then, from sites/reality-check:',
+    `cd tools/exposure && ${fulfilCommand(intake)}`,
+    '# then, from sites/reality-check:',
     `node scripts/release-report.mjs --domain ${contact.domain} --email ${contact.email}`,
     '```',
     'Reports below the coverage threshold route to a call instead of a send.',

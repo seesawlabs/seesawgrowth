@@ -56,7 +56,7 @@ import {
 } from '../lib/domain.ts';
 import type { Confidence } from '../lib/claim.ts';
 
-export type Generator = 'category-search' | 'find-similar';
+export type Generator = 'category-search' | 'find-similar' | 'named-by-subject';
 
 export interface PeerCandidate {
   domain: string;
@@ -110,6 +110,21 @@ export interface PeerOptions {
   numResults?: number;
   /** ccTLDs acceptable for this subject. Defaults to US/Canada. */
   allowedCcTlds?: string[];
+  /**
+   * Competitors the subject named on the intake form, as bare domains.
+   *
+   * This is the highest-value thing a visitor can tell us. Stage 02 is
+   * make-or-break and its generators are heuristics: Exa's category search
+   * works well when the site's own self-description is good, and five of seven
+   * live targets had a self-description that was marketing copy. An operator
+   * who names two competitors fixes in one field what no amount of query
+   * tuning reliably fixes.
+   *
+   * Named peers still go through every filter — a wrong domain, an aggregator
+   * page or the subject's own site is rejected the same as any candidate. What
+   * they skip is *discovery*, not *validation*.
+   */
+  namedPeers?: string[];
 }
 
 /**
@@ -216,13 +231,23 @@ export function filterCandidates(
   // by construction: it demonstrably retrieves same-entity pages, so a
   // candidate only it proposed has survived the filters but proved nothing.
   const peers = [...kept.values()].map((peer) => {
+    /* A peer the subject named outranks anything a generator proposed: they
+       know their market and we are guessing at it. */
+    if (peer.generators.includes('named-by-subject')) {
+      return { ...peer, confidence: 'high' as Confidence };
+    }
     const both = peer.generators.length > 1;
     const category = peer.generators.includes('category-search');
     return { ...peer, confidence: (both ? 'high' : category ? 'medium' : 'low') as Confidence };
   });
 
   const rank: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
-  peers.sort((a, b) => rank[a.confidence] - rank[b.confidence] || a.domain.localeCompare(b.domain));
+  peers.sort((a, b) => {
+    // Named peers first, always — the keep cap must never drop one.
+    const an = a.generators.includes('named-by-subject') ? 0 : 1;
+    const bn = b.generators.includes('named-by-subject') ? 0 : 1;
+    return an - bn || rank[a.confidence] - rank[b.confidence] || a.domain.localeCompare(b.domain);
+  });
 
   const keepMax = opts.keepMax ?? 8;
   for (const extra of peers.slice(keepMax)) {
@@ -267,10 +292,25 @@ export async function runPeersStage(
     );
   }
 
+  /* Named peers are seeded as candidates before the generators, so dedupe
+     merges a generator's later hit into the named entry rather than the other
+     way round, and the named provenance survives. */
+  const named = (opts.namedPeers ?? [])
+    .map((d) => registrableDomain(d.trim().replace(/^https?:\/\//, '').replace(/[/?#].*$/, '')))
+    .filter(Boolean)
+    .filter((d, i, all) => all.indexOf(d) === i);
+
   const raw = [
+    ...named.map((domain) => ({
+      result: { id: domain, url: `https://${domain}`, title: domain } as ExaResult,
+      generator: 'named-by-subject' as Generator,
+    })),
     ...(search.results ?? []).map((result) => ({ result, generator: 'category-search' as Generator })),
     ...(similar.results ?? []).map((result) => ({ result, generator: 'find-similar' as Generator })),
   ];
+  if (named.length > 0) {
+    notes.push(`${named.length} peer(s) named on the intake form, seeded ahead of the generators`);
+  }
 
   const { peers, rejected } = filterCandidates(raw, subjectDomain, subjectName, {
     ...opts,
@@ -302,6 +342,7 @@ export async function runPeersStage(
     discoveredAt: now,
     categoryQuery,
     generators: [
+      { name: 'named-by-subject', returned: named.length, scoresAreRankRamp: false },
       { name: 'category-search', returned: (search.results ?? []).length, scoresAreRankRamp: searchRamp },
       { name: 'find-similar', returned: similarReturned, scoresAreRankRamp: similarRamp },
     ],
