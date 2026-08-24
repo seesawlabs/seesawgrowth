@@ -30,6 +30,47 @@ export const CREDENTIALS = [
 
 export type CredentialName = (typeof CREDENTIALS)[number];
 
+/**
+ * Alternative environment-variable names, tried in order after the canonical
+ * one.
+ *
+ * `ANTHROPIC_API_KEY` does not survive to this process on the Claude Code
+ * environment. It has been set there and confirmed absent on four consecutive
+ * fresh sessions, while a second variable carrying the identical value under a
+ * different name arrives intact — so something between the environment and the
+ * process is filtering on the name itself, not on the value. `.env` files, the
+ * dotenv loader above and every other credential are unaffected.
+ *
+ * Probed 2026-08-24: ANTHROPIC_API_KEY absent, EXPOSURE_ANTHROPIC_KEY present
+ * at 108 chars.
+ *
+ * This is a workaround for someone else's bug, so it stays visible rather than
+ * tidy: `credentialStatus()` reports which name actually carried the value, so
+ * the day the canonical name starts working again is the day the report says so
+ * and this entry can be deleted.
+ */
+export const CREDENTIAL_ALIASES: Record<string, readonly string[]> = {
+  ANTHROPIC_API_KEY: ['EXPOSURE_ANTHROPIC_KEY'],
+};
+
+/** Every name that can supply a credential, canonical first. */
+export function credentialNames(name: string): string[] {
+  return [name, ...(CREDENTIAL_ALIASES[name] ?? [])];
+}
+
+/**
+ * First non-empty value across the canonical name and its aliases, together
+ * with the name that supplied it. Returns null rather than an empty string so
+ * callers cannot accidentally send a blank Authorization header.
+ */
+export function resolveCredential(name: string): { source: string; value: string } | null {
+  for (const candidate of credentialNames(name)) {
+    const value = (process.env[candidate] ?? '').trim();
+    if (value) return { source: candidate, value };
+  }
+  return null;
+}
+
 /** Which credentials each stage cannot run without. */
 export const STAGE_CREDENTIALS: Record<string, CredentialName[]> = {
   '01-subject': ['FIRECRAWL_API_KEY'],
@@ -73,12 +114,22 @@ export interface CredentialStatus {
   present: boolean;
   /** Length only. Enough to spot a truncated paste; reveals nothing usable. */
   length: number;
+  /**
+   * The environment variable the value actually came from. Differs from `name`
+   * when an alias supplied it; null when nothing did.
+   */
+  source: string | null;
 }
 
 export function credentialStatus(names: readonly string[] = CREDENTIALS): CredentialStatus[] {
   return names.map((name) => {
-    const value = process.env[name] ?? '';
-    return { name, present: value.trim().length > 0, length: value.trim().length };
+    const found = resolveCredential(name);
+    return {
+      name,
+      present: found !== null,
+      length: found?.value.length ?? 0,
+      source: found?.source ?? null,
+    };
   });
 }
 
@@ -90,9 +141,13 @@ export function missingCredentials(names: readonly string[]): string[] {
 
 /** Reads a credential, throwing rather than sending an empty Authorization header. */
 export function requireCredential(name: CredentialName | string): string {
-  const value = (process.env[name] ?? '').trim();
-  if (!value) throw new Error(`${name} is not set — see tools/exposure/.env.example`);
-  return value;
+  const found = resolveCredential(name);
+  if (!found) {
+    const tried = credentialNames(name);
+    const where = tried.length > 1 ? `${tried.join(' or ')} are` : `${name} is`;
+    throw new Error(`${where} not set — see tools/exposure/.env.example`);
+  }
+  return found.value;
 }
 
 /**
@@ -101,9 +156,11 @@ export function requireCredential(name: CredentialName | string): string {
  * default ceiling is a run that can surprise you on the invoice.
  */
 export function formatCredentialReport(names: readonly string[] = CREDENTIALS): string {
-  const rows = credentialStatus(names).map(
-    (s) => `  ${s.present ? 'set    ' : 'MISSING'}  ${s.name}${s.present ? ` (${s.length} chars)` : ''}`
-  );
+  const rows = credentialStatus(names).map((s) => {
+    if (!s.present) return `  MISSING  ${s.name}`;
+    const via = s.source && s.source !== s.name ? ` via ${s.source}` : '';
+    return `  set      ${s.name} (${s.length} chars${via})`;
+  });
   const budget = process.env.EXPOSURE_RUN_BUDGET_USD;
   rows.push(`  ${budget ? 'set    ' : 'default'}  EXPOSURE_RUN_BUDGET_USD${budget ? ` (${budget})` : ' (5)'}`);
   return rows.join('\n');
