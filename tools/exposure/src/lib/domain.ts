@@ -24,14 +24,6 @@ const MULTI_LABEL_SUFFIXES = [
   'org.au', 'gov.au', 'org.in', 'net.in', 'ac.in', 'gov.in', 'org.nz', 'net.nz',
 ];
 
-/** Country-code TLDs we treat as a geography signal. */
-const CC_TLDS = new Set([
-  'tz','in','pk','ng','ke','bd','lk','id','ph','vn','cn','tw','hk','tr','eg','za','br',
-  'mx','ar','ru','ua','pl','ro','gr','it','es','fr','de','nl','be','se','no','fi','dk',
-  'ch','at','cz','pt','ie','il','sa','ae','jp','kr','th','my','sg','au','nz','uk','ca',
-  'cl','pe','co','ve','ec','ma','dz','tn','gh','et','ug','zw','np','mm','kh','bg','hu',
-]);
-
 export function hostOf(url: string): string {
   try {
     return new URL(url).host.toLowerCase().replace(/^www\./, '');
@@ -63,12 +55,42 @@ export function tldOf(urlOrHost: string): string {
   return registrableDomain(urlOrHost).split('.').at(-1) ?? '';
 }
 
-/** True for a ccTLD outside the subject's geography — a cheap, hard signal. */
+/**
+ * TLDs that carry no geography: generic, sponsored, and the country codes that
+ * are sold and used as generics (`.io`, `.ai`, `.co`, `.me`).
+ *
+ * This list is the *allowlist*, and that inversion is deliberate. Deciding
+ * geography from a denylist of country codes means the filter is only as good
+ * as the list is complete, and it silently passes anything missing. The live
+ * hpsrx.com run kept `bluewater.ky` — Cayman Islands — as a peer for a US
+ * distributor, because `.ky` was one of the ~200 country codes not enumerated.
+ * There are far fewer generic TLDs than country codes, they change slowly, and
+ * a new one being wrongly rejected is a visible, logged rejection rather than
+ * a foreign company quietly presented as a competitor.
+ */
+const GENERIC_TLDS = new Set([
+  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro',
+  'io', 'ai', 'co', 'me', 'app', 'dev', 'tech', 'cloud', 'digital', 'online',
+  'site', 'store', 'shop', 'xyz', 'live', 'life', 'world', 'group', 'company',
+  'health', 'healthcare', 'care', 'clinic', 'dental', 'doctor', 'hospital',
+  'pharmacy', 'med', 'surgery', 'services', 'solutions', 'systems', 'supply',
+  'global', 'today', 'news', 'media', 'agency', 'partners', 'center', 'network',
+]);
+
+/**
+ * True when the host's TLD places it outside the subject's market — a cheap,
+ * hard signal. A US regional distributor's peers are not in Tanzania.
+ */
 export function isForeignCcTld(urlOrHost: string, allowed: readonly string[] = ['us', 'ca']): boolean {
   const domain = registrableDomain(urlOrHost);
+  if (!domain) return false;
   const suffix = MULTI_LABEL_SUFFIXES.find((s) => domain.endsWith(`.${s}`));
   const tld = (suffix ? suffix.split('.').at(-1) : domain.split('.').at(-1)) ?? '';
-  return CC_TLDS.has(tld) && !allowed.includes(tld);
+  if (!tld) return false;
+  if (allowed.includes(tld)) return false;
+  if (GENERIC_TLDS.has(tld)) return false;
+  // Anything left is a country code, listed or not — that is the point.
+  return true;
 }
 
 /* -- aggregators and directories ---------------------------------------- */
@@ -92,6 +114,12 @@ export const AGGREGATOR_HOSTS = [
   'glassdoor.com', 'indeed.com', 'ziprecruiter.com', 'yelp.com', 'bbb.org',
   'trustpilot.com', 'g2.com', 'capterra.com', 'clutch.co', 'thomasnet.com',
   'mapquest.com', 'yellowpages.com', 'chamberofcommerce.com',
+  // link-in-bio hosts. A linktr.ee page passed every other filter on the live
+  // hpsrx.com run and was kept as a peer: it carried a real company's name and
+  // real category vocabulary, because it is that company's own link page. It
+  // is still not a company website.
+  'linktr.ee', 'linktree.com', 'beacons.ai', 'bio.link', 'carrd.co', 'about.me',
+  'campsite.bio', 'solo.to', 'lnk.bio', 'msha.ke', 'linkin.bio', 'tap.bio',
   // reference, SEO shadow hosts, marketplaces
   'wikipedia.org', 'similarweb.com', 'semrush.com', 'getstat.site', 'siteworthtraffic.com',
   'medium.com', 'substack.com', 'amazon.com', 'ebay.com', 'alibaba.com', 'indiamart.com',
@@ -129,6 +157,28 @@ const CATEGORY_STOPWORDS = new Set([
   'solutions','solution','provider','providers','leading','offer','offers','offering','across',
   'range','broad','different','more','than','over','also','other','including','include','based',
   'customers','clients','industry','industries','quality','best','new','one','can','will','us',
+  // Marketing adjectives and abstract nouns. These are what a homepage hook is
+  // made of, and on the live traditionshealth.com run they became the seed
+  // terms for the demand pull: the report measured US search demand for
+  // "compassionate", "fast support" and "clear answers", found that "clear
+  // answers" was up 832%, and sourced it properly. Every figure was real and
+  // none of them was about hospice care.
+  'compassionate','caring','trusted','dedicated','experienced','professional',
+  'reliable','affordable','friendly','expert','premier','proven','passionate',
+  'comprehensive','innovative','advanced','personalized','personalised','custom',
+  'exceptional','outstanding','superior','committed','focused','driven',
+  'answers','support','help','team','today','tomorrow','future','way','ways',
+  'choice','choices','option','options','need','needs','goal','goals','value',
+  'values','mission','vision','promise','difference','journey','story','peace',
+  'mind','life','lives','people','person','family','families','community',
+  'communities','fast','clear','easy','simple','right','great','good','better',
+  // Verbs and ownership/scale words. As seed terms these measure demand for
+  // grammar: "provide pharmaceuticals" and "locally owned" were both pulled.
+  'provide','provides','providing','offer','offers','offering','choose','deliver',
+  'delivers','serve','serves','serving','specializing','specialising','specialize',
+  'specialise','bringing','helping','ensure','ensuring','create','creating',
+  'locally','nationally','owned','operated','independent','independently',
+  'privately','small','large','trusted','established','licensed','certified',
 ]);
 
 export function categoryTerms(description: string): string[] {

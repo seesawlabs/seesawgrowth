@@ -40,16 +40,23 @@ export const DEFAULT_BUDGET_USD = 5;
 export const DEFAULT_FIRECRAWL_USD_PER_CREDIT = 0.00333;
 
 export class BudgetExceeded extends Error {
-  constructor(
-    readonly spent: number,
-    readonly ceiling: number,
-    readonly attempted: string
-  ) {
+  // Written as explicit fields rather than constructor parameter properties:
+  // the project runs TypeScript through node's strip-only mode, which rejects
+  // parameter properties outright. This class could not be imported at all
+  // until that was fixed.
+  readonly spent: number;
+  readonly ceiling: number;
+  readonly attempted: string;
+
+  constructor(spent: number, ceiling: number, attempted: string) {
     super(
       `run budget exceeded: $${spent.toFixed(4)} spent of $${ceiling.toFixed(2)} ceiling, ` +
         `refusing "${attempted}". Raise EXPOSURE_RUN_BUDGET_USD or narrow the run.`
     );
     this.name = 'BudgetExceeded';
+    this.spent = spent;
+    this.ceiling = ceiling;
+    this.attempted = attempted;
   }
 }
 

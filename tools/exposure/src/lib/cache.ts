@@ -28,9 +28,43 @@ export interface CacheOptions {
   refresh?: boolean;
 }
 
+/**
+ * Deterministic JSON with object keys sorted at every depth.
+ *
+ * This replaces `JSON.stringify(request, Object.keys(request).sort())`, which
+ * looked like a canonicaliser and was in fact a cache-poisoning bug. An array
+ * second argument to `JSON.stringify` is a *recursive property allowlist*, not
+ * a key order: only the top-level names survive, so every nested property was
+ * silently deleted before hashing.
+ *
+ * Observed live on 2026-08-24, first run of stage 03. A Perplexity request is
+ * `{model, max_tokens, messages}`, and `messages` holds the entire prompt, so
+ * the serialised form was:
+ *
+ *   {"max_tokens":700,"messages":[{}],"model":"sonar"}
+ *
+ * The prompt vanished. All six peers hashed to one key, five were served the
+ * first peer's answer from cache, and the run reported "5 from cache" as if
+ * that were a saving. DataForSEO collided the same way — `{endpoint, payload}`
+ * serialised to `{"endpoint":"...","payload":{}}`, so three peers' ranked
+ * keywords were one peer's rows.
+ *
+ * Nothing about it looked broken from the outside, which is the point: this is
+ * the exact class of failure — one company's evidence attributed to another —
+ * that stage 03's citation gates exist to prevent, arriving through the cache
+ * instead of through a model. Cache keys must be total over the request.
+ */
+export function canonicalize(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalize(v)}`).join(',')}}`;
+}
+
 export function cacheKey(service: string, request: unknown): string {
-  const canonical = JSON.stringify(request, Object.keys(request as object).sort());
-  const hash = createHash('sha256').update(`${service}:${canonical}`).digest('hex');
+  const hash = createHash('sha256').update(`${service}:${canonicalize(request)}`).digest('hex');
   return `${service}-${hash.slice(0, 16)}`;
 }
 

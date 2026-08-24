@@ -169,3 +169,903 @@ test('insufficient coverage is stated in the report itself', () => {
   const { markdown } = assembleReport({ meta: FIXTURE_META, claims: FIXTURE_CLAIMS, coverage });
   assert.ok(markdown.includes('INSUFFICIENT'));
 });
+
+/* ===========================================================================
+   Stage 02 — the off-category filter.
+
+   This filter shipped untested. The live /search probe that informed stage 02
+   did not request `contents`, so no candidate carried `text`, so the branch
+   guarded by `result.text` never executed in a real run and the rejection
+   never fired once. Both generators now request `contents.text` and a live
+   re-probe on 2026-08-24 confirmed 1200 chars of text on every result at no
+   extra cost (costDollars.total 0.007, search only).
+
+   These tests pin the behaviour that probe unblocked.
+   ======================================================================== */
+
+import { categoryOverlap, categoryTerms, isNearMissDomain } from './lib/domain.ts';
+import { filterCandidates } from './stages/02-peers.ts';
+import type { ExaResult } from './lib/clients/exa.ts';
+
+const exa = (url: string, title: string, text?: string): ExaResult => ({ id: url, url, title, text });
+
+const PHARMA_CATEGORY =
+  'regional distributor supplying pharmaceutical, medical and surgical products to clinics, ' +
+  'physician offices and surgery centers';
+
+test('off-category filter fires: an IVF clinic is rejected from a pharma distributor search', () => {
+  const candidates = [
+    {
+      result: exa(
+        'https://exampleclinic.com',
+        'Example Fertility Clinic',
+        'Our fertility centre offers IVF, egg freezing, embryo transfer and donor programmes ' +
+          'with dedicated nursing staff and counselling for intended parents.'
+      ),
+      generator: 'category-search' as const,
+    },
+  ];
+
+  const { peers, rejected } = filterCandidates(candidates, 'hpsrx.com', 'HPSRx Enterprises', {
+    categoryQuery: PHARMA_CATEGORY,
+  });
+
+  assert.equal(peers.length, 0, 'the clinic should not survive');
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason, 'off_category');
+});
+
+test('off-category filter keeps a genuine peer in the same category', () => {
+  const candidates = [
+    {
+      result: exa(
+        'https://premiumrx.com',
+        'Premium Rx National',
+        'A national distributor of pharmaceutical and surgical products serving physician ' +
+          'offices, clinics and surgery centers across the United States.'
+      ),
+      generator: 'category-search' as const,
+    },
+  ];
+
+  const { peers, rejected } = filterCandidates(candidates, 'hpsrx.com', 'HPSRx Enterprises', {
+    categoryQuery: PHARMA_CATEGORY,
+  });
+
+  assert.equal(peers.length, 1, `expected a survivor, rejected: ${JSON.stringify(rejected)}`);
+  assert.equal(peers[0].domain, 'premiumrx.com');
+  assert.equal(peers[0].confidence, 'medium', 'category-search alone is medium');
+});
+
+test('off-category filter cannot fire without candidate text — the original gap', () => {
+  // Exactly the situation the first probe left behind: no contents requested,
+  // so no text, so the filter is a no-op and an off-category candidate sails
+  // through. This test documents why requesting contents.text is mandatory.
+  const noText = [{ result: exa('https://exampleclinic.com', 'Example Fertility Clinic'), generator: 'category-search' as const }];
+  const { peers } = filterCandidates(noText, 'hpsrx.com', 'HPSRx Enterprises', {
+    categoryQuery: PHARMA_CATEGORY,
+  });
+  assert.equal(peers.length, 1, 'without text the filter has nothing to test against');
+});
+
+test('category terms drop generic business vocabulary', () => {
+  const terms = categoryTerms('A leading company offering a broad range of quality products and services');
+  assert.deepEqual(terms, [], 'that sentence says nothing category-specific');
+});
+
+test('category overlap stems trailing plurals', () => {
+  const terms = categoryTerms('supplying clinics and surgery centers');
+  const overlap = categoryOverlap('our clinic serves one surgery center', terms);
+  assert.ok(overlap.includes('clinic'), `got ${overlap.join(',')}`);
+  assert.ok(overlap.includes('center'), `got ${overlap.join(',')}`);
+});
+
+test('a page naming the subject is rejected before the category check', () => {
+  const candidates = [
+    {
+      result: exa(
+        'https://randomblog.example.com/post',
+        'Distributor roundup',
+        'HPSRx Enterprises is a pharmaceutical distributor serving clinics and surgery centers.'
+      ),
+      generator: 'find-similar' as const,
+    },
+  ];
+  const { peers, rejected } = filterCandidates(candidates, 'hpsrx.com', 'HPSRx Enterprises', {
+    categoryQuery: PHARMA_CATEGORY,
+  });
+  assert.equal(peers.length, 0);
+  assert.equal(rejected[0].reason, 'names_the_subject');
+});
+
+/* ===========================================================================
+   Stage 03 — the two live citation-integrity failures.
+   ======================================================================== */
+
+import { evidenceFromAnswer, mentionsAi, yearsIn, attributesToPeer, describesAction } from './stages/03-peer-evidence.ts';
+
+test('near-miss domain gate: medi-gyn.com cited for medgyn.com is dropped', () => {
+  // The exact failure observed live on 2026-08-24.
+  assert.ok(isNearMissDomain('https://medi-gyn.com/news', 'medgyn.com'), 'near miss must be detected');
+
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: 'MedGyn deployed an AI-assisted inventory automation system in 2025.[1]',
+        citations: [
+          { marker: 1, url: 'https://medi-gyn.com/press/ai-inventory', date: '2025-06-01', title: 'AI inventory' },
+        ],
+      },
+    ],
+    { name: 'MedGyn Products', domain: 'medgyn.com' }
+  );
+
+  assert.equal(items.length, 0, 'a near-miss citation must never produce a claim');
+  assert.equal(dropped.length, 1);
+  assert.equal(dropped[0].reason, 'near_miss_domain');
+});
+
+test('year mismatch gate: prose saying 2026 for a source dated 2025-07-31 is dropped', () => {
+  // The second failure observed live: the summary asserted a year the source
+  // it cited did not support.
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: 'In 2026 the company rolled out an AI-driven order automation platform.[1]',
+        citations: [
+          { marker: 1, url: 'https://premiumrx.com/news/automation', date: '2025-07-31', title: 'Automation' },
+        ],
+      },
+    ],
+    { name: 'Premium Rx National', domain: 'premiumrx.com' }
+  );
+
+  assert.equal(items.length, 0, 'a contradicted year must not be repaired into a claim');
+  assert.equal(dropped.length, 1);
+  assert.equal(dropped[0].reason, 'year_mismatch');
+  assert.match(dropped[0].detail, /2025/);
+});
+
+test("observedAt comes from the source's date, never from the prose", () => {
+  const { items } = evidenceFromAnswer(
+    [
+      {
+        text: 'Premium Rx launched an automation platform in 2025.[1]',
+        citations: [
+          { marker: 1, url: 'https://premiumrx.com/news/automation', date: '2025-07-31', title: 'Automation' },
+        ],
+      },
+    ],
+    { name: 'Premium Rx National', domain: 'premiumrx.com' }
+  );
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0].observedAt, '2025-07-31', 'the source date wins');
+});
+
+test('a statement with no dated source is dropped', () => {
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: 'The company uses AI to automate order processing across its warehouses.[1]',
+        citations: [{ marker: 1, url: 'https://premiumrx.com/tech', title: 'Tech' }],
+      },
+    ],
+    { name: 'Premium Rx National', domain: 'premiumrx.com' }
+  );
+  assert.equal(items.length, 0);
+  assert.equal(dropped[0].reason, 'no_source_date');
+});
+
+test('a statement with no AI content is dropped even when perfectly sourced', () => {
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: 'Premium Rx opened a new distribution centre in Ohio.[1]',
+        citations: [{ marker: 1, url: 'https://premiumrx.com/news/ohio', date: '2026-01-15' }],
+      },
+    ],
+    { name: 'Premium Rx National', domain: 'premiumrx.com' }
+  );
+  assert.equal(items.length, 0);
+  assert.equal(dropped[0].reason, 'not_about_ai');
+});
+
+test('a statement that names no peer is dropped as unattributable', () => {
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: 'The distribution sector is broadly adopting AI for demand forecasting.[1]',
+        citations: [{ marker: 1, url: 'https://tradejournal.example.com/ai', date: '2026-02-01' }],
+      },
+    ],
+    { name: 'Premium Rx National', domain: 'premiumrx.com' }
+  );
+  assert.equal(items.length, 0);
+  assert.equal(dropped[0].reason, 'does_not_name_peer');
+});
+
+test('a source on the peer own domain attributes the claim without naming them', () => {
+  assert.ok(
+    attributesToPeer('The platform now automates order intake.', [
+      { marker: 1, url: 'https://premiumrx.com/news/x', date: '2026-01-01' },
+    ], { name: 'Premium Rx National', domain: 'premiumrx.com' })
+  );
+});
+
+test('mentionsAi does not fire on substrings', () => {
+  assert.ok(!mentionsAi('We supply pharmaceuticals to clinics in Cairo.'), '"Cairo" must not read as AI');
+  assert.ok(!mentionsAi('Our retail chain serves the region.'), '"chain" must not read as AI');
+  assert.ok(mentionsAi('We deployed an AI assistant.'));
+  assert.ok(mentionsAi('Warehouse automation went live.'));
+});
+
+test('yearsIn finds asserted years', () => {
+  assert.deepEqual(yearsIn('Launched in 2025, expanded in 2026.'), [2025, 2026]);
+  assert.deepEqual(yearsIn('A 6-step process taking 45 minutes.'), []);
+});
+
+/* ===========================================================================
+   Claim construction — the bracket hazard, and the never-invent-a-metric rule
+   holding end to end.
+   ======================================================================== */
+
+import { sanitize, buildClaims, coverageFrom, observedClaimsFrom, demandClaimsFrom } from './stages/claims.ts';
+import type { SubjectArtifact } from './stages/01-subject.ts';
+
+test('sanitize neutralises brackets so a quotation cannot fake a declared blank', () => {
+  const quoted = sanitize('Orders ship in 2 business days [sic] after approval [1].');
+  assert.ok(!quoted.includes('['), 'no brackets may survive');
+  assert.ok(quoted.includes('(sic)'));
+});
+
+const THIN_SUBJECT: SubjectArtifact = {
+  domain: 'example.com',
+  effectiveDomain: 'example.com',
+  crawledAt: '2026-08-24T00:00:00.000Z',
+  robots: { host: 'example.com', published: false, disallowRules: 0 },
+  mapped: 3,
+  selected: [],
+  pages: [
+    {
+      url: 'https://example.com/',
+      category: 'home',
+      wordCount: 120,
+      manualWorkQuotes: [{ phrase: 'call us', quote: 'Call us to place an order [1] within 2 business days.' }],
+      systemsNamed: [],
+      aiTermsFound: [],
+      roleLines: [],
+    },
+  ],
+  pagesCrawled: 1,
+  categoryQuery: { query: 'x', derivedFrom: 'test' },
+  categoriesMissing: ['help', 'careers', 'integrations', 'pricing'],
+  notes: [],
+};
+
+test('every built claim passes the validator — brackets in scraped text included', () => {
+  const claims = buildClaims({ subject: THIN_SUBJECT, peers: null, evidence: null, demand: null });
+  assert.ok(claims.length > 0, 'a thin site still yields something');
+  const { renderable, rejected } = partitionClaims(claims);
+  assert.deepEqual(
+    rejected.map((r) => `${r.claim.id}: ${r.problems.map((p) => p.code).join(',')}`),
+    [],
+    'construction must never emit an invalid claim'
+  );
+  assert.equal(renderable.length, claims.length);
+});
+
+test('a hypothesis claim declares every blank it uses and uses every blank it declares', () => {
+  const claims = buildClaims({ subject: THIN_SUBJECT, peers: null, evidence: null, demand: null });
+  const hypotheses = claims.filter((c) => c.tier === 'hypothesis');
+  assert.ok(hypotheses.length > 0);
+  for (const h of hypotheses) {
+    assert.deepEqual(validateClaim(h), [], `${h.id} must be clean`);
+    assert.ok((h.missingVariables ?? []).length >= 2, 'the arithmetic needs its inputs named');
+  }
+});
+
+test('a thin subject fails the coverage threshold', () => {
+  const claims = buildClaims({ subject: THIN_SUBJECT, peers: null, evidence: null, demand: null });
+  const { renderable } = partitionClaims(claims);
+  const coverage = scoreCoverage(
+    coverageFrom({ subject: THIN_SUBJECT, peers: null, evidence: null, demand: null }, renderable)
+  );
+  assert.equal(coverage.sufficient, false, 'one page and no peers must not be sendable');
+  assert.ok(coverage.shortfalls.some((s) => s.startsWith('peersIdentified')));
+});
+
+/* ===========================================================================
+   Stage 04 — trend arithmetic and seed terms.
+   ======================================================================== */
+
+import { seedTermsFrom, summarizeTrend, type DemandArtifact } from './stages/04-demand.ts';
+
+/** 24 months, newest first, at a fixed volume then a different one. */
+const series = (recent: number, prior: number) => [
+  ...Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: 12 - i, search_volume: recent })),
+  ...Array.from({ length: 12 }, (_, i) => ({ year: 2025, month: 12 - i, search_volume: prior })),
+];
+
+test('trend direction is computed from the series, not asserted', () => {
+  assert.equal(summarizeTrend(series(450, 900))?.direction, 'falling');
+  assert.equal(summarizeTrend(series(900, 450))?.direction, 'rising');
+  assert.equal(summarizeTrend(series(500, 500))?.direction, 'flat');
+});
+
+test('a small move counts as flat rather than a trend', () => {
+  // Google volume buckets are coarse; calling a 5% move a trend invents a finding.
+  assert.equal(summarizeTrend(series(105, 100))?.direction, 'flat');
+});
+
+test('a short series yields no trend at all rather than a guess', () => {
+  assert.equal(summarizeTrend(series(450, 900).slice(0, 10)), null);
+  assert.equal(summarizeTrend([]), null);
+  assert.equal(summarizeTrend(undefined), null);
+});
+
+test('the falling trend seen live on "pharmacy automation" reproduces', () => {
+  const trend = summarizeTrend(series(445, 793));
+  assert.equal(trend?.direction, 'falling');
+  assert.equal(trend?.recentMean, 445);
+  assert.equal(trend?.priorMean, 793);
+});
+
+test('seed terms prefer bigrams over single words', () => {
+  const terms = seedTermsFrom('regional pharmaceutical distributor supplying surgical products to clinics');
+  assert.ok(terms.includes('pharmaceutical distributor'), `got ${terms.join(' | ')}`);
+  assert.ok(terms.indexOf('pharmaceutical distributor') < terms.findIndex((t) => !t.includes(' ')));
+});
+
+test('seed terms from an empty category description are empty, not invented', () => {
+  assert.deepEqual(seedTermsFrom('a leading company offering quality products'), []);
+});
+
+/* ===========================================================================
+   The cost ledger. Never executed before: lib/budget.ts used constructor
+   parameter properties, which node's strip-only TypeScript mode rejects, so
+   importing it threw ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX and no test could
+   reach it.
+   ======================================================================== */
+
+import { BudgetExceeded, Ledger } from './lib/budget.ts';
+
+test('the ledger separates reported spend from estimated spend', () => {
+  const ledger = new Ledger(5, 0.00333);
+  ledger.reported('exa', 'search', 0.007);
+  ledger.reported('dataforseo', 'keyword_overview', 0.01224);
+  ledger.fromCredits('scrape', 3);
+  ledger.free('firecrawl', 'scrape (cached)');
+
+  assert.equal(Math.round(ledger.spentReported * 100000) / 100000, 0.01924);
+  assert.equal(Math.round(ledger.spentEstimated * 100000) / 100000, 0.00999);
+  assert.ok(ledger.spent > ledger.spentReported, 'the estimate is included in the total');
+});
+
+test('the ledger aborts rather than exceeding the ceiling', () => {
+  const ledger = new Ledger(0.01);
+  ledger.reported('exa', 'search', 0.009);
+  assert.throws(() => ledger.assertHeadroom('another search', 0.03), BudgetExceeded);
+});
+
+test('a BudgetExceeded error reports what it refused', () => {
+  const error = new BudgetExceeded(4.99, 5, 'perplexity peer lookup');
+  assert.equal(error.spent, 4.99);
+  assert.equal(error.attempted, 'perplexity peer lookup');
+  assert.match(error.message, /refusing "perplexity peer lookup"/);
+});
+
+test('a service is labelled estimated if any of its entries were', () => {
+  const ledger = new Ledger(5);
+  ledger.fromCredits('scrape', 1);
+  const firecrawl = ledger.byService().find((s) => s.service === 'firecrawl');
+  assert.equal(firecrawl?.basis, 'estimated', 'Firecrawl reports credits, never dollars');
+});
+
+
+/* ===========================================================================
+   Cache keys must be total over the request.
+
+   Regression tests for the cache-poisoning bug found on the first live stage
+   03 run: `JSON.stringify(request, Object.keys(request).sort())` treats its
+   array argument as a recursive property allowlist, so every nested value was
+   deleted before hashing. Six different Perplexity prompts hashed to one key
+   and five peers were served the first peer's answer.
+   ======================================================================== */
+
+import { canonicalize } from './lib/cache.ts';
+
+test('two different Perplexity prompts do not share a cache key', () => {
+  const req = (content: string) => ({ model: 'sonar', max_tokens: 700, messages: [{ role: 'user', content }] });
+  assert.notEqual(
+    cacheKey('perplexity-chat', req('AI initiatives at AMSCO Medical')),
+    cacheKey('perplexity-chat', req('AI initiatives at MedGyn Products')),
+    'the prompt must reach the hash'
+  );
+});
+
+test('two different DataForSEO payloads do not share a cache key', () => {
+  const req = (target: string) => ({ endpoint: 'ranked_keywords/live', payload: { target, limit: 20 } });
+  assert.notEqual(
+    cacheKey('dataforseo', req('medgyn.com')),
+    cacheKey('dataforseo', req('msdonline.com')),
+    'the target must reach the hash'
+  );
+});
+
+test('canonicalize reaches every level of nesting', () => {
+  assert.match(canonicalize({ a: { b: { c: 'deep' } } }), /deep/);
+  assert.match(canonicalize({ messages: [{ role: 'user', content: 'hello' }] }), /hello/);
+});
+
+test('canonicalize is stable regardless of key insertion order', () => {
+  assert.equal(canonicalize({ x: 1, y: { b: 2, a: 3 } }), canonicalize({ y: { a: 3, b: 2 }, x: 1 }));
+  assert.equal(cacheKey('exa-search', { q: 'a', n: 1 }), cacheKey('exa-search', { n: 1, q: 'a' }));
+});
+
+test('canonicalize distinguishes array order, which is meaningful in a request', () => {
+  assert.notEqual(canonicalize({ keywords: ['a', 'b'] }), canonicalize({ keywords: ['b', 'a'] }));
+});
+
+/* ===========================================================================
+   Two stage 02 defects the first live hpsrx.com run exposed.
+   ======================================================================== */
+
+import { deriveCategoryQuery } from './stages/01-subject.ts';
+import { isAggregatorHost, isForeignCcTld } from './lib/domain.ts';
+
+const homePage = (description: string) => [
+  {
+    url: 'https://www.hpsrx.com',
+    category: 'home' as const,
+    description,
+    wordCount: 500,
+    manualWorkQuotes: [],
+    systemsNamed: [],
+    aiTermsFound: [],
+    roleLines: [],
+  },
+];
+
+test('the category query does not begin with an orphaned legal suffix', () => {
+  // The live run produced "Inc. is a small specialty distributor in women's
+  // health…" and sent that to Exa and to the demand pull as a category.
+  const { query } = deriveCategoryQuery(
+    homePage(
+      "HPSRx Enterprises, Inc. is a small specialty distributor in women's health. " +
+        'We provide pharmaceuticals, medical devices, and over-the-counter products.'
+    ),
+    'hpsrx.com'
+  );
+  assert.ok(query.startsWith('small specialty distributor'), `got "${query}"`);
+  assert.ok(!/^(inc|llc|ltd|corp)\b/i.test(query));
+});
+
+test('stacked legal suffixes and a copula are all peeled', () => {
+  const { query } = deriveCategoryQuery(
+    homePage('HPSRx Enterprises LLC is a distributor of surgical supplies to clinics nationwide.'),
+    'hpsrx.com'
+  );
+  assert.ok(query.startsWith('distributor of surgical supplies'), `got "${query}"`);
+});
+
+test('a link-in-bio page is not a company website', () => {
+  // linktr.ee survived every filter on the live run and was kept as a peer:
+  // it carried a real company name and real category vocabulary, because it
+  // was that company's own link page.
+  assert.ok(isAggregatorHost('https://linktr.ee/femmepharma'));
+  assert.ok(isAggregatorHost('https://beacons.ai/somebrand'));
+
+  const { peers, rejected } = filterCandidates(
+    [
+      {
+        result: exa(
+          'https://linktr.ee/femmepharma',
+          'FemmePharma Consumer Healthcare',
+          'FemmePharma provides pharmaceutical and medical products for women’s health, clinics and surgery centers.'
+        ),
+        generator: 'category-search' as const,
+      },
+    ],
+    'hpsrx.com',
+    'HPSRx Enterprises',
+    { categoryQuery: PHARMA_CATEGORY }
+  );
+  assert.equal(peers.length, 0);
+  assert.equal(rejected[0].reason, 'aggregator_host');
+});
+
+test('geography filter catches a country code nobody enumerated', () => {
+  // The live hpsrx.com run kept bluewater.ky — Cayman Islands — as a peer for
+  // a US distributor, because .ky was missing from the old ccTLD denylist.
+  assert.ok(isForeignCcTld('https://bluewater.ky'), '.ky is not a US market');
+  assert.ok(isForeignCcTld('salamapharma.co.tz'));
+  assert.ok(isForeignCcTld('rioclarense.com.br'));
+  assert.ok(isForeignCcTld('example.co.uk'));
+});
+
+test('geography filter passes generics and the allowed market', () => {
+  for (const d of ['hpsrx.com', 'medgyn.com', 'innovahealthsupplies.org', 'someco.io', 'clinic.ai', 'thing.ca', 'x.us']) {
+    assert.equal(isForeignCcTld(d), false, `${d} must not be called foreign`);
+  }
+});
+
+/* ===========================================================================
+   Four report-quality defects the first live hpsrx.com report exposed.
+   ======================================================================== */
+
+import { assertsAbsence } from './stages/03-peer-evidence.ts';
+import { looksLikeNavigation } from './stages/01-subject.ts';
+
+test('an absence of evidence never becomes a dated threat', () => {
+  // The live run rendered this under "Where AI is a threat to you", dated,
+  // with three real citations. It is Perplexity saying it found nothing.
+  const sentence =
+    'The company pages returned describe products, quality systems, supply chain, and ' +
+    'product development, but do not show dated published AI/ML/automation initiatives ' +
+    'for Mazza Healthcare itself.[1]';
+
+  assert.ok(assertsAbsence(sentence), 'absence language must be detected');
+
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: sentence,
+        citations: [
+          { marker: 1, url: 'https://www.mazzahealthcare.com/experience', date: '2016-01-01' },
+        ],
+      },
+    ],
+    { name: 'Mazza Healthcare', domain: 'mazzahealthcare.com' }
+  );
+
+  assert.equal(items.length, 0, 'a "nothing found" statement is not a competitor move');
+  assert.equal(dropped[0].reason, 'asserts_absence');
+});
+
+test('absence language is caught even though it mentions AI and cites real sources', () => {
+  for (const s of [
+    'I found nothing specific and citable about their AI initiatives.',
+    'There is no evidence of any AI deployment at the company.',
+    'The sources do not mention any machine learning programme.',
+    'We were unable to verify the automation rollout.',
+  ]) {
+    assert.ok(assertsAbsence(s), `should be absence: ${s}`);
+  }
+});
+
+test('a real AI move is not mistaken for absence language', () => {
+  for (const s of [
+    'MedGyn launched an AI-powered inventory system in March 2026.',
+    'The company deployed robotic process automation across its billing team.',
+    'Their automated dispensing platform went live in 2025.',
+  ]) {
+    assert.equal(assertsAbsence(s), null, `should pass: ${s}`);
+  }
+});
+
+test('a product menu is not quoted as a description of manual work', () => {
+  assert.ok(
+    looksLikeNavigation(
+      'Tenaculum Hooks Uterine Sounds Forceps Metal Curettes Biopsy Punches Dilators Speculums Scissors'
+    ),
+    'a run of Title Case nouns is a menu, not prose'
+  );
+  assert.ok(looksLikeNavigation('Home | About | Contact | Careers'));
+  assert.equal(
+    looksLikeNavigation('Please call us between 9am - 6pm to speak with a representative or email us.'),
+    false,
+    'real prose must survive'
+  );
+});
+
+test('repeated manual-work phrases are capped and deduplicated', () => {
+  // "call us" on four pages produced four near-identical bullets in the live run.
+  const page = (url: string, category: 'home' | 'pricing' | 'company', phrase: string) => ({
+    url,
+    category,
+    wordCount: 400,
+    manualWorkQuotes: [{ phrase, quote: `Please ${phrase} during business hours and we will help you with your order.` }],
+    systemsNamed: [],
+    aiTermsFound: [],
+    roleLines: [],
+  });
+
+  const subject: SubjectArtifact = {
+    ...THIN_SUBJECT,
+    pages: [
+      page('https://x.com/', 'home', 'call us'),
+      page('https://x.com/pay', 'pricing', 'call us'),
+      page('https://x.com/contact', 'company', 'call us'),
+    ],
+  };
+
+  const manual = observedClaimsFrom(subject).filter((c) => c.id.startsWith('obs-manual'));
+  assert.equal(manual.length, 1, 'the same phrase on three pages is one finding');
+});
+
+test('claim statements do not disagree with their own subject', () => {
+  // "Your help and support pages describes a step…" shipped in every report.
+  const claims = buildClaims({ subject: THIN_SUBJECT, peers: null, evidence: null, demand: null });
+  for (const c of claims) {
+    assert.ok(!/pages describes/.test(c.statement), `agreement error in ${c.id}`);
+    assert.ok(!/#/.test(c.statement), `markdown heading marker leaked into ${c.id}`);
+  }
+});
+
+/* ===========================================================================
+   The redirect that broke peer discovery on the live traditionshealth.com run.
+   ======================================================================== */
+
+import { dominantDomain, extractSignals, looksLikeScrapeNoise } from './stages/01-subject.ts';
+
+test('the effective domain is read back from the map response', () => {
+  // traditionshealth.com 301s to tct-cares.com; all 60 mapped URLs were on the
+  // new host, so isHome matched nothing and the homepage was never scraped.
+  const links = Array.from({ length: 60 }, (_, i) => ({ url: `https://www.tct-cares.com/page-${i}` }));
+  assert.equal(dominantDomain(links), 'tct-cares.com');
+  assert.equal(dominantDomain([]), '');
+});
+
+test('contact-page boilerplate is not accepted as a category description', () => {
+  const contactPage = [
+    {
+      url: 'https://www.tct-cares.com/contact',
+      category: 'company' as const,
+      description:
+        'Contact us. Our team is available 24 hours a day, 7 days a week to assist patients, ' +
+        'caregivers, and health care providers.',
+      wordCount: 200,
+      manualWorkQuotes: [],
+      systemsNamed: [],
+      aiTermsFound: [],
+      roleLines: [],
+    },
+  ];
+  const { query, derivedFrom } = deriveCategoryQuery(contactPage, 'tct-cares.com');
+  assert.ok(!/24 hours a day/.test(query), `contact boilerplate leaked: "${query}"`);
+  assert.match(derivedFrom, /fallback/, 'with nothing usable it must say so, not improvise');
+});
+
+test('a real self-description still wins over a contact page', () => {
+  const pages = [
+    {
+      url: 'https://www.tct-cares.com/',
+      category: 'home' as const,
+      description: 'Provider of home health, palliative and hospice care services across multiple states.',
+      wordCount: 500,
+      manualWorkQuotes: [],
+      systemsNamed: [],
+      aiTermsFound: [],
+      roleLines: [],
+    },
+    {
+      url: 'https://www.tct-cares.com/contact',
+      category: 'company' as const,
+      description: 'Contact us. Our team is available 24 hours a day, 7 days a week.',
+      wordCount: 200,
+      manualWorkQuotes: [],
+      systemsNamed: [],
+      aiTermsFound: [],
+      roleLines: [],
+    },
+  ];
+  const { query } = deriveCategoryQuery(pages, 'tct-cares.com');
+  assert.match(query, /home health, palliative and hospice/);
+});
+
+test('both the old and new brand are stripped after a redirect', () => {
+  const pages = [
+    {
+      url: 'https://www.tct-cares.com/',
+      category: 'home' as const,
+      description: 'Traditions Health, LLC is a provider of hospice and home health services to patients.',
+      wordCount: 500,
+      manualWorkQuotes: [],
+      systemsNamed: [],
+      aiTermsFound: [],
+      roleLines: [],
+    },
+  ];
+  const { query } = deriveCategoryQuery(pages, 'tct-cares.com', ['traditionshealth.com']);
+  assert.ok(!/traditions/i.test(query), `old brand leaked: "${query}"`);
+  assert.match(query, /provider of hospice and home health/);
+});
+
+test('a negative finding phrased as a noun denial is dropped', () => {
+  // The second shape of the same failure, from the second live hpsrx.com run.
+  // It was the one item holding that report's peer-evidence coverage above zero.
+  const sentence =
+    "The only MedGyn page mentioning AI was a 2025 women's health standards page that " +
+    'contains a generic AI disclaimer, not a company initiative.[1]';
+
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: sentence,
+        citations: [
+          { marker: 1, url: 'https://www.medgyn.com/womens-health-standards/', date: '2025-01-29' },
+        ],
+      },
+    ],
+    { name: 'MedGyn Products, Inc.', domain: 'medgyn.com' }
+  );
+
+  assert.equal(items.length, 0, 'a statement that the peer did nothing is not evidence');
+  assert.ok(['asserts_absence', 'no_action_verb'].includes(dropped[0].reason), dropped[0].reason);
+});
+
+test('an AI move needs a verb of doing', () => {
+  for (const s of [
+    'MedGyn launched an AI-powered inventory system in March 2026.',
+    'The company deployed robotic process automation across its billing team.',
+    'Their automated dispensing platform went live in 2025.',
+    'Premium Rx uses machine learning to forecast demand.',
+    'The distributor partnered with a vendor to automate order intake.',
+  ]) {
+    assert.ok(describesAction(s), `should read as a move: ${s}`);
+  }
+
+  for (const s of [
+    'The page mentioning AI was a standards document.',
+    'Their website contains a reference to automation.',
+    'The sources describe products and quality systems.',
+    'An AI disclaimer appears in the footer.',
+  ]) {
+    assert.equal(describesAction(s), false, `should not read as a move: ${s}`);
+  }
+});
+
+/* ===========================================================================
+   Stage 04 seed-term quality — the defect that produced real figures about
+   nothing on the live traditionshealth.com run.
+   ======================================================================== */
+
+test('marketing adjectives never become seed terms', () => {
+  // The live run measured US demand for "compassionate", "fast support" and
+  // "clear answers", and reported that "clear answers" was up 832%. Every
+  // figure was correctly sourced and dated. None was about hospice care.
+  const terms = seedTermsFrom(
+    'Get compassionate care, fast support, and clear answers from The Care Team, a trusted ' +
+      'provider for at-home hospice and palliative care services.',
+    8
+  );
+  for (const junk of ['compassionate', 'fast support', 'clear answers', 'care team', 'trusted']) {
+    assert.ok(!terms.includes(junk), `"${junk}" must not be a seed term; got ${terms.join(' | ')}`);
+  }
+  assert.ok(terms.includes('palliative care') || terms.includes('at-home hospice'), terms.join(' | '));
+});
+
+test('bigrams are not formed across punctuation', () => {
+  // "…pharmaceuticals, medical devices…" produced "pharmaceuticals medical".
+  const terms = seedTermsFrom(
+    "specialty distributor in women's health. We provide pharmaceuticals, medical devices, and " +
+      'over 90,000 items to clinics.',
+    8
+  );
+  assert.ok(!terms.includes('pharmaceuticals medical'), `crossed a comma: ${terms.join(' | ')}`);
+  assert.ok(!terms.some((t) => /^provide /.test(t)), `verb-led pair: ${terms.join(' | ')}`);
+  assert.ok(terms.includes('specialty distributor'), terms.join(' | '));
+});
+
+test('a malformed token never reaches a paid API call', () => {
+  const terms = seedTermsFrom("distributor in women's health and medical devices", 8);
+  for (const t of terms) {
+    assert.match(t, /^[a-z0-9][a-z0-9 -]*$/, `malformed seed term "${t}"`);
+  }
+});
+
+test('seed terms attested in the body text are preferred', () => {
+  const terms = seedTermsFrom(
+    'provider of hospice and palliative care and gourmet catering services',
+    8,
+    'hospice care hospice team palliative medicine hospice admissions palliative consult'
+  );
+  assert.ok(terms.includes('hospice'), terms.join(' | '));
+  assert.ok(!terms.includes('catering'), `unattested term survived: ${terms.join(' | ')}`);
+});
+
+test('role lines do not carry markdown links', () => {
+  // "(Talk to a Care Specialist)(https://www.tct-cares.com/request-care/)"
+  // rendered in the live report as a job title.
+  const markdown = [
+    '- [Talk to a Care Specialist](https://www.tct-cares.com/request-care/)',
+    '- Registered Nurse - Hospice',
+  ].join('\n');
+  const signals = extractSignals(
+    { url: 'https://x.com/careers', category: 'careers', weight: 9, matched: 'path:careers' },
+    markdown
+  );
+  for (const line of signals.roleLines) {
+    assert.ok(!/https?:\/\//.test(line), `URL leaked into a role line: ${line}`);
+    assert.ok(!/\]\(/.test(line), `markdown link leaked: ${line}`);
+  }
+});
+
+test('escaped markdown does not leak into a quoted claim', () => {
+  const signals = extractSignals(
+    { url: 'https://x.com/', category: 'home', weight: 100, matched: 'homepage' },
+    '\\\\ \\\\ **Request Care Today** \\\\ \\\\ Fill out a care request form or give us a call at 833-483-2273.'
+  );
+  for (const q of signals.manualWorkQuotes) {
+    assert.ok(!q.quote.includes('\\'), `backslash leaked: ${q.quote}`);
+    assert.ok(!q.quote.includes('**'), `emphasis leaked: ${q.quote}`);
+  }
+});
+
+test('an irrelevant long-tail ranking is not printed as a competitive signal', () => {
+  // The live runs printed Care Hospice ranking "bmi index chart for females"
+  // at position 86, and AMSCO ranking "djo global" at 49, as threats.
+  const demand: DemandArtifact = {
+    subjectDomain: 'x.com',
+    categoryQuery: 'provider of at-home hospice and palliative care services',
+    pulledAt: '2026-08-24T00:00:00.000Z',
+    account: { login: 'x', balanceUsd: 51 },
+    seedTerms: [],
+    terms: [],
+    peerRanked: [
+      { peerDomain: 'carehospice.com', keyword: 'bmi index chart for females', searchVolume: 90500, rank: 86, url: null },
+      { peerDomain: 'carehospice.com', keyword: 'hospice care near me', searchVolume: 8100, rank: 7, url: null },
+    ],
+    peerTotals: [{ peerDomain: 'carehospice.com', rankingKeywords: 524 }],
+    sources: [],
+    notes: [],
+  };
+
+  const claim = demandClaimsFrom(demand).find((c) => c.id.startsWith('dem-peer'))!;
+  assert.ok(!/bmi index/.test(claim.statement), `long-tail noise printed: ${claim.statement}`);
+  assert.match(claim.statement, /hospice care near me/);
+  assert.match(claim.statement, /524 US Google search terms/);
+  assert.deepEqual(validateClaim(claim), []);
+});
+
+test('a peer with no relevant top-20 term says so rather than reaching', () => {
+  const demand: DemandArtifact = {
+    subjectDomain: 'x.com',
+    categoryQuery: 'provider of at-home hospice and palliative care services',
+    pulledAt: '2026-08-24T00:00:00.000Z',
+    account: null,
+    seedTerms: [],
+    terms: [],
+    peerRanked: [
+      { peerDomain: 'p.com', keyword: 'bmi index chart for females', searchVolume: 90500, rank: 86, url: null },
+    ],
+    peerTotals: [{ peerDomain: 'p.com', rankingKeywords: 12 }],
+    sources: [],
+    notes: [],
+  };
+  const claim = demandClaimsFrom(demand).find((c) => c.id.startsWith('dem-peer'))!;
+  assert.match(claim.statement, /none of them in the top 20/);
+  assert.deepEqual(validateClaim(claim), []);
+});
+
+test('browser and scrape boilerplate is never quoted as the company own words', () => {
+  // The live meridianmedicalsupply.com report attributed an ad-blocker error
+  // page to the prospect as a description of their manual process.
+  assert.ok(
+    looksLikeScrapeNoise(
+      'ERR_BLOCKED_BY_CLIENT Reload This page has been blocked by an extension × Contact Us Please fill out this form'
+    )
+  );
+  assert.ok(looksLikeScrapeNoise('Skip to main content Contact Us We are Ready to Help'));
+  assert.equal(
+    looksLikeScrapeNoise('Please fill out our account application form to get an account started.'),
+    false,
+    'real prose must survive'
+  );
+
+  const signals = extractSignals(
+    { url: 'https://x.com/', category: 'home', weight: 100, matched: 'homepage' },
+    'ERR_BLOCKED_BY_CLIENT Reload This page has been blocked by an extension × Please fill out this form to contact us.'
+  );
+  assert.equal(signals.manualWorkQuotes.length, 0, 'the whole quote is scrape noise');
+});
+
+test('a generic single word is dropped when a bigram already contains it', () => {
+  // The live run measured "medical" (301,000 US searches) alongside
+  // "medical supply" — a true figure about the wrong question.
+  const terms = seedTermsFrom('locally owned medical supply company offering wholesale medical supply', 8);
+  assert.ok(terms.includes('medical supply'), terms.join(' | '));
+  assert.ok(!terms.includes('medical'), `redundant single survived: ${terms.join(' | ')}`);
+  assert.ok(!terms.includes('supply'), `redundant single survived: ${terms.join(' | ')}`);
+});
