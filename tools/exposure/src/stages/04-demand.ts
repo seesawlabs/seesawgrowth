@@ -138,7 +138,6 @@ export interface DemandArtifact {
  */
 export function seedTermsFrom(categoryQuery: string, limit = 8, corpus = ''): string[] {
   const content = categoryTerms(categoryQuery);
-  const contentSet = new Set(content);
 
   // Bigrams are formed *within* a clause, never across punctuation. Splitting
   // the whole description on whitespace pairs the last word of one phrase with
@@ -147,10 +146,22 @@ export function seedTermsFrom(categoryQuery: string, limit = 8, corpus = ''): st
   const clauses = categoryQuery
     .toLowerCase()
     .split(/[,.;:!?()]+|\s(?:and|or|with|for|to|in|of|as|from)\s/)
-    .map((c) => c.replace(/[^a-z0-9\s-]/g, ' ').trim())
+    // Apostrophes are removed rather than spaced: splitting "women's" into
+    // "women" and "s" lost the "women's health" bigram on the live run and
+    // left a bare "health" — 450,000 searches a month at difficulty 100, and
+    // not a category anyone sells into.
+    .map((c) => c.replace(/['\u2019]/g, '').replace(/[^a-z0-9\s-]/g, ' ').trim())
     .filter(Boolean);
 
-  const stem = (w: string) => (w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w);
+  const stem = (w: string) => {
+    const bare = w.replace(/['\u2019]/g, '');
+    return bare.endsWith('s') && !bare.endsWith('ss') ? bare.slice(0, -1) : bare;
+  };
+
+  // Both sides of the bigram test are normalised the same way. They were not:
+  // categoryTerms keeps the apostrophe in "women's" while the clause words had
+  // it stripped, so the two never matched and the pair was never formed.
+  const contentSet = new Set(content.map(stem));
 
   const bigrams: string[] = [];
   for (const clause of clauses) {
@@ -207,8 +218,13 @@ export function seedTermsFrom(categoryQuery: string, limit = 8, corpus = ''): st
     return count;
   };
 
+  // Attestation *orders* the list rather than truncating it. PageSignals keeps
+  // no body text, so the corpus available here is titles, descriptions and
+  // quotes — thin enough that a hard filter left a single term on two of the
+  // three live targets. Attested terms first, then the rest to fill the quota.
   const attested = candidates.filter((t) => occurrences(t) >= 2);
-  return (attested.length > 0 ? attested : candidates).slice(0, limit);
+  const rest = candidates.filter((t) => !attested.includes(t));
+  return [...attested, ...rest].slice(0, limit);
 }
 
 export interface DemandOptions {
@@ -217,6 +233,12 @@ export interface DemandOptions {
    * seed terms come from a meta description alone — see `seedTermsFrom`.
    */
   corpus?: string;
+  /**
+   * Trimmed category text for seed terms. Defaults to `categoryQuery`, which
+   * is deliberately longer: peer discovery needs the incidental detail that
+   * ruins a keyword list. See `deriveCategoryQuery`.
+   */
+  seedText?: string;
   /** Peers whose ranking terms we pull. Each costs one request. */
   peerDomains?: string[];
   maxPeerLookups?: number;
@@ -257,7 +279,11 @@ export async function runDemandStage(
     };
   }
 
-  const seedTerms = seedTermsFrom(categoryQuery, opts.seedLimit ?? 8, opts.corpus ?? '');
+  const seedTerms = seedTermsFrom(
+    opts.seedText ?? categoryQuery,
+    opts.seedLimit ?? 8,
+    opts.corpus ?? ''
+  );
   const terms: DemandTerm[] = [];
 
   if (seedTerms.length === 0) {

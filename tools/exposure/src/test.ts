@@ -438,7 +438,7 @@ const THIN_SUBJECT: SubjectArtifact = {
     },
   ],
   pagesCrawled: 1,
-  categoryQuery: { query: 'x', derivedFrom: 'test' },
+  categoryQuery: { query: 'x', seedText: 'x', derivedFrom: 'test' },
   categoriesMissing: ['help', 'careers', 'integrations', 'pricing'],
   notes: [],
 };
@@ -961,8 +961,10 @@ test('seed terms attested in the body text are preferred', () => {
     8,
     'hospice care hospice team palliative medicine hospice admissions palliative consult'
   );
-  assert.ok(terms.includes('hospice'), terms.join(' | '));
-  assert.ok(!terms.includes('catering'), `unattested term survived: ${terms.join(' | ')}`);
+  // Attestation orders rather than truncates: the attested term must come
+  // first, but an unattested one may still fill the quota.
+  assert.equal(terms[0], 'hospice', terms.join(' | '));
+  assert.ok(terms.indexOf('hospice') < terms.indexOf('gourmet catering'), terms.join(' | '));
 });
 
 test('role lines do not carry markdown links', () => {
@@ -1068,4 +1070,40 @@ test('a generic single word is dropped when a bigram already contains it', () =>
   assert.ok(terms.includes('medical supply'), terms.join(' | '));
   assert.ok(!terms.includes('medical'), `redundant single survived: ${terms.join(' | ')}`);
   assert.ok(!terms.includes('supply'), `redundant single survived: ${terms.join(' | ')}`);
+});
+
+test('seed text stops after two sentences while the peer query keeps all of it', () => {
+  // The live hpsrx.com meta description closed with "…excellent customer
+  // service on a first name basis. We are licensed to ship to all 50 states."
+  // Stage 04 measured US search demand for "first name" and "excellent customer".
+  const { query, seedText } = deriveCategoryQuery(
+    homePage(
+      "HPSRx Enterprises, Inc. is a small specialty distributor in women's health. " +
+        'We provide pharmaceuticals, medical devices, and over 90,000 items of medical supplies. ' +
+        'Our dedicated team provides excellent customer service on a first name basis. ' +
+        'We are licensed to ship to all 50 states.'
+    ),
+    'hpsrx.com'
+  );
+  assert.ok(!/first name/.test(seedText), `filler survived into seed text: "${seedText}"`);
+  assert.ok(!/50 states/.test(seedText));
+  assert.match(seedText, /specialty distributor/);
+  assert.match(seedText, /medical devices/);
+
+  // The peer-discovery query keeps the whole description on purpose: trimming
+  // it returned a Zimbabwean distributor in place of AMSCO Medical.
+  assert.match(query, /first name basis/, 'peer discovery needs the incidental detail');
+
+  const terms = seedTermsFrom(seedText, 8);
+  for (const junk of ['first name', 'name basis', 'excellent customer']) {
+    assert.ok(!terms.includes(junk), `"${junk}" reached a paid API call: ${terms.join(' | ')}`);
+  }
+});
+
+test("an apostrophe does not split a category phrase into a generic single", () => {
+  // "women's health" formed no bigram, leaving a bare "health": 450,000 US
+  // searches a month at difficulty 100, and not a category anyone sells into.
+  const terms = seedTermsFrom("small specialty distributor in women's health and medical devices", 8);
+  assert.ok(terms.includes('womens health'), terms.join(' | '));
+  assert.ok(!terms.includes('health'), `generic single survived: ${terms.join(' | ')}`);
 });

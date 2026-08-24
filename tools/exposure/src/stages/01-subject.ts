@@ -443,7 +443,7 @@ export function deriveCategoryQuery(
   signals: PageSignals[],
   domain: string,
   alsoStrip: string[] = []
-): { query: string; derivedFrom: string } {
+): { query: string; seedText: string; derivedFrom: string } {
   /**
    * Contact-page boilerplate is not a category description.
    *
@@ -514,14 +514,47 @@ export function deriveCategoryQuery(
     return out.trim();
   };
 
+  /**
+   * TWO OUTPUTS, because the two consumers want opposite things — and this was
+   * learned the hard way, by breaking one to fix the other.
+   *
+   * `seedText` is the first sentence or two. The live hpsrx.com description ran
+   * 300 characters and closed with "Our dedicated team provides excellent
+   * customer service on a first name basis. We are licensed to ship to all 50
+   * states", and stage 04 duly paid to measure US search demand for "first
+   * name" and "excellent customer". Trimming to the opening sentences fixed
+   * that.
+   *
+   * `query` is the whole description, because trimming it made peer discovery
+   * measurably worse. The short version of the HPSRx description returned a
+   * Zimbabwean healthcare distributor and a Middle Eastern pharmaceutical
+   * trader in place of AMSCO Medical, MedGyn and Mazza Healthcare: the
+   * incidental detail Exa needs to locate a *specific* niche is exactly the
+   * filler that ruins a keyword list.
+   *
+   * So the trailing sentences are noise to one stage and signal to the other,
+   * and the fix is to stop making them share one string.
+   */
+  const firstSentences = (text: string, count = 2) => {
+    const parts = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+    const kept = parts.slice(0, count).join(' ').trim();
+    return (kept.length >= 40 ? kept : text).slice(0, 300);
+  };
+
   for (const candidate of candidates) {
     const stripped = strip(candidate.text);
     if (stripped.length >= 40) {
-      return { query: stripped.slice(0, 300), derivedFrom: candidate.from };
+      return {
+        query: stripped.slice(0, 300),
+        seedText: firstSentences(stripped),
+        derivedFrom: candidate.from,
+      };
     }
   }
+  const fallback = `companies similar to ${domain}`;
   return {
-    query: `companies similar to ${domain}`,
+    query: fallback,
+    seedText: fallback,
     derivedFrom: 'fallback — no usable self-description found on the site',
   };
 }
@@ -538,7 +571,7 @@ export interface SubjectArtifact {
   selected: SelectedPage[];
   pages: PageSignals[];
   pagesCrawled: number;
-  categoryQuery: { query: string; derivedFrom: string };
+  categoryQuery: { query: string; seedText: string; derivedFrom: string };
   /** Categories the site simply doesn't have. The thin-target diagnosis. */
   categoriesMissing: PageCategory[];
   notes: string[];
@@ -618,7 +651,11 @@ export async function runSubjectStage(
     effectiveDomain === requested ? [] : [requested]
   );
   const categoryQuery = opts.categoryQueryOverride
-    ? { query: opts.categoryQueryOverride, derivedFrom: 'supplied on the command line' }
+    ? {
+        query: opts.categoryQueryOverride,
+        seedText: opts.categoryQueryOverride,
+        derivedFrom: 'supplied on the command line',
+      }
     : derived;
   if (opts.categoryQueryOverride) {
     notes.push(`category query overridden; derived query would have been: "${derived.query}"`);

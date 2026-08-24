@@ -255,6 +255,9 @@ async function report(argv: string[]): Promise<void> {
       demand = await runDemandStage(cache, ledger, domain, subject.categoryQuery.query, now, {
         // Body text from the crawl, so a seed term has to be attested on the
         // site rather than just present in a meta description.
+        // The trimmed opening sentences, not the full description: see
+        // deriveCategoryQuery for why those are two different strings.
+        seedText: subject.categoryQuery.seedText,
         corpus: subject.pages
           .flatMap((p) => [p.title ?? '', p.description ?? '', ...p.manualWorkQuotes.map((q) => q.quote), ...p.roleLines])
           .join(' '),
