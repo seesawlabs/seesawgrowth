@@ -1,0 +1,154 @@
+---
+/* ---------------------------------------------------------------------------
+   GET /r/<token> — the lead's magic link.
+
+   Server-rendered, always. The report is a whole document produced by
+   tools/exposure, so this route verifies the token and then *streams that
+   document as the response* rather than wrapping it in the site chrome. A
+   report inside a marketing-site header would read as a web page about them;
+   on its own it reads as a document written for them.
+
+   Failure is deliberately gentle and identical for every cause: an expired
+   link, a truncated copy-paste and a forged token all produce the same page
+   with the same status. Distinguishing them would tell someone probing tokens
+   which guesses were closer, and would tell an honest reader nothing they can
+   act on — either way the answer is "ask us for a fresh link".
+--------------------------------------------------------------------------- */
+import { verifyToken, daysUntil } from '../../lib/magic-link';
+import { loadReport, storeConfig, describeStore } from '../../lib/report-store';
+
+export const prerender = false;
+
+const token = Astro.params.token ?? '';
+const secret = (import.meta.env.EXPOSURE_LINK_SECRET ?? '') as string;
+
+const verdict = verifyToken(token, secret);
+let html: string | null = null;
+let expiresInDays = 0;
+
+if (verdict.ok) {
+  const cfg = storeConfig(import.meta.env as unknown as Record<string, unknown>);
+  const stored = await loadReport(verdict.payload.r, cfg);
+  if (stored) {
+    html = stored.html;
+    expiresInDays = daysUntil(verdict.payload.x);
+  } else {
+    console.warn(
+      `[exposure] valid token, no report: id=${verdict.payload.r} store=${describeStore(cfg)}`
+    );
+  }
+} else if (verdict.reason === 'no_secret') {
+  console.error('[exposure] EXPOSURE_LINK_SECRET is not set — every link will fail');
+}
+
+/* Serve the report as the whole response. `expiresInDays` is injected as a
+   quiet line at the end so the reader knows the link is not permanent. */
+if (html) {
+  const notice =
+    `<div style="max-width:53rem;margin:0 auto;padding:0 min(6vw,32px) 3rem;` +
+    `font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.7rem;color:#787878">` +
+    `This private link expires in ${expiresInDays} day${expiresInDays === 1 ? '' : 's'}. ` +
+    `Forward it to a colleague if that helps — ask us for a fresh one if it lapses.</div>`;
+  const body = html.includes('</main>') ? html.replace('</main>', `</main>${notice}`) : html + notice;
+  return new Response(body, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      // Private to this reader, and never indexed.
+      'cache-control': 'private, no-store',
+      'x-robots-tag': 'noindex, nofollow',
+      'referrer-policy': 'no-referrer',
+    },
+  });
+}
+
+Astro.response.status = verdict.ok ? 404 : 410;
+Astro.response.headers.set('x-robots-tag', 'noindex, nofollow');
+Astro.response.headers.set('cache-control', 'private, no-store');
+
+const title = verdict.ok ? 'This report isn’t ready yet' : 'This link has expired';
+const message = verdict.ok
+  ? 'The link is valid, but the report behind it isn’t available. That’s on us, not you — reply to the email that brought you here and we’ll sort it out.'
+  : 'Exposure Report links expire after a month, and they break if they get truncated in an email client. Either way, ask us and we’ll send a fresh one.';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} — SeeSaw Labs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Pixelify+Sans&display=swap"
+    />
+  </head>
+  <body>
+    <main class="pane">
+      <p class="brand"><span class="dotmark" aria-hidden="true"></span>SeeSaw&nbsp;Labs</p>
+      <h1>{title}</h1>
+      <p>{message}</p>
+      <a class="cta" href="mailto:calvin@seesawlabs.com?subject=Exposure%20Report%20link">Ask for a fresh link</a>
+    </main>
+
+    <style>
+      :root {
+        --bg: #00032e;
+        --ink: #ffffff;
+        --ink-2: #9ad4fd;
+        --accent: #1061df;
+        --accent-hover: #337df0;
+        --dot: #0b2a52;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        background-image: radial-gradient(1.5px at center, var(--dot) 0%, var(--dot) 99%, transparent 100%);
+        background-size: 40px 40px;
+        color: var(--ink);
+        font-family: 'Outfit', ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        padding: 2rem min(6vw, 32px);
+      }
+      .pane { max-width: 34rem; }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin: 0 0 3rem;
+        font-family: 'Pixelify Sans', ui-monospace, monospace;
+        font-size: 1rem;
+        letter-spacing: 0.025em;
+      }
+      .dotmark { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-hover); }
+      h1 {
+        font-size: clamp(1.75rem, 5vw, 2.5rem);
+        font-weight: 600;
+        letter-spacing: -0.025em;
+        line-height: 1.12;
+        margin: 0 0 1rem;
+        text-wrap: balance;
+      }
+      p { font-size: 1.05rem; line-height: 1.6; color: var(--ink-2); margin: 0 0 2rem; max-width: 46ch; }
+      .cta {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 500;
+        padding: 0.7rem 1.3rem;
+        border-radius: 0.375rem;
+        transition: background 0.2s cubic-bezier(0, 0, 0.2, 1);
+      }
+      .cta:hover { background: var(--accent-hover); }
+      .cta:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 3px; }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+  </body>
+</html>

@@ -59,6 +59,22 @@ export interface Claim {
   /** When the underlying event happened (not when we fetched it). */
   observedAt?: string;
   confidence?: Confidence;
+  /**
+   * True for evidence that should inform the analysis but never appear in the
+   * client's document.
+   *
+   * Careers pages are the case this exists for. The README calls them a
+   * highest-yield research target, and it is right — what a company is hiring
+   * for tells you which workflow is under strain. But a job advert is not a
+   * description of a process, and quoting a client's own vacancies back at them
+   * reads as filler. The first live report rendered "Perform all tasks in a
+   * safe manner that is consistent with corporate policies" as a manual step
+   * worth costing. It is boilerplate from a pharmacy-tech listing.
+   *
+   * So these claims stay in claims.json and go to stage 06 as signal; the
+   * renderer drops them.
+   */
+  internalOnly?: boolean;
 }
 
 /* -- validation -------------------------------------------------------- */

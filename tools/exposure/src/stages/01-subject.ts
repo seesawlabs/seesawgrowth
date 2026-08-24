@@ -272,6 +272,13 @@ function quoteAround(text: string, index: number, phrase: string): string {
  * persuasive move this report has, and it only works if the words are theirs.
  */
 const SCRAPE_NOISE = [
+  // Article and listing furniture. The live senderrarx.com run quoted
+  // "4 min read How Specialty Pharmacy Technology is Freeing Nurses' Time
+  // Senderra : Mar 6, 2022, 9:56:57 PM News Senderra Specialty Pharmacy..."
+  // as a description of a manual step. It is a blog index row.
+  'min read', 'minute read', 'read more', 'share this', 'posted on',
+  'published on', 'filed under', 'tagged with', 'related posts', 'next post',
+  'previous post', 'subscribe to our', 'sign up for our newsletter',
   'err_blocked', 'err_', 'blocked by an extension', 'blocked by client',
   'skip to main content', 'skip to content', 'enable javascript',
   'javascript is disabled', 'your browser', 'browser does not support',
@@ -455,8 +462,17 @@ export function deriveCategoryQuery(
    */
   const isContactBoilerplate = (url: string, text: string) =>
     /\/(contact|contact-us|get-in-touch|request|locations?)(\/|$)/i.test(url) ||
-    /^(contact|call|email|reach|get in touch|request|speak|talk|schedule|book)\b/i.test(text.trim()) ||
-    /\b(24 hours a day|7 days a week|business hours|toll[- ]free)\b/i.test(text);
+    // Call-to-action openers. "Discover the difference. Call 833.380.9583 today
+    // to learn more about our in-home hospice services" became the live
+    // category query for a 300-programme hospice operator, and peer discovery
+    // returned six single-location agencies instead of its actual competitors.
+    /^(contact|call|email|reach|get in touch|request|speak|talk|schedule|book|discover|learn|find out|get started|see how|explore|welcome|looking for|need help)\b/i.test(
+      text.trim()
+    ) ||
+    // A phone number in a meta description means it is an advert, not a
+    // description of the business.
+    /(\+?\d[\d\s().-]{8,}\d)/.test(text) ||
+    /\b(24 hours a day|7 days a week|business hours|toll[- ]free|call today|call now)\b/i.test(text);
 
   const preferred: PageCategory[] = ['home', 'company', 'product'];
   const candidates = preferred

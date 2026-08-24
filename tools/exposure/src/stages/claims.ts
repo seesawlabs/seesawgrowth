@@ -116,6 +116,7 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
         statement: `On your ${label}, a step runs on people rather than software: "${shorten(quote.quote)}"`,
         sources: [source],
         confidence: 'high',
+        internalOnly: page.category === 'careers',
       });
     }
   }
@@ -148,6 +149,8 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
       tier: 'observed',
       angle: 'opportunity',
       subject: 'self',
+      // Signal for the analyst, never a bullet for the client.
+      internalOnly: true,
       statement:
         `Your careers page lists roles that are largely process execution: ` +
         `${roles.join('; ')}. Roles like these describe the work before they describe the worker.`,
@@ -229,6 +232,7 @@ export function hypothesisClaimsFrom(subject: SubjectArtifact, limit = 3): Claim
           { key: `hoursPerYear${n}`, label: `the annual total those two produce`, unit: 'hours/year' },
         ],
         confidence: 'low',
+        internalOnly: page.category === 'careers',
       });
     }
   }

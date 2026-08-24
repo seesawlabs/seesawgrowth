@@ -1,0 +1,300 @@
+---
+/* ---------------------------------------------------------------------------
+   The Exposure Report request form.
+
+   Four fields. Every one of them is used: the domain is what we crawl, the
+   company name is what we call them, the email is where the link goes, and the
+   trigger is the one line that shapes the report's opening. Nothing is
+   collected to be scored — that is the Reality Check qualifier's job, and
+   asking a stranger eleven questions for a free automated report would be
+   trading their patience for data we do not need yet.
+
+   The "also want to talk" checkbox is why the page has one form rather than two
+   competing calls to action. Someone who wants both should not have to pick,
+   and someone who only wants the call still gives us their domain on the way
+   past.
+
+   Progressive enhancement: the form posts JSON to /api/exposure-request and
+   swaps in a confirmation. With no JavaScript, or if the endpoint is missing
+   because the adapter is not deployed, the visitor sees an honest fallback that
+   tells them to email us — never a silent failure, which is what the qualifier
+   learned the hard way.
+--------------------------------------------------------------------------- */
+---
+
+<form class="xr" id="xr-form" novalidate>
+  <div class="xr__row">
+    <label class="xr__field">
+      <span class="xr__label">Your name</span>
+      <input name="name" type="text" autocomplete="name" required />
+    </label>
+    <label class="xr__field">
+      <span class="xr__label">Work email</span>
+      <input name="email" type="email" autocomplete="email" inputmode="email" required />
+    </label>
+  </div>
+
+  <div class="xr__row">
+    <label class="xr__field">
+      <span class="xr__label">Company</span>
+      <input name="company" type="text" autocomplete="organization" required />
+    </label>
+    <label class="xr__field">
+      <span class="xr__label">Website</span>
+      <input name="website" type="text" inputmode="url" placeholder="yourcompany.com" required />
+    </label>
+  </div>
+
+  <label class="xr__field">
+    <span class="xr__label">
+      What&rsquo;s driving this right now?
+      <span class="xr__opt">optional</span>
+    </span>
+    <textarea name="trigger" rows="3" placeholder="A board question, a competitor announcement, a process that keeps breaking — one line is plenty."></textarea>
+  </label>
+
+  <label class="xr__check">
+    <input name="wantsCall" type="checkbox" />
+    <span>Also put an hour in the diary to walk through it together.</span>
+  </label>
+
+  <button class="btn btn--primary xr__submit" type="submit">Send me the report</button>
+
+  <p class="xr__fine">
+    We read every report before it goes out, so this takes about a business day rather than a
+    minute. One email, one private link. No sequence, no newsletter.
+  </p>
+
+  <p class="xr__error" id="xr-error" hidden role="alert"></p>
+</form>
+
+<div class="xr__done" id="xr-done" hidden>
+  <p class="xr__doneKicker">Request received</p>
+  <h3 id="xr-doneHead">We&rsquo;ll email your link within a business day</h3>
+  <p id="xr-doneBody">
+    A person reads every Exposure Report before it goes out. If the public evidence on your
+    company turns out to be too thin to be worth your time, we&rsquo;ll tell you that instead of
+    sending you a padded document.
+  </p>
+  <p class="xr__doneBook" id="xr-doneBook" hidden>
+    <a class="btn btn--primary" id="xr-bookLink" href="#">Pick a time now</a>
+  </p>
+</div>
+
+<style>
+  .xr { display: grid; gap: var(--sp-5); max-width: 40rem; }
+  .xr__row { display: grid; gap: var(--sp-5); }
+  @media (min-width: 34rem) {
+    .xr__row { grid-template-columns: 1fr 1fr; }
+  }
+  .xr__field { display: grid; gap: var(--sp-2); }
+  .xr__label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-2);
+  }
+  .xr__opt {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .xr input[type='text'],
+  .xr input[type='email'],
+  .xr textarea {
+    font-family: inherit;
+    font-size: var(--text-md);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3) var(--sp-4);
+    width: 100%;
+    transition: border-color var(--dur-normal) var(--ease-out);
+  }
+  .xr textarea { resize: vertical; line-height: var(--lh-normal); }
+  .xr input:focus-visible,
+  .xr textarea:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .xr input[aria-invalid='true'],
+  .xr textarea[aria-invalid='true'] { border-color: var(--red-500); }
+
+  .xr__check {
+    display: flex;
+    gap: var(--sp-3);
+    align-items: flex-start;
+    font-size: var(--text-sm);
+    line-height: var(--lh-snug);
+    color: var(--ink-2);
+    padding: var(--sp-4);
+    background: var(--bg-sunk);
+    border-radius: var(--radius-md);
+  }
+  .xr__check input { margin-top: 0.15rem; accent-color: var(--accent); flex: none; }
+
+  .xr__submit { justify-self: start; }
+
+  .xr__fine {
+    font-size: var(--text-sm);
+    line-height: var(--lh-snug);
+    color: var(--muted);
+    margin: 0;
+    max-width: 44ch;
+  }
+
+  .xr__error {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--red-700);
+    background: var(--red-50);
+    border-radius: var(--radius-md);
+    padding: var(--sp-3) var(--sp-4);
+  }
+
+  .xr__done {
+    max-width: 40rem;
+    padding: var(--sp-8);
+    background: var(--bg-sunk);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--rule);
+  }
+  .xr__doneKicker {
+    font-family: var(--font-accent);
+    font-size: var(--text-sm);
+    letter-spacing: var(--ls-wide);
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 var(--sp-3);
+  }
+  .xr__done h3 {
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    letter-spacing: var(--ls-tight);
+    line-height: var(--lh-tight);
+    margin: 0 0 var(--sp-4);
+    text-wrap: balance;
+  }
+  .xr__done p:not(.xr__doneKicker) {
+    margin: 0 0 var(--sp-4);
+    color: var(--ink-2);
+    line-height: var(--lh-relaxed);
+    max-width: 52ch;
+  }
+  .xr__doneBook { margin-bottom: 0 !important; }
+</style>
+
+<script>
+  const form = document.getElementById('xr-form');
+  const done = document.getElementById('xr-done');
+  const errorBox = document.getElementById('xr-error');
+  const submit = form?.querySelector('button[type="submit"]');
+
+  const MAILTO =
+    'mailto:calvin@seesawlabs.com?subject=AI%20Exposure%20Report%20request';
+
+  function fail(message, withMailto) {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    if (withMailto) {
+      const a = document.createElement('a');
+      a.href = MAILTO;
+      a.textContent = ' Email us instead.';
+      errorBox.appendChild(a);
+    }
+    errorBox.hidden = false;
+  }
+
+  function markInvalid(field, invalid) {
+    const el = form?.elements.namedItem(field);
+    if (el instanceof HTMLElement) el.setAttribute('aria-invalid', invalid ? 'true' : 'false');
+  }
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!(form instanceof HTMLFormElement)) return;
+    if (errorBox) errorBox.hidden = true;
+
+    const data = new FormData(form);
+    const payload = {
+      name: String(data.get('name') ?? '').trim(),
+      email: String(data.get('email') ?? '').trim(),
+      company: String(data.get('company') ?? '').trim(),
+      website: String(data.get('website') ?? '').trim(),
+      trigger: String(data.get('trigger') ?? '').trim(),
+      wantsCall: data.get('wantsCall') === 'on',
+      attribution: {},
+    };
+
+    let missing = false;
+    for (const field of ['name', 'email', 'company', 'website']) {
+      const empty = !payload[field];
+      markInvalid(field, empty);
+      if (empty) missing = true;
+    }
+    if (missing) {
+      fail('Name, email, company and website are all needed before we can crawl anything.', false);
+      return;
+    }
+
+    try {
+      payload.attribution = JSON.parse(sessionStorage.getItem('ssl_attr') ?? '{}');
+    } catch {
+      /* private mode — attribution is best-effort and never blocks a submit */
+    }
+
+    if (submit instanceof HTMLButtonElement) {
+      submit.disabled = true;
+      submit.textContent = 'Sending…';
+    }
+
+    try {
+      const res = await fetch('/api/exposure-request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        /* 404 means the server adapter is not deployed. Say so plainly rather
+           than pretending the request landed — the qualifier lost submissions
+           to exactly this silence. */
+        const reason =
+          res.status === 404
+            ? 'Our form endpoint is not reachable right now, so this did not send.'
+            : 'Something went wrong at our end, so this did not send.';
+        fail(reason, true);
+        if (submit instanceof HTMLButtonElement) {
+          submit.disabled = false;
+          submit.textContent = 'Send me the report';
+        }
+        return;
+      }
+
+      const body = await res.json().catch(() => ({}));
+      form.hidden = true;
+      if (done) done.hidden = false;
+
+      if (body.bookingUrl) {
+        const wrap = document.getElementById('xr-doneBook');
+        const link = document.getElementById('xr-bookLink');
+        if (wrap && link instanceof HTMLAnchorElement) {
+          link.href = body.bookingUrl;
+          wrap.hidden = false;
+        }
+      }
+      done?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      fail('That did not send — you may be offline.', true);
+      if (submit instanceof HTMLButtonElement) {
+        submit.disabled = false;
+        submit.textContent = 'Send me the report';
+      }
+    }
+  });
+</script>

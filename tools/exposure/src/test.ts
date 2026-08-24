@@ -1107,3 +1107,145 @@ test("an apostrophe does not split a category phrase into a generic single", () 
   assert.ok(terms.includes('womens health'), terms.join(' | '));
   assert.ok(!terms.includes('health'), `generic single survived: ${terms.join(' | ')}`);
 });
+
+test('a call-to-action with a phone number is not a category description', () => {
+  // The live compassus.com run used "Discover the difference. Call
+  // 833.380.9583 today to learn more about our in-home hospice and care
+  // services." as its category query, and Exa returned six single-location
+  // agencies instead of a 300-programme operator's real competitors.
+  const ctaPage = [
+    {
+      url: 'https://www.compassus.com/',
+      category: 'home' as const,
+      description:
+        'Discover the difference. Call 833.380.9583 today to learn more about our in-home hospice and care services.',
+      wordCount: 300,
+      manualWorkQuotes: [],
+      systemsNamed: [],
+      aiTermsFound: [],
+      roleLines: [],
+    },
+  ];
+  const { query, derivedFrom } = deriveCategoryQuery(ctaPage, 'compassus.com');
+  assert.ok(!/833/.test(query), `a phone number reached the category query: "${query}"`);
+  assert.ok(!/Discover the difference/i.test(query), `CTA copy survived: "${query}"`);
+  assert.match(derivedFrom, /fallback/, 'with nothing usable it must say so');
+});
+
+test('a statement disclaiming its own attribution is not peer evidence', () => {
+  // The third shape of the negative-finding failure, and the costliest: this
+  // claim carried the senderrarx.com run's peer-evidence count from one to two,
+  // which is what marked the report sendable at 100% coverage.
+  const sentence =
+    'The search results surfaced a QuickRx-branded automated prescription pickup product from ' +
+    'Bell and Howell, but that is not QuickRx Specialty Pharmacy and should not be attributed to ' +
+    'this company.[1]';
+
+  assert.ok(assertsAbsence(sentence), 'a non-attribution disclaimer must be detected');
+
+  const { items, dropped } = evidenceFromAnswer(
+    [
+      {
+        text: sentence,
+        citations: [{ marker: 1, url: 'https://bhemea.com/quickrx', date: '2025-01-11' }],
+      },
+    ],
+    { name: 'QuickRx Specialty Pharmacy', domain: 'quickrxspecialty.com' }
+  );
+  assert.equal(items.length, 0, 'a disclaimer must never become the peer’s initiative');
+  assert.equal(dropped[0].reason, 'asserts_absence');
+});
+
+test('non-attribution language is caught in its common shapes', () => {
+  for (const s of [
+    'That product should not be credited to this company.',
+    'This is not the same company as the one in the citation.',
+    'The tool belongs to another vendor entirely.',
+    'Not to be confused with the similarly named firm.',
+    'The initiative is run by a different company.',
+  ]) {
+    assert.ok(assertsAbsence(s), `should be absence: ${s}`);
+  }
+});
+
+test('blog and listing furniture is not quoted as a manual step', () => {
+  assert.ok(
+    looksLikeScrapeNoise(
+      "4 min read How Specialty Pharmacy Technology is Freeing Nurses' Time Senderra : Mar 6, 2022"
+    )
+  );
+  assert.ok(looksLikeScrapeNoise('Read more about our services and subscribe to our newsletter'));
+  assert.equal(
+    looksLikeScrapeNoise('All documents are fillable and can be submitted within the Physician Portal.'),
+    false
+  );
+});
+
+test('careers-derived claims are marked internal and never rendered', () => {
+  // "Perform all tasks in a safe manner that is consistent with corporate
+  // policies" is pharmacy-tech job-advert boilerplate. It rendered as a manual
+  // step worth costing.
+  const careers = {
+    url: 'https://x.com/careers',
+    category: 'careers' as const,
+    wordCount: 400,
+    manualWorkQuotes: [
+      { phrase: 'paperwork', quote: 'Maintain current notes and paperwork related to the patient drug therapy and pharmacy care plan.' },
+    ],
+    systemsNamed: [],
+    aiTermsFound: [],
+    roleLines: ['Pharmacy Technician'],
+  };
+  const subject: SubjectArtifact = { ...THIN_SUBJECT, pages: [careers] };
+  const claims = buildClaims({ subject, peers: null, evidence: null, demand: null });
+
+  // Quotes and arithmetic derived from the careers page are internal. Site-wide
+  // findings like obs-no-ai-language are not — they are about the whole surface,
+  // not about a job advert.
+  const derived = claims.filter(
+    (c) => c.id.startsWith('obs-manual') || c.id.startsWith('hyp-') || c.id === 'obs-hiring'
+  );
+  assert.ok(derived.length > 0, 'the careers page should yield something');
+  for (const c of derived) {
+    assert.equal(c.internalOnly, true, `${c.id} came from a careers page and must be internal`);
+  }
+  assert.equal(
+    claims.find((c) => c.id === 'obs-no-ai-language')?.internalOnly,
+    undefined,
+    'a site-wide finding is not careers-derived'
+  );
+});
+
+/* ===========================================================================
+   The lead-facing renderer.
+   ======================================================================== */
+
+import { linkClaimIds } from './render/report-html.ts';
+
+test('citation linking never eats an ordinary English word', () => {
+  // A /(obs|cmp|dem|hyp)[a-z0-9._-]*­/ prefix pattern deleted the word
+  // "Demand", so a finding in the live report opened mid-sentence.
+  const footnotes = (id: string) => (id === 'dem-2' ? [6] : []);
+  const ids = ['obs-manual-1', 'dem-2', 'dem-trend-1'];
+
+  const out = linkClaimIds('Demand for the broad terms is shrinking (dem-2).', footnotes, ids);
+  assert.match(out, /^Demand for the broad terms is shrinking/, `got: ${out}`);
+  assert.match(out, /href="#src-6"/, 'the real citation must still become a link');
+
+  for (const word of ['demand', 'demonstrate', 'competition', 'observed', 'hypothesis']) {
+    assert.match(
+      linkClaimIds(`The word ${word} must survive.`, footnotes, ids),
+      new RegExp(word),
+      `${word} was eaten`
+    );
+  }
+});
+
+test('a parenthetical group of citations collapses to references', () => {
+  const footnotes = (id: string) => ({ 'dem-2': [6], 'dem-trend-1': [7] })[id] ?? [];
+  const out = linkClaimIds('Both are falling (dem-2, dem-trend-1).', footnotes, ['dem-2', 'dem-trend-1']);
+  assert.match(out, /href="#src-6"/);
+  assert.match(out, /href="#src-7"/);
+  assert.ok(!out.includes('dem-2'), `raw id survived: ${out}`);
+  assert.ok(!/\(\s*\)/.test(out), `empty parens left: ${out}`);
+});

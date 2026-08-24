@@ -90,6 +90,23 @@ const ABSENCE_PATTERNS: { pattern: RegExp; label: string }[] = [
   { pattern: /\bnot\s+(?:a|an|its own|their own)\b[^.]{0,40}\b(?:initiative|deployment|announcement|program|programme|project|rollout|investment|offering|adoption)\b/i, label: 'explicitly not an initiative' },
   { pattern: /\bdisclaimer\b/i, label: 'a disclaimer, not a deployment' },
   { pattern: /\brather than\s+(?:a|an)\b[^.]{0,40}\b(?:initiative|deployment|announcement|product)\b/i, label: 'explicitly not an initiative' },
+  /* Explicit non-attribution. The third shape of this failure, and the one
+     that did real damage: asked about QuickRx Specialty Pharmacy, Perplexity
+     answered "the search results surfaced a QuickRx-branded automated
+     prescription pickup product from Bell and Howell, but that is not QuickRx
+     Specialty Pharmacy and should not be attributed to this company."
+
+     Correct, careful, and it passed every gate — it names the peer, cites a
+     dated source, and contains "automated", which the action-verb check reads
+     as a move. It rendered as the peer's second AI initiative and it was the
+     claim that carried this run's peer-evidence count from one to two, which
+     is what took coverage to 100% and marked the report sendable. A sentence
+     that exists to disclaim an attribution must never become one. */
+  { pattern: /\bshould not be (?:attributed|credited|confused|conflated|associated)\b/i, label: 'explicitly disclaims the attribution' },
+  { pattern: /\b(?:is|are|was|were) not\s+(?:the same|this|that)\b/i, label: 'explicitly a different entity' },
+  { pattern: /\b(?:a |an )?(?:different|another|separate|unrelated|third[- ]party)\s+(?:company|vendor|firm|entity|organisation|organization|business|product)\b/i, label: 'names a different company' },
+  { pattern: /\bnot\s+(?:to be )?(?:confused|conflated)\s+with\b/i, label: 'explicitly a different entity' },
+  { pattern: /\bbelongs? to (?:a |an )?(?:different|another)\b/i, label: 'belongs to another company' },
 ];
 
 /** True when a statement asserts that nothing was found, rather than a fact. */
