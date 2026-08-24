@@ -102,13 +102,31 @@ test('coverage is insufficient when a minimum is missed', () => {
   const c = scoreCoverage({
     pagesCrawled: 12,
     peersIdentified: 4,
-    peersWithDatedAiEvidence: 1, // below the minimum of 2
+    peersWithDatedAiEvidence: 0, // below the minimum of 1
     observedClaims: 6,
     comparativeClaims: 4,
   });
   assert.equal(c.sufficient, false);
   assert.ok(c.shortfalls.some((s) => s.startsWith('peersWithDatedAiEvidence')));
-  assert.ok(c.score > 0.8, 'one near miss should still score high');
+  // Exactly 0.8: four of five minimums fully met, the fifth at zero. Lowering
+  // the peer-evidence minimum to 1 means a miss there now contributes nothing
+  // rather than half, so the boundary sits on 0.8 instead of above it.
+  assert.ok(c.score >= 0.8, `one near miss should still score high, got ${c.score}`);
+});
+
+test('one dated peer move is enough to send, none is not', () => {
+  // The threshold moved from two to one once stage 06 existed: sparseness in a
+  // category is a finding an analyst can use, but zero peer moves leaves no
+  // comparative claim to reason from at all.
+  const base = {
+    pagesCrawled: 12,
+    peersIdentified: 8,
+    observedClaims: 16,
+    comparativeClaims: 3,
+  };
+  assert.equal(scoreCoverage({ ...base, peersWithDatedAiEvidence: 1 }).sufficient, true);
+  assert.equal(scoreCoverage({ ...base, peersWithDatedAiEvidence: 0 }).sufficient, false);
+  assert.equal(COVERAGE_MINIMUMS.peersWithDatedAiEvidence, 1);
 });
 
 test('coverage is sufficient exactly at the minimums', () => {
@@ -282,7 +300,14 @@ test('a page naming the subject is rejected before the category check', () => {
    Stage 03 — the two live citation-integrity failures.
    ======================================================================== */
 
-import { evidenceFromAnswer, mentionsAi, yearsIn, attributesToPeer, describesAction } from './stages/03-peer-evidence.ts';
+import {
+  evidenceFromAnswer,
+  mentionsAi,
+  yearsIn,
+  attributesToPeer,
+  describesAction,
+} from './stages/03-peer-evidence.ts';
+import { mapWithConcurrency } from './lib/concurrency.ts';
 
 test('near-miss domain gate: medi-gyn.com cited for medgyn.com is dropped', () => {
   // The exact failure observed live on 2026-08-24.
@@ -1248,4 +1273,27 @@ test('a parenthetical group of citations collapses to references', () => {
   assert.match(out, /href="#src-7"/);
   assert.ok(!out.includes('dem-2'), `raw id survived: ${out}`);
   assert.ok(!/\(\s*\)/.test(out), `empty parens left: ${out}`);
+});
+
+test('mapWithConcurrency preserves order and bounds what is in flight', async () => {
+  const started: number[] = [];
+  let inFlight = 0;
+  let peak = 0;
+  const out = await mapWithConcurrency([1, 2, 3, 4, 5, 6, 7, 8], 3, async (n) => {
+    started.push(n);
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await new Promise((r) => setTimeout(r, 5));
+    inFlight -= 1;
+    return n * 10;
+  });
+  assert.deepEqual(out, [10, 20, 30, 40, 50, 60, 70, 80], 'results must stay in input order');
+  assert.equal(peak, 3, `at most 3 concurrent, saw ${peak}`);
+  assert.equal(started.length, 8, 'every item runs exactly once');
+});
+
+test('mapWithConcurrency handles a limit above the item count', async () => {
+  const out = await mapWithConcurrency([1, 2], 10, async (n) => n + 1);
+  assert.deepEqual(out, [2, 3]);
+  assert.deepEqual(await mapWithConcurrency([], 4, async (n) => n), []);
 });

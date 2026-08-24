@@ -29,6 +29,7 @@ import type { Ledger } from '../lib/budget.ts';
 import { map, scrape, type FirecrawlLink } from '../lib/clients/firecrawl.ts';
 import { registrableDomain } from '../lib/domain.ts';
 import { robotsFor } from '../lib/http.ts';
+import { mapWithConcurrency, PAGE_CONCURRENCY } from '../lib/concurrency.ts';
 
 export type PageCategory =
   | 'home'
@@ -596,6 +597,8 @@ export interface SubjectArtifact {
 export interface SubjectOptions {
   mapLimit?: number;
   pageLimit?: number;
+  /** Pages scraped concurrently. Defaults to PAGE_CONCURRENCY. */
+  concurrency?: number;
   categoryQueryOverride?: string;
 }
 
@@ -633,25 +636,30 @@ export async function runSubjectStage(
   }
 
   const selected = selectPages(links, effectiveDomain, opts.pageLimit ?? 12);
-  const pages: PageSignals[] = [];
 
-  for (const page of selected) {
-    const result = await scrape(cache, ledger, page.url, now);
-    if (!result.ok) {
-      pages.push({
-        url: page.url,
-        category: page.category,
-        wordCount: 0,
-        manualWorkQuotes: [],
-        systemsNamed: [],
-        aiTermsFound: [],
-        roleLines: [],
-        skipped: result.skipped ?? `scrape returned no markdown (status ${result.statusCode ?? '?'})`,
-      });
-      continue;
+  /* Scraped concurrently. Twelve pages in series was 48 seconds of a
+     125-second run — see lib/concurrency.ts. Order is preserved so the
+     artifact still reads in selection order. */
+  const pages: PageSignals[] = await mapWithConcurrency(
+    selected,
+    opts.concurrency ?? PAGE_CONCURRENCY,
+    async (page) => {
+      const result = await scrape(cache, ledger, page.url, now);
+      if (!result.ok) {
+        return {
+          url: page.url,
+          category: page.category,
+          wordCount: 0,
+          manualWorkQuotes: [],
+          systemsNamed: [],
+          aiTermsFound: [],
+          roleLines: [],
+          skipped: result.skipped ?? `scrape returned no markdown (status ${result.statusCode ?? '?'})`,
+        };
+      }
+      return extractSignals(page, result.markdown, result.title, result.description);
     }
-    pages.push(extractSignals(page, result.markdown, result.title, result.description));
-  }
+  );
 
   const present = new Set(pages.filter((p) => !p.skipped).map((p) => p.category));
   const categoriesMissing = (['help', 'careers', 'integrations', 'pricing'] as PageCategory[]).filter(

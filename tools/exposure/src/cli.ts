@@ -149,6 +149,21 @@ async function report(argv: string[]): Promise<void> {
 
   const stageNotes: string[] = [];
 
+  /* Per-stage wall clock. This is not instrumentation for its own sake: whether
+     a visitor waits on the page, waits for an email, or books a call while the
+     run happens is a UX decision that needs a real number, and the number is
+     dominated by one stage rather than spread evenly. Printed per stage and
+     totalled at the end. */
+  const runStart = Date.now();
+  const timings: { stage: string; ms: number }[] = [];
+  let stageStart = runStart;
+  const mark = (stage: string) => {
+    const ms = Date.now() - stageStart;
+    timings.push({ stage, ms });
+    stageStart = Date.now();
+    console.error(`        ${(ms / 1000).toFixed(1)}s`);
+  };
+
   /* stage 01 — mandatory. No subject crawl, no report. */
   const gate01 = checkStage('01-subject');
   if (!gate01.ok) {
@@ -167,6 +182,7 @@ async function report(argv: string[]): Promise<void> {
   for (const note of subject.notes) console.error(`        - ${note}`);
   console.error(`        category query: "${subject.categoryQuery.query.slice(0, 110)}"`);
   console.error(`        derived from: ${subject.categoryQuery.derivedFrom}`);
+  mark('01 subject');
 
   /* stage 02 — peers. */
   let peers: PeersArtifact | null = null;
@@ -204,6 +220,7 @@ async function report(argv: string[]): Promise<void> {
       console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
     }
   }
+  mark('02 peers');
 
   /* stage 03 — peer evidence. */
   let evidence: PeerEvidenceArtifact | null = null;
@@ -242,6 +259,7 @@ async function report(argv: string[]): Promise<void> {
       console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
     }
   }
+  mark('03 peer evidence');
 
   /* stage 04 — demand. */
   let demand: DemandArtifact | null = null;
@@ -272,6 +290,7 @@ async function report(argv: string[]): Promise<void> {
       console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
     }
   }
+  mark('04 demand');
 
   /* claims + stage 05 — deterministic, no network. */
   console.error('[05/05] claims and assembly — deterministic, no model');
@@ -312,6 +331,12 @@ async function report(argv: string[]): Promise<void> {
       `peersWithDatedAiEvidence=${coverage.peersWithDatedAiEvidence} ` +
       `observedClaims=${coverage.observedClaims} comparativeClaims=${coverage.comparativeClaims}`
   );
+  mark('05 claims + assembly');
+  console.error('\nTime per stage:');
+  for (const t of timings) {
+    console.error(`  ${t.stage.padEnd(22)} ${(t.ms / 1000).toFixed(1)}s`);
+  }
+  console.error(`  ${'TOTAL'.padEnd(22)} ${((Date.now() - runStart) / 1000).toFixed(1)}s`);
   console.error(`\n${ledger.format()}`);
   console.error(`\nwrote ${join(dir, 'report.md')}`);
 }

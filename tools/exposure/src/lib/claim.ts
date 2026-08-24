@@ -186,7 +186,24 @@ export function partitionClaims(claims: Claim[]): {
 export const COVERAGE_MINIMUMS = {
   pagesCrawled: 5,
   peersIdentified: 3,
-  peersWithDatedAiEvidence: 2,
+  /**
+   * One, not two.
+   *
+   * Two was the guess made before stage 06 existed, when the report's value
+   * *was* the peer list — a document whose competitive section held a single
+   * dated move genuinely did read thin. Across six real targets we never
+   * legitimately reached two: the one run that did was counting a
+   * non-attribution disclaimer as evidence, which is the bug that made a 90%
+   * report look sendable at 100%.
+   *
+   * With an analyst in the pipeline the calculus changed. "Of eight comparable
+   * companies only one has a public dated initiative, and it goes at the
+   * document work you describe" is a finding, and the sparseness is part of it
+   * — an early field is a different conversation from a settled one. Zero still
+   * fails, because with no peer move there is no comparative claim to reason
+   * from at all.
+   */
+  peersWithDatedAiEvidence: 1,
   observedClaims: 4,
   comparativeClaims: 3,
 } as const;

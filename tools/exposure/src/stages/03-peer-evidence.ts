@@ -42,6 +42,7 @@ import type { Ledger } from '../lib/budget.ts';
 import { ask, citedSentences, cleanStatement, type ResolvedCitation } from '../lib/clients/perplexity.ts';
 import { map, scrape } from '../lib/clients/firecrawl.ts';
 import { isNearMissDomain, nameKey, registrableDomain } from '../lib/domain.ts';
+import { mapWithConcurrency, PEER_CONCURRENCY } from '../lib/concurrency.ts';
 import type { PeerCandidate } from './02-peers.ts';
 
 /**
@@ -452,6 +453,8 @@ export interface PeerEvidenceOptions {
   /** Crawl each peer's own site as well. Costs Firecrawl credits. */
   crawlPeerSites?: boolean;
   pagesPerPeer?: number;
+  /** Peers researched concurrently. Defaults to PEER_CONCURRENCY. */
+  concurrency?: number;
 }
 
 /**
@@ -486,10 +489,14 @@ export async function runPeerEvidenceStage(
     notes.push(`researched ${targets.length} of ${peers.length} peer(s) — one Perplexity call each`);
   }
 
-  const out: PeerEvidence[] = [];
   const allDropped: DroppedStatement[] = [];
 
-  for (const peer of targets) {
+  /* Concurrent across peers. The ledger's headroom check is inherently racy
+     under concurrency: several calls can pass it before any of them records a
+     cost. At roughly half a cent per peer lookup against a dollar-scale
+     ceiling that overshoot is immaterial, and the alternative — serialising to
+     keep the check exact — is the three-minute run this replaced. */
+  const out = await mapWithConcurrency(targets, opts.concurrency ?? PEER_CONCURRENCY, async (peer) => {
     const peerRef = { name: peer.name, domain: peer.domain };
     let items: PeerEvidenceItem[] = [];
     let dropped: DroppedStatement[] = [];
@@ -541,15 +548,15 @@ export async function runPeerEvidenceStage(
       ownSurface = { peerDomain: peer.domain, pagesScraped, aiQuotes, notes: surfaceNotes };
     }
 
-    out.push({
+    return {
       peerName: peer.name,
       peerDomain: peer.domain,
       confidence: peer.confidence,
       items,
       ownSurface,
       hasDatedAiEvidence: items.length > 0,
-    });
-  }
+    };
+  });
 
   const dropSummary: Record<string, number> = {};
   for (const d of allDropped) dropSummary[d.reason] = (dropSummary[d.reason] ?? 0) + 1;
