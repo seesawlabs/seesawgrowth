@@ -38,16 +38,18 @@ export interface ReportCopy {
   promise: string;
   sections: {
     standing: Sec;
-    strengths: Sec;
-    weaknesses: Sec;
-    market: Sec;
+    questions: Sec;
+    opportunities: Sec;
     peers: Sec;
-    considerations: Sec;
-    arithmetic: Sec;
-    boundary: Sec;
+    blindSpots: Sec;
     evidence: Sec;
   };
-  needHeading: string;
+  /** Label above a question's supporting research. */
+  whyLabel: string;
+  /** Label above what an answer would change. */
+  changesLabel: string;
+  /** Label above a sizing block's declared assumptions. */
+  assumptionsLabel: string;
   closing: { heading: string; body: string[]; ctaLabel: string };
   sourcesHeading: string;
   /** Rendered when a section has no content. Honesty over a blank space. */
@@ -65,78 +67,64 @@ export const COPY: ReportCopy = {
   sections: {
     standing: {
       num: '01',
-      eyebrow: 'Where you stand',
-      heading: 'What we think is actually going on',
+      eyebrow: 'What we think we see',
+      heading: 'From the outside, this is how it looks',
       intro: '',
     },
-    strengths: {
+    opportunities: {
       num: '02',
-      eyebrow: 'Where you are strong',
-      heading: 'What you have that your category mostly does not',
-      intro: '',
+      eyebrow: 'What we would build',
+      heading: 'Three ideas you may not have considered',
+      intro:
+        'Not "add AI to your operation". Specific enough to argue with, and sequenced the way we would ' +
+        'actually do it. Where we have put numbers on one they are our own assumptions, labelled as ' +
+        'such — the point is the order of magnitude, and your correction is worth more than our estimate.',
     },
-    weaknesses: {
+    questions: {
       num: '03',
-      eyebrow: 'Where you are exposed',
-      heading: 'What we would worry about in your position',
-      intro: '',
-    },
-    market: {
-      num: '04',
-      eyebrow: 'Your category',
-      heading: 'Which way the market is moving',
-      intro: '',
+      eyebrow: 'What we would ask you',
+      heading: 'The questions that would sharpen those ideas',
+      intro:
+        'We have read your public surface and nothing else. These are the questions whose answers would ' +
+        'change the advice above, and the reason each one is worth your time sits underneath it.',
     },
     peers: {
-      num: '05',
+      num: '04',
       eyebrow: 'What comparable companies did',
-      heading: 'Who has moved, how, and whether it worked',
+      heading: 'Who has moved, and whether it worked',
       intro: '',
     },
-    considerations: {
-      num: '06',
-      eyebrow: 'What to weigh',
-      heading: 'The decisions this puts in front of you',
-      intro: '',
-    },
-    arithmetic: {
-      num: '07',
-      eyebrow: 'The arithmetic',
-      heading: 'We can see the shape of these. We can’t finish the maths',
+    blindSpots: {
+      num: '05',
+      eyebrow: 'Where we are probably wrong',
+      heading: 'What we could not see from outside',
       intro:
-        'Each of these needs numbers only you have. We have left them blank rather than guessing, so ' +
-        'the sum you reach is yours and not ours.',
-    },
-    boundary: {
-      num: '08',
-      eyebrow: 'The boundary',
-      heading: 'What we couldn’t determine from the outside',
-      intro:
-        'This report is built entirely from public evidence. These are the things that would change its ' +
-        'conclusions and that no amount of research can reach.',
+        'This is built entirely from public evidence, so some of it will be wrong or out of date. These ' +
+        'are the places we would bet on being wrong first.',
     },
     evidence: {
-      num: '09',
+      num: '06',
       eyebrow: 'The evidence',
       heading: 'Everything above, and where it came from',
       intro:
-        'Every statement in this report traces to one of these, and every one of these carries a source ' +
-        'you can open. Nothing here is our characterisation of you — it is your own words, a dated ' +
-        'published source, or a figure from a named data provider with the date we pulled it.',
+        'Every statement traces to one of these, and every one carries a source you can open. Nothing ' +
+        'here is our characterisation of you — it is your own words, a dated published source, or a ' +
+        'figure from a named data provider with the date we pulled it.',
     },
   },
-
-  needHeading: 'What we’d need from you',
+  whyLabel: 'Why we’re asking',
+  changesLabel: 'What your answer changes',
+  assumptionsLabel: 'What we assumed — correct us',
 
   closing: {
     heading: 'Where this goes next',
     body: [
-      'The blanks above are the agenda. A one-hour **AI Reality Check** fills them in and tells you where ' +
-        'you actually stand — no preparation, no deck, and no charge.',
+      'The questions above are the agenda. An hour with us is where you answer them, correct what we got ' +
+        'wrong, and we tell you which of these is actually worth doing — no preparation, no deck, no charge.',
       'If the answer is that there is something worth building, the next step is an AI Production Roadmap. ' +
-        'If it isn’t, we will tell you that instead.',
+        'If there isn’t, we will tell you that instead.',
     ],
-    ctaLabel: 'Book the Reality Check',
+    ctaLabel: 'Book the hour',
   },
 
   sourcesHeading: 'Sources & retrieval dates',
@@ -145,8 +133,8 @@ export const COPY: ReportCopy = {
     'means the evidence is internal rather than missing.',
 };
 
-/** Two extra boundary lines that are true of every report, not just this one. */
+/** Blind spots true of every report built from the outside, not just this one. */
 export const UNIVERSAL_UNKNOWNS = [
-  'Which of the manual steps we found is actually expensive, as opposed to merely visible',
-  'What your systems of record already talk to, and where the handoffs break',
+  'Which of the steps we found is actually expensive, as opposed to merely visible from outside',
+  'What you have already tried here, and what you decided against and why',
 ];

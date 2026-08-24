@@ -102,6 +102,8 @@ interface Args {
   namedPeers: string[];
   /** Skip the analyst. Only useful when debugging the evidence stages. */
   noSynthesis: boolean;
+  /** Skip the wider web research pass before the analysis. */
+  noResearch: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -112,6 +114,7 @@ function parseArgs(argv: string[]): Args {
     quiet: false,
     namedPeers: [],
     noSynthesis: false,
+    noResearch: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -119,6 +122,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--no-peer-crawl') args.peerCrawl = false;
     else if (a === '--quiet') args.quiet = true;
     else if (a === '--no-synthesis') args.noSynthesis = true;
+    else if (a === '--no-research') args.noResearch = true;
     else if (a === '--peer') {
       const v = argv[++i];
       if (v) args.namedPeers.push(v);
@@ -341,14 +345,23 @@ async function report(argv: string[]): Promise<void> {
       synthesis = await runSynthesisStage(
         cache,
         ledger,
-        { company, claims: renderable, subject, peers, evidence, trigger: args.trigger },
-        now
+        {
+          company,
+          claims: renderable,
+          subject,
+          peers,
+          evidence,
+          trigger: args.trigger,
+          oneLiner: args.category ?? subject.categoryQuery.seedText,
+        },
+        now,
+        { research: !args.noResearch }
       );
       await writeArtifact(dir, '06-synthesis', synthesis);
       const s = synthesis.synthesis;
       console.error(
-        `        ${s.strengths.length} strength(s), ${s.weaknesses.length} exposure(s), ` +
-          `${s.considerations.length} consideration(s) — ${synthesis.model}`
+        `        ${s.questions.length} question(s), ${s.opportunities.length} opportunity(ies), ` +
+          `${s.blindSpots.length} blind spot(s) — ${synthesis.model}`
       );
       for (const note of synthesis.notes) console.error(`        - ${note}`);
       for (const p of synthesis.problems) console.error(`        REJECTED ${p.field}: ${p.detail}`);

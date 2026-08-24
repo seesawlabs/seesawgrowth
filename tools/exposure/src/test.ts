@@ -1297,3 +1297,98 @@ test('mapWithConcurrency handles a limit above the item count', async () => {
   assert.deepEqual(out, [2, 3]);
   assert.deepEqual(await mapWithConcurrency([], 4, async (n) => n), []);
 });
+
+/* ===========================================================================
+   Stage 06 sizing — assumptions are allowed, and structurally policed.
+   ======================================================================== */
+
+import { validateSynthesis, pruneSynthesis } from './stages/06-synthesis.ts';
+
+const FACTS = {
+  pagesCrawled: 10,
+  peersIdentified: 8,
+  peersWithDatedAiEvidence: 2,
+  observedClaims: 11,
+  comparativeClaims: 7,
+};
+
+const CLAIMS_FOR_SYNTH: Claim[] = [
+  {
+    id: 'obs-manual-1',
+    tier: 'observed',
+    angle: 'context',
+    subject: 'self',
+    statement: 'On your about page, a step runs on people rather than software: "developing mindset".',
+    sources: [{ url: 'https://x.com/about', retrievedAt: '2026-08-24T00:00:00.000Z' }],
+  },
+];
+
+const sizedSynthesis = (arithmetic: string, assumptions: unknown[]) => ({
+  standing: 'You run an advisory business.',
+  questions: [
+    { question: 'Where does prep time go?', why: 'Your about page describes human work.', claimIds: ['obs-manual-1'], whatItChanges: 'Whether we start with prep.' },
+  ],
+  opportunities: [
+    {
+      heading: 'A commitment ledger',
+      body: 'Durable state per client.',
+      basis: 'Your own page names manual work.',
+      claimIds: ['obs-manual-1'],
+      sizing: { assumptions, arithmetic, question: 'Is that the right order of magnitude?' },
+    },
+  ],
+  competitorSignal: { point: 'One peer has moved.', claimIds: ['obs-manual-1'] },
+  blindSpots: ['We cannot see your volumes.'],
+}) as never;
+
+test('derived figures in the arithmetic are allowed — deriving them is the point', () => {
+  // This rejected three of four sizings on the live Cultivate Advisors run and
+  // left the document with no order of magnitude anywhere.
+  const s = sizedSynthesis('500 clients × 20% churn = 100 lost a year. Half seen early is 50, a quarter saved is 12.', [
+    { label: 'Active clients', value: '500', unit: 'clients', basis: 'A round number to keep the arithmetic legible.' },
+    { label: 'Annual churn', value: '20', unit: '%', basis: 'A round placeholder; your real number replaces it.' },
+  ]);
+  const problems = validateSynthesis(s, CLAIMS_FOR_SYNTH, FACTS);
+  assert.deepEqual(problems, [], `derived arithmetic must survive: ${JSON.stringify(problems)}`);
+});
+
+test('a sizing must show at least two declared inputs, each with a basis', () => {
+  const oneInput = sizedSynthesis('500 × something = a lot.', [
+    { label: 'Clients', value: '500', unit: 'clients', basis: 'Round number.' },
+  ]);
+  assert.ok(
+    validateSynthesis(oneInput, CLAIMS_FOR_SYNTH, FACTS).some((p) => p.code === 'assumption_without_basis'),
+    'one input is not arithmetic'
+  );
+
+  const noBasis = sizedSynthesis('500 × 20% = 100.', [
+    { label: 'Clients', value: '500', unit: 'clients', basis: 'Round number.' },
+    { label: 'Churn', value: '20', unit: '%', basis: '   ' },
+  ]);
+  const problems = validateSynthesis(noBasis, CLAIMS_FOR_SYNTH, FACTS);
+  assert.ok(problems.some((p) => p.code === 'assumption_without_basis'), 'a basis is required');
+});
+
+test('a failed sizing drops the sizing, not the idea it belonged to', () => {
+  const bad = sizedSynthesis('500 × 20% = 100.', [
+    { label: 'Clients', value: '500', unit: 'clients', basis: '' },
+  ]);
+  const problems = validateSynthesis(bad, CLAIMS_FOR_SYNTH, FACTS);
+  const { kept, dropped } = pruneSynthesis(bad, problems);
+  assert.equal(kept.opportunities.length, 1, 'the recommendation survives');
+  assert.equal(kept.opportunities[0].sizing, null, 'the arithmetic does not');
+  assert.ok(dropped.some((d) => d.includes('sizing')));
+});
+
+test('a figure in an idea body still needs a source — only arithmetic is exempt', () => {
+  const s = sizedSynthesis('500 × 20% = 100.', [
+    { label: 'Clients', value: '500', unit: 'clients', basis: 'Round number.' },
+    { label: 'Churn', value: '20', unit: '%', basis: 'Round placeholder.' },
+  ]);
+  s.opportunities[0].body = 'This would cut prep by 37% across the bench.';
+  const problems = validateSynthesis(s, CLAIMS_FOR_SYNTH, FACTS);
+  assert.ok(
+    problems.some((p) => p.code === 'unsourced_numeral' && p.detail.includes('37')),
+    `an invented figure in prose must still fail: ${JSON.stringify(problems)}`
+  );
+});

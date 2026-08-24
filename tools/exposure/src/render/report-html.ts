@@ -197,28 +197,77 @@ export function renderReportHtml(input: RenderInput): string {
 
   /* -- analysis blocks -- */
 
-  const standing = synthesis?.standing
-    ? `<p class="standing">${prose(synthesis.standing)}</p>`
-    : '';
+  const standing = synthesis?.standing ? `<p class="standing">${prose(synthesis.standing)}</p>` : '';
 
-  const points = (items: { point: string; claimIds: string[] }[]) =>
-    items.length
-      ? `<ul class="points">${items
-          .map((p) => `<li><p>${prose(p.point)}</p></li>`)
-          .join('')}</ul>`
-      : '';
-
-  const backed = (b: { point: string; claimIds: string[] } | undefined) =>
-    b && b.point ? `<p class="finding">${prose(b.point)}</p>` : '';
-
-  const considerations = synthesis?.considerations.length
-    ? `<ol class="considers">${synthesis.considerations
+  /* Questions are the spine of the document. Each renders as the question
+     itself, then the research that makes it worth asking, then what the answer
+     would change — in that order, because the question has to land before the
+     justification or we are back to lecturing. */
+  const questions = (synthesis?.questions ?? []).length
+    ? `<ol class="qs">${synthesis!.questions
         .map(
-          (c) =>
-            `<li><h3>${esc(c.heading)}</h3><p>${prose(c.body)}</p></li>`
+          (q) => `<li class="q">
+            <p class="q__ask">${prose(q.question)}</p>
+            <div class="q__meta">
+              <p class="q__lab">${esc(copy.whyLabel)}</p>
+              <p class="q__why">${prose(q.why)}</p>
+            </div>
+            <div class="q__meta">
+              <p class="q__lab">${esc(copy.changesLabel)}</p>
+              <p class="q__why">${prose(q.whatItChanges)}</p>
+            </div>
+          </li>`
         )
         .join('')}</ol>`
     : '';
+
+  /**
+   * A sizing block. Assumptions are printed as ours, with their basis, before
+   * the arithmetic that uses them — so the reader meets the caveat before the
+   * number rather than after it, and the closing question hands the sum back.
+   */
+  const sizing = (z: NonNullable<Synthesis['opportunities'][number]['sizing']>) => `
+    <div class="size">
+      <p class="size__lab">${esc(copy.assumptionsLabel)}</p>
+      <ul class="size__as">
+        ${z.assumptions
+          .map(
+            (a) => `<li>
+              <span class="size__v">${esc(a.value)}${a.unit ? ` <span class="size__u">${esc(a.unit)}</span>` : ''}</span>
+              <span class="size__l">${esc(a.label)}</span>
+              <span class="size__b">${esc(a.basis)}</span>
+            </li>`
+          )
+          .join('')}
+      </ul>
+      <p class="size__sum">${prose(z.arithmetic)}</p>
+      <p class="size__q">${prose(z.question)}</p>
+    </div>`;
+
+  const opportunities = (synthesis?.opportunities ?? []).length
+    ? `<ol class="ops">${synthesis!.opportunities
+        .map(
+          (o) => `<li class="op">
+            <h3 class="op__h">${esc(o.heading)}</h3>
+            <p class="op__b">${prose(o.body)}</p>
+            <p class="op__basis"><span class="op__lab">Why we think this applies to you</span> ${prose(o.basis)}</p>
+            ${o.sizing ? sizing(o.sizing) : ''}
+          </li>`
+        )
+        .join('')}</ol>`
+    : '';
+
+  const peerSignal = synthesis?.competitorSignal.point
+    ? `<p class="finding">${prose(synthesis.competitorSignal.point)}</p>`
+    : '';
+
+  const blindSpots = (synthesis?.blindSpots ?? []).length
+    ? `<ul class="unknowns">${[...new Set([...synthesis!.blindSpots, ...UNIVERSAL_UNKNOWNS])]
+        .map((b) => `<li><span class="ublank"></span><span>${prose(b)}</span></li>`)
+        .join('')}</ul>`
+    : `<ul class="unknowns">${UNIVERSAL_UNKNOWNS.map(
+        (b) => `<li><span class="ublank"></span><span>${esc(b)}</span></li>`
+      ).join('')}</ul>`;
 
   /* -- supporting evidence, grouped -- */
 
@@ -254,40 +303,6 @@ export function renderReportHtml(input: RenderInput): string {
           .join('')}</ul></div>`
     )
     .join('');
-
-  /* -- the arithmetic, with its blanks intact -- */
-
-  const hypotheses = shown.filter((c) => c.tier === 'hypothesis');
-  const hypBody = hypotheses.length
-    ? `<ul class="claims">${hypotheses
-        .map((claim) => {
-          const need = (claim.missingVariables ?? [])
-            .map(
-              (v: MissingVariable) =>
-                `<li><span class="blank">${esc(v.key)}</span><span class="needlabel">${esc(v.label)}` +
-                (v.unit ? ` <span class="unit">(${esc(v.unit)})</span>` : '') +
-                `</span></li>`
-            )
-            .join('');
-          return `<li class="claim claim-hyp">
-            <p>${withQuotes(withBlanks(claim.statement))}${refsFor(claim)}</p>
-            ${need ? `<div class="needbox"><p class="needhead">${esc(copy.needHeading)}</p><ul class="need">${need}</ul></div>` : ''}
-          </li>`;
-        })
-        .join('')}</ul>`
-    : '';
-
-  /* -- the boundary -- */
-
-  const unknowns = [
-    ...new Set([
-      ...hypotheses.flatMap((c) => (c.missingVariables ?? []).map((v) => v.label)),
-      ...UNIVERSAL_UNKNOWNS,
-    ]),
-  ];
-  const boundaryBody = `<ul class="unknowns">${unknowns
-    .map((u) => `<li><span class="ublank"></span><span>${esc(u)}</span></li>`)
-    .join('')}</ul>`;
 
   /* -- sources -- */
 
@@ -348,13 +363,10 @@ ${banner}
 <main class="shell">
   ${noAnalysis}
   ${sec(copy.sections.standing, standing)}
-  ${sec(copy.sections.strengths, points(synthesis?.strengths ?? []))}
-  ${sec(copy.sections.weaknesses, points(synthesis?.weaknesses ?? []))}
-  ${sec(copy.sections.market, backed(synthesis?.categoryTrend))}
-  ${sec(copy.sections.peers, backed(synthesis?.peerPattern))}
-  ${sec(copy.sections.considerations, considerations)}
-  ${sec(copy.sections.arithmetic, hypBody)}
-  ${sec(copy.sections.boundary, boundaryBody, 'boundary')}
+  ${sec(copy.sections.opportunities, opportunities)}
+  ${sec(copy.sections.questions, questions)}
+  ${sec(copy.sections.peers, peerSignal)}
+  ${sec(copy.sections.blindSpots, blindSpots, 'boundary')}
 
   <section class="closing">
     <h2>${esc(copy.closing.heading)}</h2>
@@ -464,6 +476,37 @@ ul.need li{display:flex;flex-wrap:wrap;gap:.5rem;align-items:baseline}
 .needlabel{font-size:.9rem;color:var(--ink-2)}
 .unit{font-family:var(--font-mono);font-size:.72rem;color:var(--muted)}
 
+
+/* -- questions: the spine of the document ------------------------------ */
+ol.qs{list-style:none;counter-reset:q;margin:0;padding:0;display:grid;gap:1.6rem}
+li.q{counter-increment:q;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:var(--radius-lg);padding:1.4rem 1.5rem;position:relative}
+.q__ask{margin:0 0 1rem;font-size:clamp(1.06rem,2.3vw,1.2rem);line-height:1.45;font-weight:500;color:var(--ink);max-width:56ch}
+.q__ask::before{content:counter(q,decimal-leading-zero);display:block;font-family:var(--font-accent);font-size:.8rem;font-weight:400;letter-spacing:var(--ls-wide);color:var(--accent);margin-bottom:.5rem}
+.q__meta{margin-top:.85rem}
+.q__lab{font-family:var(--font-mono);font-size:.62rem;letter-spacing:var(--ls-widest);text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
+.q__why{margin:0;font-size:.94rem;line-height:1.6;color:var(--ink-2);max-width:62ch}
+
+/* -- opportunities: things to build ------------------------------------ */
+ol.ops{list-style:none;counter-reset:o;margin:0;padding:0;display:grid;gap:1.6rem}
+li.op{counter-increment:o;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:1.5rem;position:relative}
+.op__h{font-size:clamp(1.1rem,2.4vw,1.28rem);font-weight:600;letter-spacing:var(--ls-tight);line-height:1.3;margin:0 0 .7rem;padding-right:2.5rem;color:var(--ink)}
+li.op::after{content:counter(o,decimal-leading-zero);position:absolute;top:1.5rem;right:1.5rem;font-family:var(--font-accent);font-size:1.1rem;color:var(--rule);line-height:1}
+.op__b{margin:0 0 .9rem;font-size:1rem;line-height:1.62;color:var(--ink);max-width:62ch}
+.op__basis{margin:0;font-size:.92rem;line-height:1.6;color:var(--ink-2);max-width:62ch}
+.op__lab{font-family:var(--font-mono);font-size:.62rem;letter-spacing:var(--ls-widest);text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.25rem}
+
+/* -- sizing: our numbers, labelled as ours ---------------------------- */
+.size{margin-top:1.2rem;padding:1.1rem 1.2rem;background:var(--bg-sunk);border-radius:var(--radius-md);border:1px dashed var(--rule)}
+.size__lab{font-family:var(--font-accent);font-size:.78rem;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--accent);margin:0 0 .8rem}
+ul.size__as{list-style:none;margin:0 0 1rem;padding:0;display:grid;gap:.65rem}
+ul.size__as li{display:grid;grid-template-columns:auto 1fr;gap:.15rem .8rem;align-items:baseline}
+.size__v{font-family:var(--font-mono);font-size:1rem;font-weight:500;color:var(--accent-deep);background:var(--accent-soft);padding:.1rem .4rem;border-radius:var(--radius-sm);white-space:nowrap}
+.size__u{font-size:.72rem;color:var(--muted)}
+.size__l{font-size:.94rem;color:var(--ink)}
+.size__b{grid-column:2;font-size:.8rem;line-height:1.5;color:var(--muted);font-style:italic}
+.size__sum{margin:0 0 .8rem;padding-top:.8rem;border-top:1px solid var(--rule);font-size:.98rem;line-height:1.6;color:var(--ink);max-width:60ch}
+.size__q{margin:0;font-size:.98rem;line-height:1.55;font-weight:500;color:var(--accent-deep);max-width:56ch}
+@media (max-width:520px){ul.size__as li{grid-template-columns:1fr}.size__b{grid-column:1}}
 /* -- analysis: the part the reader came for ---------------------------- */
 .standing{font-size:clamp(1.15rem,2.6vw,1.4rem);line-height:1.55;color:var(--ink);max-width:60ch;margin:0;font-weight:400}
 .finding{font-size:1.06rem;line-height:1.62;color:var(--ink);max-width:64ch;margin:0}
