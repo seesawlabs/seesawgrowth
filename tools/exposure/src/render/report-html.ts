@@ -274,15 +274,15 @@ export function renderReportHtml(input: RenderInput): string {
   const isDemand = (c: Claim) => c.id.startsWith('dem-');
   const groups: { label: string; items: Claim[] }[] = [
     {
-      label: 'Your own public surface — your words, quoted',
+      label: 'From your own website, quoted',
       items: shown.filter((c) => c.tier === 'observed' && !isDemand(c)),
     },
     {
-      label: 'Comparable companies — dated, published moves',
+      label: 'What companies like yours announced, with dates',
       items: shown.filter((c) => c.tier === 'comparative'),
     },
     {
-      label: 'Category demand — named provider, both dates stamped',
+      label: 'Search demand, with the date we pulled it',
       items: shown.filter((c) => isDemand(c) && c.tier === 'observed'),
     },
   ];

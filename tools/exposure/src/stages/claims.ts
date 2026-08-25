@@ -113,7 +113,7 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
         subject: 'self',
         // Phrased to avoid subject-verb agreement with the label: "help and
         // support pages describes" appeared in every report before this.
-        statement: `On your ${label}, a step runs on people rather than software: "${shorten(quote.quote)}"`,
+        statement: `Your ${label} describe a step that a person does by hand: "${shorten(quote.quote)}"`,
         sources: [source],
         confidence: 'high',
         internalOnly: page.category === 'careers',
@@ -132,9 +132,9 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
       angle: 'opportunity',
       subject: 'self',
       statement:
-        `Your site names the systems your work already passes through — ` +
-        `${systems.map((s) => sanitize(s)).join(', ')}. ` +
-        `Each named system is a place where work can be handed to software instead of a person.`,
+        `Your site mentions the systems your work already runs through: ` +
+        `${systems.map((s) => sanitize(s)).join(', ')}. Anything already in one of those is easier ` +
+        `to hand to software than something that isn't.`,
       sources: [pageSource(page.url, retrievedAt, page.title)],
       confidence: 'high',
     });
@@ -152,8 +152,8 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
       // Signal for the analyst, never a bullet for the client.
       internalOnly: true,
       statement:
-        `Your careers page lists roles that are largely process execution: ` +
-        `${roles.join('; ')}. Roles like these describe the work before they describe the worker.`,
+        `Your careers page lists these roles: ${roles.join('; ')}. What a company hires for says ` +
+        `a lot about which work is under strain.`,
       sources: [pageSource(careers.url, retrievedAt, careers.title)],
       confidence: 'medium',
     });
@@ -169,9 +169,9 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
       angle: 'threat',
       subject: 'self',
       statement:
-        `Across the pages of yours we read, nothing on your public site mentions AI, ` +
-        `automation, or machine learning. Whatever you are doing internally, a buyer ` +
-        `comparing you to a competitor who does say it cannot see it.`,
+        `None of the pages we read mention AI, automation or machine learning. You may well be ` +
+        `doing something internally, but a customer comparing you with a competitor who talks ` +
+        `about it won't know that.`,
       sources: [pageSource(`https://${subject.domain}`, retrievedAt)],
       confidence: 'medium',
     });
@@ -183,9 +183,9 @@ export function observedClaimsFrom(subject: SubjectArtifact, manualLimit = 5): C
       angle: 'context',
       subject: 'self',
       statement:
-        `Your own site already uses the language of automation — ` +
-        `${[...new Set(aiPages.flatMap((p) => p.aiTermsFound))].slice(0, 6).map((t) => `"${sanitize(t)}"`).join(', ')} ` +
-        `— so this is a conversation you have already started publicly.`,
+        `Your site already talks about automation. It uses the words ` +
+        `${[...new Set(aiPages.flatMap((p) => p.aiTermsFound))].slice(0, 6).map((t) => `"${sanitize(t)}"`).join(', ')}, ` +
+        `so this isn't a subject you'd be raising with your market for the first time.`,
       sources: [pageSource(page.url, retrievedAt, page.title)],
       confidence: 'medium',
     });
@@ -328,8 +328,8 @@ export function demandClaimsFrom(demand: DemandArtifact): Claim[] {
       angle: 'context',
       subject: 'self',
       statement:
-        `"${sanitize(term.keyword)}" runs ${bits.join(', ')}` +
-        `${term.intent ? `, with mainly ${sanitize(term.intent)} intent` : ''} (${stamp}).`,
+        `"${sanitize(term.keyword)}" gets ${bits.join(', ')}` +
+        `${term.intent ? `. Most of those searches look ${sanitize(term.intent)}` : ''} (${stamp}).`,
       sources: [overviewSource(term.keyword, term.dataLastUpdated)],
       confidence: 'high',
     });
@@ -348,10 +348,10 @@ export function demandClaimsFrom(demand: DemandArtifact): Claim[] {
       angle: tr.direction === 'rising' ? 'opportunity' : 'threat',
       subject: 'self',
       statement:
-        `Search demand for "${sanitize(term.keyword)}" is ${tr.direction}: the last 12 months ` +
-        `averaged ${tr.recentMean} searches a month against ${tr.priorMean} in the 12 months before, ` +
-        `a change of ${tr.changePct}% over ${tr.monthsCompared} months of Google's own series ` +
-        `(${term.dataLastUpdated ? `data of ${term.dataLastUpdated}, ` : ''}pulled ${pulled}).`,
+        `Searches for "${sanitize(term.keyword)}" are ${tr.direction}. The last 12 months averaged ` +
+        `${tr.recentMean} a month against ${tr.priorMean} the 12 months before, a change of ` +
+        `${tr.changePct}% across ${tr.monthsCompared} months of Google's own numbers ` +
+        `(${term.dataLastUpdated ? `data from ${term.dataLastUpdated}, ` : ''}pulled ${pulled}).`,
       sources: [overviewSource(term.keyword, term.dataLastUpdated)],
       confidence: 'high',
     });
@@ -397,9 +397,9 @@ export function demandClaimsFrom(demand: DemandArtifact): Claim[] {
         `ranks for ${total.rankingKeywords} US Google search terms` +
         `${
           top
-            ? `, including "${sanitize(top.keyword)}" in the top ${RELEVANT_RANK_LIMIT} ` +
-              `at position ${top.rank}, against ${top.searchVolume} searches a month`
-            : ` — none of them in the top ${RELEVANT_RANK_LIMIT} for a term in your category`
+            ? `, including "${sanitize(top.keyword)}" at position ${top.rank}, on a term ` +
+              `searched ${top.searchVolume} times a month`
+            : `, but none in the top ${RELEVANT_RANK_LIMIT} for a term in your category`
         } (pulled ${pulled}).`,
       sources: [rankedSource],
       confidence: 'medium',

@@ -58,83 +58,82 @@ export interface ReportCopy {
 
 export const COPY: ReportCopy = {
   kicker: 'AI Exposure Report',
-  headline: 'What AI is doing to your category, and where it touches you',
+  headline: 'What we\u2019d tell you about AI if we had an hour',
   promise:
-    'Every number in this report carries a source you can open, or it is left as a {blank} for you to ' +
-    'fill in. We have not estimated anything silently. Where the evidence runs out, we say so and stop — ' +
-    'that boundary is a section of its own, and it is the part worth talking about.',
+    'Every number here either links to where we got it, or it\u2019s a {blank} for you to fill in. We ' +
+    'haven\u2019t quietly estimated anything. When we ran out of evidence, we stopped and said so.',
 
   sections: {
     standing: {
       num: '01',
-      eyebrow: 'What we think we see',
-      heading: 'From the outside, this is how it looks',
+      eyebrow: 'First read',
+      heading: 'What we think is going on',
       intro: '',
     },
     opportunities: {
       num: '02',
-      eyebrow: 'What we would build',
+      eyebrow: 'What we\u2019d build',
       heading: 'Three ideas you may not have considered',
       intro:
-        'Not "add AI to your operation". Specific enough to argue with, and sequenced the way we would ' +
-        'actually do it. Where we have put numbers on one they are our own assumptions, labelled as ' +
-        'such — the point is the order of magnitude, and your correction is worth more than our estimate.',
+        'Specific enough to argue with, in the order we\u2019d do them. Where we\u2019ve put numbers on ' +
+        'one, they\u2019re our guesses and we\u2019ve said so. Tell us how far off we are.',
     },
     questions: {
       num: '03',
-      eyebrow: 'What we would ask you',
-      heading: 'The questions that would sharpen those ideas',
+      eyebrow: 'Questions',
+      heading: 'What we\u2019d ask you first',
       intro:
-        'We have read your public surface and nothing else. These are the questions whose answers would ' +
-        'change the advice above, and the reason each one is worth your time sits underneath it.',
+        'We\u2019ve only read your website. These are the questions whose answers would change the ' +
+        'advice above.',
     },
     peers: {
       num: '04',
-      eyebrow: 'What comparable companies did',
-      heading: 'Who has moved, and whether it worked',
+      eyebrow: 'Competitors',
+      heading: 'What companies like you have done',
       intro: '',
     },
     blindSpots: {
       num: '05',
-      eyebrow: 'Where we are probably wrong',
-      heading: 'What we could not see from outside',
+      eyebrow: 'Caveats',
+      heading: 'What we couldn\u2019t see',
       intro:
-        'This is built entirely from public evidence, so some of it will be wrong or out of date. These ' +
-        'are the places we would bet on being wrong first.',
+        'This is built from public information only, so some of it will be wrong or out of date. Here\u2019s ' +
+        'where we\u2019d guess we got it wrong.',
     },
     evidence: {
       num: '06',
-      eyebrow: 'The evidence',
-      heading: 'Everything above, and where it came from',
+      eyebrow: 'Sources',
+      heading: 'Where all this came from',
       intro:
-        'Every statement traces to one of these, and every one carries a source you can open. Nothing ' +
-        'here is our characterisation of you — it is your own words, a dated published source, or a ' +
-        'figure from a named data provider with the date we pulled it.',
+        'Everything above traces back to one of these, and each one links to where we found it. None of ' +
+        'it is us paraphrasing you \u2014 it\u2019s your own words, a dated article, or a figure from a ' +
+        'named data provider with the date we pulled it.',
     },
   },
   whyLabel: 'Why we’re asking',
   changesLabel: 'What your answer changes',
-  assumptionsLabel: 'What we assumed — correct us',
+  assumptionsLabel: 'Our guesses — correct them',
 
   closing: {
     heading: 'Where this goes next',
     body: [
-      'The questions above are the agenda. An hour with us is where you answer them, correct what we got ' +
-        'wrong, and we tell you which of these is actually worth doing — no preparation, no deck, no charge.',
-      'If the answer is that there is something worth building, the next step is an AI Production Roadmap. ' +
-        'If there isn’t, we will tell you that instead.',
+      'We wrote this from the outside, so some of it will be wrong. An hour on a call is where you tell us ' +
+        'which parts, and we tell you which of these ideas we\u2019d actually start with. No prep needed, ' +
+        'and no charge.',
+      'If there\u2019s something here we think you should build, we\u2019ll say so. If there isn\u2019t, ' +
+        'we\u2019ll say that instead.',
     ],
     ctaLabel: 'Book the hour',
   },
 
   sourcesHeading: 'Sources & retrieval dates',
   emptySection:
-    'We found nothing here we could source. That absence is itself worth a conversation — it usually ' +
-    'means the evidence is internal rather than missing.',
+    'We couldn\u2019t find anything here we could back up. That usually means the answer is inside your ' +
+    'company rather than online, which is a good thing to talk through.',
 };
 
 /** Blind spots true of every report built from the outside, not just this one. */
 export const UNIVERSAL_UNKNOWNS = [
-  'Which of the steps we found is actually expensive, as opposed to merely visible from outside',
-  'What you have already tried here, and what you decided against and why',
+  'Which of the steps we found actually costs you money, rather than just being easy to spot from outside',
+  'What you\u2019ve already tried here, and what you decided against',
 ];

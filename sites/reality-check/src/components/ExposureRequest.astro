@@ -55,9 +55,9 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
     <textarea name="oneLiner" rows="2" maxlength={ONE_LINER_MAX} required
       placeholder="Specialty pharmacy handling prior authorization and patient onboarding for prescribers"></textarea>
     <span class="xr__help">
-      This is what we search on to find comparable companies, and it&rsquo;s the one
-      thing we can&rsquo;t reliably get from your website — most homepages describe a
-      feeling rather than a business. Your words, however blunt.
+      This is what we search on to find companies like yours. Most homepages
+      describe a feeling rather than a business, so we&rsquo;d rather have your
+      version, however blunt.
     </span>
   </label>
 
@@ -72,8 +72,8 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
       <input name="competitor" type="text" placeholder="competitor.com" aria-label="Competitor 3" />
     </div>
     <span class="xr__help">
-      You know your market better than our search does. Anyone you name here, we
-      research directly.
+      You know your market better than our search does. We&rsquo;ll look up
+      anyone you name here.
     </span>
   </fieldset>
 
@@ -104,23 +104,22 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
   <p class="xr__doneKicker" id="xr-doneKicker">Request received</p>
   <h3 id="xr-doneHead">We&rsquo;ll email you a link shortly</h3>
   <p id="xr-doneBody">
-    We&rsquo;re reading your site now, then every comparable company we can find.
-    One email, one private link — you don&rsquo;t need to keep this page open.
+    We&rsquo;re reading your site now, then looking up companies like yours.
+    One email, one private link. No need to keep this page open.
   </p>
 
   <div class="xr__while">
     <p class="xr__whileH">While that happens</p>
     <p class="xr__whileB">
-      The report is built entirely from the outside, so parts of it will be
-      wrong. The hour is where you correct it — and where the blanks get filled
-      in with numbers only you have.
+      We write it from the outside, so some of it will be wrong. The hour is
+      where you put us straight and fill in the blanks.
     </p>
     <a class="btn" id="xr-bookLink" href={calLink}>Book the hour</a>
   </div>
 
   <p class="xr__thin" id="xr-thin" hidden>
-    If the public evidence on your company turns out to be too thin to be worth
-    your time, we&rsquo;ll tell you that instead of sending a padded document.
+    If there isn&rsquo;t enough public information on your company to say
+    anything useful, we&rsquo;ll tell you that rather than pad it out.
   </p>
 </div>
 

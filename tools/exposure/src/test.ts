@@ -1062,7 +1062,7 @@ test('a peer with no relevant top-20 term says so rather than reaching', () => {
     notes: [],
   };
   const claim = demandClaimsFrom(demand).find((c) => c.id.startsWith('dem-peer'))!;
-  assert.match(claim.statement, /none of them in the top 20/);
+  assert.match(claim.statement, /none in the top 20/);
   assert.deepEqual(validateClaim(claim), []);
 });
 
