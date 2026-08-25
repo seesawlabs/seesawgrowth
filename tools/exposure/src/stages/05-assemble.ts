@@ -90,7 +90,7 @@ export function assembleReport(input: AssembleInput): {
 
   const parts: string[] = [];
 
-  parts.push(`# AI Exposure Report — ${meta.domain}\n`);
+  parts.push(`# AI Opportunity Brief — ${meta.domain}\n`);
   if (syntheticNotice) {
     parts.push(`> **${syntheticNotice}**\n`);
   }

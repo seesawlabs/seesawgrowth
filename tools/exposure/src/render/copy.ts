@@ -59,7 +59,7 @@ export interface ReportCopy {
 }
 
 export const COPY: ReportCopy = {
-  kicker: 'AI Exposure Report',
+  kicker: 'AI Opportunity Brief',
   headline: 'Spend an hour with us. We have a lot to say about {company} and AI.',
   promise:
     'Our numbers link to where we found them, or they\u2019re a deliberate {blank} we can fill in ' +

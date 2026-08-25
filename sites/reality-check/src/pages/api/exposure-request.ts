@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
    POST /api/exposure-request
 
-   Someone asks for an Exposure Report on their own company. This endpoint
+   Someone asks for an Opportunity Brief on their own company. This endpoint
    validates the intake, records it, tells a human, and answers honestly about
    timing. It does not generate the report.
 
@@ -29,7 +29,8 @@
 
 import type { APIRoute } from 'astro';
 
-import { validate, normalise, fulfilCommand, type Intake } from '../../lib/exposure-intake';
+import { coerceIntake, validate, normalise, fulfilCommand, type Intake } from '../../lib/exposure-intake';
+import { ackEmail, sendEmail } from '../../lib/email';
 
 export const prerender = false;
 
@@ -88,13 +89,16 @@ export function deliveryMode(): DeliveryMode {
 }
 
 export const POST: APIRoute = async ({ request }) => {
-  let raw: Partial<Intake>;
+  let body: unknown;
   try {
-    raw = (await request.json()) as Partial<Intake>;
+    body = await request.json();
   } catch {
     return json({ error: 'bad_json' }, 400);
   }
 
+  /* Coerce before validating. Anything can POST here, and the shape the form
+     sends is not the only shape that arrives — see `coerceIntake`. */
+  const raw = coerceIntake(body);
   const errors = validate(raw);
   if (errors.length > 0) {
     console.log('[exposure-request] rejected', JSON.stringify({ errors, email: raw.email }));
@@ -148,7 +152,11 @@ export const POST: APIRoute = async ({ request }) => {
     ok: true,
     duplicate,
     mode,
-    eta: mode === 'instant' ? 'two minutes' : 'one business day',
+    /* "Shortly" is what the confirmation screen says and what the ack email
+       says, so it is what the API says. A number here would be a promise the
+       review gate cannot keep: a thin brief gets routed to a call instead of
+       sent, and that decision takes as long as it takes. */
+    eta: 'shortly',
     /* Returned to everyone, not only those who ticked the box: a run is long
        enough that the wait may as well be spent booking the hour that fixes
        the report. */
@@ -180,7 +188,7 @@ async function alertOperator(
   const hook = import.meta.env.SLACK_WEBHOOK;
   const { contact, intake: meta } = record;
   const lines = [
-    `*Exposure Report requested* — ${contact.company} (${contact.domain})`,
+    `*Opportunity Brief requested* — ${contact.company} (${contact.domain})`,
     `${contact.name} · ${contact.email}${meta.wants_call ? ' · also asked for a call' : ''}`,
     `> ${intake.oneLiner}`,
     meta.trigger ? `Driving it: ${meta.trigger}` : null,
@@ -218,12 +226,29 @@ async function pushToCrm(record: unknown): Promise<void> {
   console.log('[exposure-request] CRM push pending implementation', record);
 }
 
-async function acknowledge(record: unknown): Promise<void> {
-  if (!import.meta.env.RESEND_TOKEN) {
-    console.log('[exposure-request] ack email skipped — RESEND_TOKEN unset');
-    return;
-  }
-  // TODO: one template. Must say a person reads it before it is sent, and must
-  // not promise a turnaround the review gate cannot keep.
-  console.log('[exposure-request] ack email pending implementation', record);
+/**
+ * The "we got it" email. Sent to everyone, immediately, because the form's own
+ * confirmation is the only other evidence the request landed and a visitor who
+ * closes the tab has none. The template is shared with the delivery email in
+ * lib/email.ts so the two cannot promise different things.
+ */
+async function acknowledge(record: {
+  contact: { name: string; email: string; company: string };
+}): Promise<void> {
+  const message = ackEmail({
+    name: record.contact.name,
+    company: record.contact.company,
+    bookingUrl: bookingUrl(),
+  });
+  const result = await sendEmail(record.contact.email, message, {
+    RESEND_TOKEN: import.meta.env.RESEND_TOKEN,
+  });
+  /* An unsent ack is not a failed request — the Slack alert still fired and the
+     submission is in the log above. It is worth saying loudly, though, because
+     the visitor was told to expect a link. */
+  console.log(
+    result.sent
+      ? `[exposure-request] ack email sent to ${record.contact.email} (${result.id ?? 'no id'})`
+      : `[exposure-request] ack email NOT sent to ${record.contact.email} — ${result.reason}`
+  );
 }

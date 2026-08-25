@@ -11,12 +11,17 @@
      node scripts/release-report.mjs --domain senderrarx.com --email d@x.com
 
    By default it releases the newest run for that domain, refuses to release a
-   report below the coverage threshold, and prints the link rather than sending
-   it. Nothing here emails anyone yet: RESEND_TOKEN is not wired, and a script
-   that silently fails to send is worse than one that hands you a link to paste.
+   brief below the coverage threshold, and PRINTS the link without sending it.
+   Sending is opt-in per release (`--send`) rather than automatic, because the
+   review gate is the point: the operator has read the document by the time they
+   run this, and a script that mails on every invocation would make a dry run
+   indistinguishable from a delivery.
 
    Flags:
      --run <id>       release a specific run instead of the newest
+     --send           email the link to --email (needs RESEND_TOKEN)
+     --name <name>    recipient's name for the email greeting
+     --company <name> company name for the email (defaults to the domain)
      --force          release below the coverage threshold anyway
      --ttl <days>     link lifetime (default 30)
      --base <url>     site origin for the link
@@ -26,6 +31,7 @@ import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 import { mintToken, linkFor, reportIdFor, DEFAULT_TTL_DAYS } from '../src/lib/magic-link.ts';
+import { readyEmail, sendEmail } from '../src/lib/email.ts';
 
 const HERE = new URL('.', import.meta.url).pathname;
 const SITE_ROOT = resolve(HERE, '..');
@@ -135,8 +141,29 @@ console.log(`\n  ${domain} · run ${runId}`);
 console.log(`  coverage ${pct}%${coverage.sufficient ? '' : '  (released with --force)'}`);
 console.log(`  stored   ${join(storeDir, `${reportId}.html`)}`);
 console.log(`  expires  ${ttlDays} days\n`);
-console.log(`  ${linkFor(base, token)}\n`);
+const link = linkFor(base, token);
+console.log(`  ${link}\n`);
 
-if (!process.env.RESEND_TOKEN) {
-  console.log('  RESEND_TOKEN unset — nothing was emailed. Send the link above by hand.\n');
+if (!flag('send')) {
+  console.log('  Not sent. Add --send to email it, or paste the link above.\n');
+  process.exit(0);
+}
+
+const message = readyEmail({
+  name: arg('name', email.split('@')[0]),
+  company: arg('company', domain),
+  link,
+  ttlDays,
+  bookingUrl: process.env.PUBLIC_CAL_LINK,
+});
+
+const result = await sendEmail(email, message, { RESEND_TOKEN: process.env.RESEND_TOKEN });
+if (result.sent) {
+  console.log(`  emailed  ${email}  (${result.id ?? 'no id'})\n`);
+} else {
+  /* Exit non-zero: the operator asked for a send and did not get one, and the
+     link above is now minted but undelivered. */
+  console.error(`  NOT SENT to ${email} — ${result.reason}`);
+  console.error('  The link above is valid. Send it by hand.\n');
+  process.exit(6);
 }

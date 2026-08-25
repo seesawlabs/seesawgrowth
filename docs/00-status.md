@@ -56,6 +56,12 @@ actively trying to do less of it.
 | └ Qualifier form | Calvin | **Spec'd + prototyped. Scoring validated against 14 personas** |
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric** |
 | └ Website build (page, form, scheduler) | Calvin | **Built and deployed to Vercel (SeeSaw-owned). Stack landed: Astro. Scheduler not yet wired** |
+| └ AI Opportunity Brief pipeline | Calvin | **Runs end to end. Named for the client, generated, released, served over a magic link** |
+| └ ─ Brief generation (`tools/exposure`) | Calvin | **Working. ~$1.40 and 6–11 min a run. Stage 03 is non-deterministic — same peers, different evidence hours apart** |
+| └ ─ Landing page + intake (`/brief`) | Calvin | **Built. Intake validated against hostile payloads** |
+| └ ─ Delivery emails | Calvin | **Written and wired. Nothing sends until `RESEND_TOKEN` is set in Vercel** |
+| └ ─ Magic link + report store | Calvin | **Built and verified locally. Prod storage undecided — Vercel Blob is the proposal** |
+| └ ─ Booking | Calvin | **Wired on the confirmation screen and on the brief itself. Needs a real `PUBLIC_CAL_LINK`** |
 | └ Program breakdown (11 projects) | Calvin | **Outlined. Awaiting owner + capacity assignment** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |

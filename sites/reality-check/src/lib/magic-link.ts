@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
-   Magic links for Exposure Reports.
+   Magic links for Opportunity Briefs.
 
-   An Exposure Report names a company, quotes their own pages back to them, and
+   An Opportunity Brief names a company, quotes their own pages back to them, and
    lists what we could not find out. It is not secret, but it is *theirs*, and
    it must not be indexable, guessable, or forwardable forever.
 

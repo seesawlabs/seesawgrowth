@@ -86,6 +86,50 @@ export const ONE_LINER_MAX = 300;
 export const MAX_COMPETITORS = 3;
 export const TRIGGER_MAX = 500;
 
+/**
+ * Force arbitrary JSON into the shape the rest of this module assumes.
+ *
+ * `validate` used to trust that `competitors` was an array, and a POST that
+ * sent it as a string — the obvious thing for anyone writing against this
+ * endpoint by hand, and the first thing a scanner tries — crashed on
+ * `.filter is not a function`. A public form must answer 422 with field
+ * errors, never 500: a lead lost to a type error is a lead lost silently.
+ *
+ * So the boundary coerces rather than trusts. Strings that arrive where a list
+ * belongs are split on the separators a person would actually type, everything
+ * non-stringy becomes empty, and validation runs on a shape it can rely on.
+ */
+export function coerceIntake(raw: unknown): Partial<Intake> {
+  const input = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
+
+  const list = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.map(str).filter(Boolean);
+    const one = str(v);
+    return one
+      ? one
+          .split(/[,\n;]+/)
+          .map((x) => x.trim())
+          .filter(Boolean)
+      : [];
+  };
+
+  return {
+    name: str(input.name),
+    email: str(input.email),
+    company: str(input.company),
+    website: str(input.website),
+    oneLiner: str(input.oneLiner),
+    competitors: list(input.competitors),
+    trigger: str(input.trigger),
+    wantsCall: input.wantsCall === true || input.wantsCall === 'on',
+    attribution:
+      input.attribution && typeof input.attribution === 'object'
+        ? (input.attribution as Record<string, string>)
+        : undefined,
+  };
+}
+
 export function validate(input: Partial<Intake>): FieldError[] {
   const errors: FieldError[] = [];
   const push = (field: keyof Intake, message: string) => errors.push({ field, message });

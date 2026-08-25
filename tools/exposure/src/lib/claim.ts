@@ -1,7 +1,7 @@
 /* ---------------------------------------------------------------------------
    The claim model — where "never invent a metric" is enforced mechanically.
 
-   Every statement in an Exposure Report is a Claim, graded by how we know it:
+   Every statement in an Opportunity Brief is a Claim, graded by how we know it:
 
      observed     we found it on the subject's own public surface
      comparative  we found it about a named peer

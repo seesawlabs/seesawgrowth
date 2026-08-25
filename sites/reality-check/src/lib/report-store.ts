@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
-   Where a rendered Exposure Report lives between generation and reading.
+   Where a rendered Opportunity Brief lives between generation and reading.
 
    ONE INTERFACE, THREE BACKENDS, because the storage decision is not made yet
    and blocking the magic link on it would be the wrong order. Resolution is by

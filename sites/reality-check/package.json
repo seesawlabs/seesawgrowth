@@ -10,7 +10,9 @@
     "preview": "astro preview",
     "check": "astro check",
     "check:prose": "node scripts/check-prose.mjs",
-    "release": "node --experimental-strip-types scripts/release-report.mjs"
+    "release": "node --experimental-strip-types scripts/release-report.mjs",
+    "check:email": "node --experimental-strip-types scripts/check-email.mjs",
+    "check:intake": "node --experimental-strip-types scripts/check-intake.mjs"
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.6",

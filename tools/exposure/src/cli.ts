@@ -162,7 +162,7 @@ async function report(argv: string[]): Promise<void> {
   const ledger = new Ledger(args.budget);
   const cache: CacheOptions = { dir: join(ROOT, 'cache'), refresh: args.refresh };
 
-  console.error(`AI Exposure Report — ${domain}`);
+  console.error(`AI Opportunity Brief — ${domain}`);
   console.error(`run ${runId}\n`);
   console.error('Credentials:');
   console.error(formatCredentialReport());
