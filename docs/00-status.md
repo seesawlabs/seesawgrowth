@@ -58,7 +58,7 @@ actively trying to do less of it.
 | └ Website build (page, form, scheduler) | Calvin | **Built and deployed to Vercel (SeeSaw-owned). Stack landed: Astro. Scheduler not yet wired** |
 | └ AI Opportunity Brief pipeline | Calvin | **Runs end to end. Named for the client, generated, released, served over a magic link** |
 | └ ─ Brief generation (`tools/exposure`) | Calvin | **Working. ~$1.40 and 6–11 min a run. Stage 03 is non-deterministic — same peers, different evidence hours apart** |
-| └ ─ Landing page + intake (`/brief`) | Calvin | **Built. Intake validated against hostile payloads** |
+| └ ─ Landing page + intake (site root) | Calvin | **The brief is now the front door. The Reality Check hour moved to `/reality-check`** |
 | └ ─ Public sample (`/sample-brief`) | Calvin | **We ran the brief on ourselves. 100% coverage, published unedited** |
 | └ ─ Delivery emails | Calvin | **Written and wired. Nothing sends until `RESEND_TOKEN` is set in Vercel** |
 | └ ─ Magic link + report store | Calvin | **Built and verified locally. Prod storage undecided — Vercel Blob is the proposal** |

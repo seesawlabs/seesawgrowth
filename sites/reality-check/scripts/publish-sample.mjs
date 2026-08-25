@@ -53,7 +53,7 @@ const banner = `<div style="background:#1a1a1a;color:#f7f6f3;padding:14px min(6v
   <strong style="font-weight:600">This is a real brief, and it is about us.</strong>
   We pointed the pipeline at seesawlabs.com and published what came out.
   Nothing was edited afterwards, including the part where it tells us what we
-  are missing. <a href="/brief" style="color:#f7f6f3;text-decoration:underline">Get one for your company &rarr;</a>
+  are missing. <a href="/" style="color:#f7f6f3;text-decoration:underline">Get one for your company &rarr;</a>
 </div>`;
 
 html = html.includes('<body>')
