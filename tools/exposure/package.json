@@ -8,7 +8,7 @@
     "test": "node --experimental-strip-types --test src/test.ts",
     "prototype": "node --experimental-strip-types src/cli.ts prototype",
     "report": "node --experimental-strip-types src/cli.ts report",
-    "check:voice": "node scripts/check-voice.mjs"
+    "check:voice": "node --experimental-strip-types scripts/check-voice.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

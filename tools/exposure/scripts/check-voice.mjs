@@ -2,84 +2,22 @@
 /**
  * Flags the constructions that make writing read as machine-generated.
  *
- *   npm run check:voice                 # the report copy and the prompt
+ *   npm run check:voice                       # the static report copy
  *   npm run check:voice -- runs/x/y/report.html
  *
- * WHY THIS IS A SCRIPT AND NOT A STYLE NOTE. The first review of the finished
- * report was "feels very AI generated". A later pass counted the tells across
- * every surface: fourteen em-dash asides that land a small conclusion, five
- * "Not X. Y." pairs, eight rhetorical uses of "worth", and four of six section
- * headings appending a second clause after a comma for balance. None of that
- * was deliberate, which is exactly why it needs a checker — these are habits,
- * and habits come back.
+ * The patterns live in src/lib/voice.ts, shared with stage 06 so a rule added
+ * for one caller is enforced by both. This script covers the copy we write by
+ * hand; the stage covers the prose the model writes on each run, and repairs it
+ * there rather than only reporting it.
  *
- * The patterns are high-precision on purpose. A checker that cries wolf gets
- * ignored, and some of these constructions are fine once. The count is the
- * signal: one em-dash aside in a document is a writer, nine is a tic.
+ * The prompt in src/stages/06-synthesis.ts is excluded from the default set on
+ * purpose: it quotes every construction it forbids, so a checker reading it
+ * finds the ban list and reports the crime.
  */
 
 import { readFile } from 'node:fs/promises';
+import { checkVoice, textFromHtml } from '../src/lib/voice.ts';
 
-const PATTERNS = [
-  {
-    id: 'em-dash-aside',
-    // An em dash followed by a short clause that ends the sentence.
-    re: /—[^.!?—\n]{10,90}[.!?]/g,
-    note: 'em-dash aside landing a conclusion. Use a full stop, or cut it.',
-    budget: 2,
-  },
-  {
-    id: 'not-x-but-y',
-    re: /\b(?:It|That|This)(?:'s| is| does)? not (?:an?|the) [^.,;]{2,40}[.,] (?:It|That|This)(?:'s| is)? (?:an?|the)\b|\bnot (?:an?|the) [^.,;]{2,40}, (?:it'?s|but) \b/gi,
-    note: '"Not X. Y." rhetorical pair. Just say what it is.',
-    budget: 0,
-  },
-  {
-    id: 'rhetorical-worth',
-    re: /\bworth (?:a conversation|your time|talking about|having|doing|the effort)\b|\bearns? its place\b/gi,
-    note: '"worth …" doing rhetorical work. Say what it gets them.',
-    budget: 1,
-  },
-  {
-    id: 'comma-appendix-heading',
-    re: /^[A-Z][^.\n]{8,60}, and (?:whether|where|what|how|why)\b[^.\n]{0,40}$/gm,
-    note: 'heading with a balancing clause after a comma.',
-    budget: 0,
-  },
-  {
-    id: 'jargon',
-    re: /\bpublic surface\b|\bleverage\b|\bunlock\b|\bnorth star\b|\bdouble down\b|\brapidly evolving\b|\bin today's\b/gi,
-    note: 'consultant register or in-house jargon.',
-    budget: 0,
-  },
-  {
-    id: 'inverted-moral',
-    re: /\b(?:It|That|This) does(?:n't| not) need to be [^.,]{3,40}, it needs to\b|\bis not (?:about|a matter of) [^.,]{3,40}, (?:it'?s|but)\b/gi,
-    note: 'sentence ending on a neat inversion.',
-    budget: 0,
-  },
-  {
-    id: 'triad',
-    re: /\bno [a-z]{3,12}, no [a-z]{3,12}(?:,| and) no [a-z]{3,12}\b/gi,
-    note: 'three-item list used for rhythm.',
-    budget: 0,
-  },
-];
-
-function strip(html) {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&mdash;/g, '—')
-    .replace(/&[a-z]+;/gi, ' ')
-    .replace(/[ \t]+/g, ' ');
-}
-
-/* The prompt in src/stages/06-synthesis.ts is deliberately excluded from the
-   default set: it quotes every one of these constructions in order to forbid
-   them, so a checker reading it finds the ban list and reports the crime. Pass
-   it explicitly if you want to audit the prose around the rules. */
 const targets = process.argv.slice(2);
 const files = targets.length ? targets : ['src/render/copy.ts'];
 
@@ -92,32 +30,24 @@ for (const file of files) {
     console.error(`  skipped ${file} (unreadable)`);
     continue;
   }
-  if (file.endsWith('.html')) text = strip(text);
+  if (file.endsWith('.html')) text = textFromHtml(text);
 
-  const hits = [];
-  for (const p of PATTERNS) {
-    const found = [...text.matchAll(p.re)];
-    if (found.length > p.budget) {
-      hits.push({ p, found });
-    }
-  }
-
-  if (hits.length === 0) {
+  const flags = checkVoice(text);
+  if (flags.length === 0) {
     console.log(`  ok      ${file}`);
     continue;
   }
   console.log(`\n  ${file}`);
-  for (const { p, found } of hits) {
-    total += found.length;
-    console.log(`    ${p.id} ×${found.length} (budget ${p.budget}) — ${p.note}`);
-    for (const m of found.slice(0, 3)) {
-      console.log(`        …${m[0].replace(/\s+/g, ' ').trim().slice(0, 96)}`);
-    }
+  for (const f of flags) {
+    total += f.count - f.budget;
+    console.log(`    ${f.id} ×${f.count} (budget ${f.budget}) — ${f.note}`);
+    for (const e of f.examples) console.log(`        …${e.slice(0, 96)}`);
   }
 }
 
 console.log(
   total === 0
     ? '\nVoice check clean.\n'
-    : `\n${total} flagged construction(s) over budget. These are habits, not errors — cut the ones that are doing rhythm rather than work.\n`
+    : `\n${total} construction(s) over budget. These are habits, not errors — cut the ones doing rhythm rather than work.\n`
 );
+process.exitCode = total === 0 ? 0 : 1;

@@ -40,6 +40,7 @@ import type { Claim } from '../lib/claim.ts';
 import type { Ledger } from '../lib/budget.ts';
 import { cached, type CacheOptions } from '../lib/cache.ts';
 import { requireCredential } from '../lib/env.ts';
+import { checkVoice, describeFlags, type VoiceFlag } from '../lib/voice.ts';
 import type { SubjectArtifact } from './01-subject.ts';
 import type { PeersArtifact } from './02-peers.ts';
 import type { PeerEvidenceArtifact } from './03-peer-evidence.ts';
@@ -610,11 +611,169 @@ Write a briefing for a colleague, not a report for a client: dense, specific, no
   return { brief: response.brief, model, searches: response.searches };
 }
 
+/* -- voice repair -------------------------------------------------------- */
+
+/** Every string in a synthesis that a reader will actually see. */
+export function synthesisProse(x: Synthesis): string {
+  return [
+    x.standing,
+    ...x.questions.flatMap((q) => [q.question, q.why, q.whatItChanges]),
+    ...x.opportunities.flatMap((o) => [
+      o.heading,
+      o.body,
+      o.basis,
+      ...(o.sizing ? [o.sizing.arithmetic, o.sizing.question, ...o.sizing.assumptions.map((a) => a.basis)] : []),
+    ]),
+    x.competitorSignal.point,
+    ...x.blindSpots,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+/**
+ * Rewrite the prose when it trips the voice check, then verify the rewrite did
+ * not cost us anything factual.
+ *
+ * REWRITE RATHER THAN DROP, which is the opposite of how this pipeline treats
+ * every other kind of problem. An unsourced figure has to be removed because
+ * there is no honest version of it. A tic is different: the idea underneath is
+ * fine and only the sentence around it is wrong, so dropping a good
+ * recommendation over an em-dash would be a worse trade than the em-dash.
+ *
+ * The risk of rewriting is that the model quietly changes a number, drops a
+ * citation, or softens a claim into something the evidence no longer supports.
+ * So the rewrite is not trusted: `validateSynthesis` runs again over the result
+ * and, if the rewrite introduced a single problem the original did not have, we
+ * keep the original and log that we did. Prose we are slightly embarrassed by
+ * beats prose we cannot stand behind.
+ *
+ * One attempt only. If the second draft still trips the check, that is a
+ * prompting problem to fix in SYSTEM_PROMPT, not something to keep paying a
+ * model to paper over.
+ */
+export async function repairVoice(
+  cache: CacheOptions,
+  ledger: Ledger,
+  args: { synthesis: Synthesis; flags: VoiceFlag[]; claims: Claim[]; facts: ComputedFacts },
+  now: string,
+  opts: { model?: string } = {}
+): Promise<{ synthesis: Synthesis; applied: boolean; reason: string; flagsAfter: VoiceFlag[] }> {
+  const model = opts.model ?? process.env.EXPOSURE_SYNTHESIS_MODEL ?? DEFAULT_MODEL;
+
+  const instruction = `Below is a draft you wrote. The prose trips our house style check. Rewrite only the sentences that need it.
+
+WHAT TO FIX:
+${describeFlags(args.flags)}
+
+WHAT MUST NOT CHANGE:
+- Every claimId, exactly as it is.
+- Every figure, exactly as it is, including the assumption values and the arithmetic.
+- The substance of each question and each recommendation. You are changing how it reads, not what it says.
+- The number of questions, opportunities and blind spots.
+
+Write the way a smart colleague emails you: contractions, plain words, mostly short sentences. Return the whole document in the same structure.
+
+DRAFT:
+${JSON.stringify(args.synthesis, null, 2)}`;
+
+  const request = { model, purpose: 'voice-repair', instruction };
+
+  let repaired: Synthesis;
+  try {
+    const { response, hit } = await cached<{ synthesis: Synthesis; usage: { input: number; output: number } }>(
+      cache,
+      'anthropic-voice',
+      request,
+      now,
+      async () => {
+        ledger.assertHeadroom(`anthropic voice repair ${model}`, 0.2);
+        const client = new Anthropic({ apiKey: requireCredential('ANTHROPIC_API_KEY') });
+        const message = await client.messages.parse({
+          model,
+          max_tokens: 16000,
+          thinking: { type: 'adaptive' },
+          output_config: { effort: 'medium', format: zodOutputFormat(SynthesisSchema) },
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: instruction }],
+        });
+        if (!message.parsed_output) throw new Error('voice repair returned nothing parseable');
+        return {
+          synthesis: message.parsed_output,
+          usage: { input: message.usage.input_tokens ?? 0, output: message.usage.output_tokens ?? 0 },
+        };
+      }
+    );
+    if (hit) ledger.free('anthropic', `voice repair ${model}`);
+    else {
+      const usd = (response.usage.input / 1e6) * 5 + (response.usage.output / 1e6) * 25;
+      ledger.record({
+        service: 'anthropic',
+        operation: `voice repair ${model}`,
+        usd,
+        basis: 'estimated',
+        cached: false,
+        note: `${response.usage.input} in / ${response.usage.output} out at $5/$25 per MTok (list)`,
+      });
+    }
+    repaired = response.synthesis;
+  } catch (error) {
+    return {
+      synthesis: args.synthesis,
+      applied: false,
+      reason: `repair call failed: ${(error as Error).message.slice(0, 140)}`,
+      flagsAfter: args.flags,
+    };
+  }
+
+  /* The rewrite is a fresh draft, so it gets the same scrutiny as the first. */
+  const problems = validateSynthesis(repaired, args.claims, args.facts);
+  if (problems.length > 0) {
+    return {
+      synthesis: args.synthesis,
+      applied: false,
+      reason:
+        `rewrite introduced ${problems.length} validation problem(s) ` +
+        `(${[...new Set(problems.map((x) => x.code))].join(', ')}) — kept the original`,
+      flagsAfter: args.flags,
+    };
+  }
+
+  const shapeChanged =
+    repaired.questions.length !== args.synthesis.questions.length ||
+    repaired.opportunities.length !== args.synthesis.opportunities.length;
+  if (shapeChanged) {
+    return {
+      synthesis: args.synthesis,
+      applied: false,
+      reason: 'rewrite changed how many questions or ideas there are — kept the original',
+      flagsAfter: args.flags,
+    };
+  }
+
+  const flagsAfter = checkVoice(synthesisProse(repaired));
+  const before = args.flags.reduce((n, f) => n + f.count - f.budget, 0);
+  const after = flagsAfter.reduce((n, f) => n + f.count - f.budget, 0);
+  if (after >= before) {
+    return {
+      synthesis: args.synthesis,
+      applied: false,
+      reason: `rewrite did not improve the prose (${before} over budget before, ${after} after)`,
+      flagsAfter: args.flags,
+    };
+  }
+
+  return { synthesis: repaired, applied: true, reason: `${before} over budget -> ${after}`, flagsAfter };
+}
+
 /* -- the stage ----------------------------------------------------------- */
 
 export interface SynthesisArtifact {
   model: string;
   synthesizedAt: string;
+  /** House-style flags on the delivered prose. Empty is the goal. */
+  voiceFlags?: VoiceFlag[];
+  voiceRepair?: { attempted: boolean; applied: boolean; reason: string };
   /** The wider research pass, kept so a reviewer can see what informed the ask. */
   industryBrief?: string;
   researchModel?: string;
@@ -734,13 +893,36 @@ export async function runSynthesisStage(
     );
   }
 
+  /* Voice check on what the model actually wrote, and one repair attempt if it
+     trips. The static copy is checked separately by scripts/check-voice.mjs;
+     this covers the part that is different on every run. */
+  let finalSynthesis = kept;
+  let voiceFlags = checkVoice(synthesisProse(kept));
+  let voiceRepair: SynthesisArtifact['voiceRepair'];
+
+  if (voiceFlags.length > 0) {
+    notes.push(`voice check: ${voiceFlags.map((f) => `${f.id} ×${f.count}`).join(', ')} — attempting a rewrite`);
+    const repair = await repairVoice(
+      cache,
+      ledger,
+      { synthesis: kept, flags: voiceFlags, claims: args.claims, facts },
+      now
+    );
+    finalSynthesis = repair.synthesis;
+    voiceFlags = repair.flagsAfter;
+    voiceRepair = { attempted: true, applied: repair.applied, reason: repair.reason };
+    notes.push(`voice repair ${repair.applied ? 'applied' : 'rejected'}: ${repair.reason}`);
+  }
+
   return {
     model,
     synthesizedAt: now,
+    voiceFlags,
+    voiceRepair,
     industryBrief: brief?.brief,
     researchModel: brief?.model,
     researchSearches: brief?.searches,
-    synthesis: kept,
+    synthesis: finalSynthesis,
     droppedBlocks: dropped,
     problems,
     facts,

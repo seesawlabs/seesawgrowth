@@ -315,6 +315,42 @@ export function looksLikeNavigation(quote: string): boolean {
   return lowercaseWords.length < 4;
 }
 
+/**
+ * System names that are also ordinary English words.
+ *
+ * A case-insensitive word match told Cultivate Advisors — a business coaching
+ * firm — that their work runs through Epic, the hospital EHR. Their page said
+ * something was epic. The claim then reached the analyst, which turned it into
+ * a question about their clinical systems, and the whole report looked like it
+ * had not been read by anyone.
+ *
+ * For these names we require the exact capitalisation and refuse a match at the
+ * start of a sentence, where any word is capitalised. Unambiguous names like
+ * "PointClickCare" keep the loose match.
+ */
+const AMBIGUOUS_SYSTEMS = new Set([
+  'Epic', 'Sage', 'Slack', 'Workday', 'Jira', 'Stripe', 'Shopify', 'SAP', 'EDI',
+]);
+
+export function namesSystem(text: string, system: string): boolean {
+  const escaped = system.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!AMBIGUOUS_SYSTEMS.has(system)) {
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
+  }
+  /* Exact case, and never sentence-initial — including the very start of the
+     text, where a heading like "Epic growth is what we deliver" would otherwise
+     match. Requiring mid-sentence context costs us a real mention that happens
+     to open a page, and that is the safer way to be wrong. */
+  const re = new RegExp(`\\b${escaped}\\b`, 'g');
+  for (const m of text.matchAll(re)) {
+    if (m.index === 0) continue;
+    const before = text.slice(0, m.index);
+    if (/(^|[.!?])\s*$/.test(before)) continue;
+    return true;
+  }
+  return false;
+}
+
 export function extractSignals(
   page: SelectedPage,
   markdown: string,
@@ -343,9 +379,7 @@ export function extractSignals(
     manualWorkQuotes.push({ phrase: phrase.trim(), quote });
   }
 
-  const systemsNamed = SYSTEMS_OF_RECORD.filter((s) =>
-    new RegExp(`\\b${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)
-  );
+  const systemsNamed = SYSTEMS_OF_RECORD.filter((s) => namesSystem(text, s));
 
   const aiTermsFound = AI_TERMS.filter((t) => lower.includes(t)).map((t) => t.trim());
 

@@ -822,7 +822,7 @@ test('claim statements do not disagree with their own subject', () => {
    The redirect that broke peer discovery on the live traditionshealth.com run.
    ======================================================================== */
 
-import { dominantDomain, extractSignals, looksLikeScrapeNoise } from './stages/01-subject.ts';
+import { dominantDomain, extractSignals, looksLikeScrapeNoise, namesSystem } from './stages/01-subject.ts';
 
 test('the effective domain is read back from the map response', () => {
   // traditionshealth.com 301s to tct-cares.com; all 60 mapped URLs were on the
@@ -1390,5 +1390,110 @@ test('a figure in an idea body still needs a source — only arithmetic is exemp
   assert.ok(
     problems.some((p) => p.code === 'unsourced_numeral' && p.detail.includes('37')),
     `an invented figure in prose must still fail: ${JSON.stringify(problems)}`
+  );
+});
+
+/* ===========================================================================
+   Voice. Shared between the checker script and stage 06's repair pass.
+   ======================================================================== */
+
+import { checkVoice, describeFlags, textFromHtml } from './lib/voice.ts';
+import { synthesisProse } from './stages/06-synthesis.ts';
+
+test('plain prose raises no flags', () => {
+  assert.deepEqual(
+    checkVoice("We read your site. Here's what we think. Tell us where we got it wrong."),
+    []
+  );
+});
+
+test('the tells that prompted this are caught', () => {
+  const flagged = (t: string) => checkVoice(t).map((f) => f.id);
+  assert.ok(flagged('It is not a chatbot, it is a workflow.').includes('not-x-but-y'));
+  assert.ok(flagged('That is worth your time and it earns its place.').includes('rhetorical-worth'));
+  assert.ok(flagged('No prep, no deck, no charge.').includes('triad'));
+  assert.ok(flagged('We read your public surface to unlock value.').includes('jargon'));
+  assert.ok(
+    flagged('It does not need to be clever, it needs to be durable.').includes('inverted-moral')
+  );
+  assert.ok(
+    flagged('Who has moved, and whether it worked').includes('comma-appendix-heading'),
+    'the heading shape that was 4 of our 6 headings'
+  );
+});
+
+test('one em-dash aside is a writer, several are a tic', () => {
+  const one = 'We stopped there — that gap is the interesting part.';
+  assert.deepEqual(checkVoice(one), [], 'a single aside is within budget');
+
+  const many = [one, one, one, one].join(' ');
+  const flags = checkVoice(many);
+  assert.equal(flags[0].id, 'em-dash-aside');
+  assert.equal(flags[0].count, 4);
+  assert.ok(flags[0].examples.length <= 3, 'examples are capped for the repair prompt');
+});
+
+test('flags describe themselves well enough to act on', () => {
+  const text = describeFlags(checkVoice('No prep, no deck, no charge. We read your public surface.'));
+  assert.match(text, /three-item list/i);
+  assert.match(text, /jargon|plain word/i);
+  assert.match(text, /found \d+, allowed \d+/);
+});
+
+test('synthesisProse gathers every string a reader sees', () => {
+  const prose = synthesisProse({
+    standing: 'STANDING_TEXT',
+    questions: [{ question: 'Q_TEXT', why: 'WHY_TEXT', claimIds: ['a'], whatItChanges: 'CHANGES_TEXT' }],
+    opportunities: [
+      {
+        heading: 'HEAD_TEXT',
+        body: 'BODY_TEXT',
+        basis: 'BASIS_TEXT',
+        claimIds: ['a'],
+        sizing: {
+          assumptions: [{ label: 'L', value: '5', unit: 'x', basis: 'ASSUMPTION_BASIS' }],
+          arithmetic: 'ARITH_TEXT',
+          question: 'SIZE_Q_TEXT',
+        },
+      },
+    ],
+    competitorSignal: { point: 'PEER_TEXT', claimIds: ['a'] },
+    blindSpots: ['BLIND_TEXT'],
+  } as never);
+
+  for (const marker of [
+    'STANDING_TEXT', 'Q_TEXT', 'WHY_TEXT', 'CHANGES_TEXT', 'HEAD_TEXT', 'BODY_TEXT',
+    'BASIS_TEXT', 'ASSUMPTION_BASIS', 'ARITH_TEXT', 'SIZE_Q_TEXT', 'PEER_TEXT', 'BLIND_TEXT',
+  ]) {
+    assert.ok(prose.includes(marker), `${marker} is shown to readers and must be checked`);
+  }
+});
+
+test('textFromHtml leaves em dashes intact so asides are still detectable', () => {
+  const text = textFromHtml('<p>We stopped there &mdash; that gap is the interesting part.</p>');
+  assert.match(text, /—/);
+  assert.ok(!text.includes('<p>'));
+});
+
+test('a system name that is also an English word needs exact case and context', () => {
+  // We told a business coaching firm their work runs through Epic, the hospital
+  // EHR, because their page said something was epic.
+  assert.equal(namesSystem('Epic growth is what we deliver.', 'Epic'), false);
+  assert.equal(namesSystem('An epic journey for our clients.', 'Epic'), false);
+  assert.equal(namesSystem('We integrate with Epic and Cerner.', 'Epic'), true);
+  assert.equal(namesSystem('Our team uses Slack daily.', 'Slack'), true);
+  assert.equal(namesSystem('We work in slack time.', 'Slack'), false);
+  // Unambiguous names keep the loose match.
+  assert.equal(namesSystem('runs on pointclickcare today', 'PointClickCare'), true);
+});
+
+test('the voice check ignores the client’s own quoted words', () => {
+  // Cultivate Advisors was flagged twice for "Unlock" — their word, from their
+  // homepage, quoted accurately by us.
+  const html = '<p>Their homepage says <q>Unlock your potential and unlock growth</q> which we read as marketing.</p>';
+  assert.deepEqual(checkVoice(textFromHtml(html)), [], 'quoted client copy is not our prose');
+  assert.ok(
+    checkVoice(textFromHtml('<p>We will unlock your potential.</p>')).some((f) => f.id === 'jargon'),
+    'our own jargon is still caught'
   );
 });
