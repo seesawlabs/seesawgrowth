@@ -44,6 +44,7 @@ import { checkVoice, describeFlags, type VoiceFlag } from '../lib/voice.ts';
 import type { SubjectArtifact } from './01-subject.ts';
 import type { PeersArtifact } from './02-peers.ts';
 import type { PeerEvidenceArtifact } from './03-peer-evidence.ts';
+import { stripPaddingAssumptions } from '../lib/sizing.ts';
 
 /** Opus by default: this is the analysis, and it is what the report is for. */
 export const DEFAULT_MODEL = 'claude-opus-5';
@@ -103,11 +104,15 @@ const AssumptionSchema = z.object({
 });
 
 const SizingSchema = z.object({
-  assumptions: z.array(AssumptionSchema).describe('The figures you chose. 2-4.'),
+  assumptions: z
+    .array(AssumptionSchema)
+    .describe(
+      'The inputs the sum is built from — 2-3 of them. Never the result of the arithmetic, and never a constant everyone already knows.'
+    ),
   arithmetic: z
     .string()
     .describe(
-      'The sum, written out so the reader can check it. Every digit here must appear in an assumption above or in a cited claim.'
+      'The sum, written out so the reader can check it, taking the assumptions above as its inputs.'
     ),
   question: z
     .string()
@@ -445,8 +450,9 @@ Everywhere except a \`sizing\` block, every digit you write must appear in a cla
 
 Inside a \`sizing\` block you may choose figures, because a rough order of magnitude they can argue with beats a blank they have to fill in. The rules there:
 
-  - EVERY figure that appears in \`arithmetic\` or \`question\` must first be declared in \`assumptions\`. This includes figures you took from the industry context — declare them, with a basis naming where they came from. A number in the arithmetic that is not in the assumptions list is deleted, and it takes the whole sizing with it, so declaring is the difference between a defensible estimate and nothing at all.
+  - \`assumptions\` lists the inputs you chose — the two or three quantities the sum is built from, each with a basis. Figures you took from the industry context belong here too, with a basis naming where they came from. What the arithmetic *produces* is not an input: never declare the answer, and never declare a constant the reader already knows. "12 / months in a year / Calendar" is not an assumption, it is padding, and it makes the block read as a form to fill in.
   - A real \`basis\` is required. "A round number chosen to keep the arithmetic legible" is honest. "From the industry research: typical advisory books run 20-25% annual churn" is honest. "Industry standard" on its own is not.
+  - Write each \`basis\` as a sentence rather than a reference. "Google's own figure, pulled 2026-08-25 (dem-4)" reads; "From dem-4" does not, because the id becomes a footnote marker and a sentence that is nothing but a marker says nothing. Put the id at the end, in parentheses.
   - Prefer round, obviously-illustrative numbers. 500 and 20% invite correction; 487 and 21.3% pretend to a precision you do not have.
   - Show the sum in \`arithmetic\` so they can redo it, and keep it to arithmetic a reader can follow in their head.
   - End with \`question\` handing it back — is that the right order of magnitude, and is it worth the effort?
@@ -899,8 +905,9 @@ export async function runSynthesisStage(
     });
   }
 
-  const problems = validateSynthesis(response.synthesis, args.claims, facts);
-  const { kept, dropped } = pruneSynthesis(response.synthesis, problems);
+  const sized = stripPaddingAssumptions(response.synthesis);
+  const problems = validateSynthesis(sized, args.claims, facts);
+  const { kept, dropped } = pruneSynthesis(sized, problems);
 
   if (problems.length > 0) {
     notes.push(

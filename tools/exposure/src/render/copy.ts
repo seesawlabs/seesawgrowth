@@ -50,6 +50,8 @@ export interface ReportCopy {
   changesLabel: string;
   /** Label above a sizing block's declared assumptions. */
   assumptionsLabel: string;
+  /** Stands in when a figure's stated basis is nothing but a citation. */
+  citedBasis: string;
   closing: { heading: string; body: string[]; ctaLabel: string };
   sourcesHeading: string;
   /** Rendered when a section has no content. Honesty over a blank space. */
@@ -112,6 +114,7 @@ export const COPY: ReportCopy = {
   whyLabel: 'Why we’re asking',
   changesLabel: 'What your answer changes',
   assumptionsLabel: 'Example ROI',
+  citedBasis: 'A measured figure, not one we chose.',
 
   closing: {
     heading: 'Where this goes next',

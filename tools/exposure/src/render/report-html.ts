@@ -27,6 +27,7 @@ import type { PeersArtifact } from '../stages/02-peers.ts';
 import { COPY, UNIVERSAL_UNKNOWNS, type ReportCopy, type Sec } from './copy.ts';
 import type { Synthesis } from '../stages/06-synthesis.ts';
 import { partitionClaims } from '../lib/claim.ts';
+import { citationOnlyBasis, normaliseBasis, sizeValue, stripPaddingAssumptions } from '../lib/sizing.ts';
 
 export interface RenderInput {
   meta: RunMeta;
@@ -114,9 +115,15 @@ export function linkClaimIds(
      those three letters was a candidate. */
   const ids = new Set(knownIds);
 
+  /* One link per statement, never a cluster.
+     A sentence built on six claims used to end in "3 4 5 6 7 8", which reads
+     as a citation contest rather than as a document meant to be read. The
+     first source is the one that carries the claim; the rest of the trail is
+     in the evidence appendix, where a reader who wants it goes anyway. */
   const refs = (list: string[]) => {
-    const ns = [...new Set(list.flatMap(footnotesFor))].sort((a, b) => a - b);
-    return ns.map((n) => `<a class="ref" href="#src-${n}" aria-label="Source ${n}">${n}</a>`).join('');
+    const [n] = [...new Set(list.flatMap(footnotesFor))].sort((a, b) => a - b);
+    if (typeof n !== 'number') return '';
+    return `<a class="ref" href="#src-${n}" aria-label="Source ${n}">${n}</a>`;
   };
 
   // Parenthetical groups that contain nothing but ids, commas and whitespace.
@@ -144,7 +151,8 @@ export function renderReportHtml(input: RenderInput): string {
   const { renderable } = partitionClaims(input.claims);
   const company = input.companyName?.trim() || input.subject.domain;
   const pulled = input.meta.startedAt.slice(0, 10);
-  const synthesis = input.synthesis ?? null;
+  /* A run stored before the padding rule existed still renders without it. */
+  const synthesis = input.synthesis ? stripPaddingAssumptions(input.synthesis) : null;
 
   /* Research signals are inputs to the analysis, not findings for the client.
      See `internalOnly` in lib/claim.ts — careers pages are the reason it
@@ -171,12 +179,13 @@ export function renderReportHtml(input: RenderInput): string {
       .filter((n): n is number => typeof n === 'number');
   };
 
-  const refsFor = (claim: Claim) =>
-    [...new Set(claim.sources.map((s) => index.get(s.url)))]
-      .filter((n): n is number => typeof n === 'number')
-      .sort((a, b) => a - b)
-      .map((n) => `<a class="ref" href="#src-${n}" aria-label="Source ${n}">${n}</a>`)
-      .join('');
+  const refsFor = (claim: Claim) => {
+    const [n] = [...new Set(claim.sources.map((s) => index.get(s.url)))]
+      .filter((x): x is number => typeof x === 'number')
+      .sort((a, b) => a - b);
+    if (typeof n !== 'number') return '';
+    return `<a class="ref" href="#src-${n}" aria-label="Source ${n}">${n}</a>`;
+  };
 
   /** Analysis prose: escape, turn blanks visible, link ids, curl the quotes. */
   const prose = (text: string) =>
@@ -229,6 +238,16 @@ export function renderReportHtml(input: RenderInput): string {
    * the arithmetic that uses them — so the reader meets the caveat before the
    * number rather than after it, and the closing question hands the sum back.
    */
+  /* A basis is a sentence. When the model wrote only a citation, the sentence
+     is supplied here and the citation kept — a figure taken from a cited claim
+     is measured rather than chosen, which is the whole point of the row. */
+  const basisOf = (a: { basis: string }) => {
+    const cited = citationOnlyBasis(a.basis);
+    return cited
+      ? `${esc(copy.citedBasis)} ${prose(`(${cited})`)}`
+      : prose(normaliseBasis(a.basis));
+  };
+
   const sizing = (z: NonNullable<Synthesis['opportunities'][number]['sizing']>) => `
     <div class="size">
       <p class="size__lab">${esc(copy.assumptionsLabel)}</p>
@@ -236,9 +255,9 @@ export function renderReportHtml(input: RenderInput): string {
         ${z.assumptions
           .map(
             (a) => `<li>
-              <span class="size__v">${esc(a.value)}${a.unit ? ` <span class="size__u">${esc(a.unit)}</span>` : ''}</span>
+              <span class="size__v">${esc(sizeValue(a))}</span>
               <span class="size__l">${esc(a.label)}</span>
-              <span class="size__b">${esc(a.basis)}</span>
+              <span class="size__b">${basisOf(a)}</span>
             </li>`
           )
           .join('')}
@@ -503,15 +522,17 @@ li.op::after{content:counter(o,decimal-leading-zero);position:absolute;top:1.5re
 /* -- sizing: our numbers, labelled as ours ---------------------------- */
 .size{margin-top:1.2rem;padding:1.1rem 1.2rem;background:var(--bg-sunk);border-radius:var(--radius-md);border:1px dashed var(--rule)}
 .size__lab{font-family:var(--font-accent);font-size:.78rem;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--accent);margin:0 0 .8rem}
-ul.size__as{list-style:none;margin:0 0 1rem;padding:0;display:grid;gap:.65rem}
-ul.size__as li{display:grid;grid-template-columns:auto 1fr;gap:.15rem .8rem;align-items:baseline}
-.size__v{font-family:var(--font-mono);font-size:1rem;font-weight:500;color:var(--accent-deep);background:var(--accent-soft);padding:.1rem .4rem;border-radius:var(--radius-sm);white-space:nowrap}
-.size__u{font-size:.72rem;color:var(--muted)}
-.size__l{font-size:.94rem;color:var(--ink)}
-.size__b{grid-column:2;font-size:.8rem;line-height:1.5;color:var(--muted);font-style:italic}
+ul.size__as{list-style:none;margin:0 0 1.1rem;padding:0;display:grid;gap:.7rem}
+/* One column width for every row, so the figures line up as a column of
+   figures. A minmax column rather than a fixed one: the widest chip in the
+   block sets it, and a long value grows the column instead of wrapping. */
+ul.size__as li{display:grid;grid-template-columns:minmax(6.5rem,max-content) 1fr;column-gap:1rem;row-gap:.15rem;align-items:baseline}
+.size__v{grid-column:1;grid-row:1;justify-self:stretch;text-align:right;font-family:var(--font-mono);font-size:.95rem;font-weight:500;color:var(--accent-deep);background:var(--accent-soft);padding:.22rem .5rem;border-radius:var(--radius-sm);white-space:nowrap}
+.size__l{grid-column:2;grid-row:1;font-size:.95rem;line-height:1.45;color:var(--ink)}
+.size__b{grid-column:2;grid-row:2;font-size:.82rem;line-height:1.5;color:var(--muted)}
 .size__sum{margin:0 0 .8rem;padding-top:.8rem;border-top:1px solid var(--rule);font-size:.98rem;line-height:1.6;color:var(--ink);max-width:60ch}
 .size__q{margin:0;font-size:.98rem;line-height:1.55;font-weight:500;color:var(--accent-deep);max-width:56ch}
-@media (max-width:520px){ul.size__as li{grid-template-columns:1fr}.size__b{grid-column:1}}
+@media (max-width:520px){ul.size__as li{grid-template-columns:1fr}.size__v{grid-column:1;justify-self:start;text-align:left}.size__l,.size__b{grid-column:1}.size__l{grid-row:auto}.size__b{grid-row:auto}}
 /* -- analysis: the part the reader came for ---------------------------- */
 .standing{font-size:clamp(1.15rem,2.6vw,1.4rem);line-height:1.55;color:var(--ink);max-width:60ch;margin:0;font-weight:400}
 .finding{font-size:1.06rem;line-height:1.62;color:var(--ink);max-width:64ch;margin:0}

@@ -1246,6 +1246,7 @@ test('careers-derived claims are marked internal and never rendered', () => {
    ======================================================================== */
 
 import { linkClaimIds } from './render/report-html.ts';
+import { normaliseBasis, sizeValue, stripPaddingAssumptions } from './lib/sizing.ts';
 
 test('citation linking never eats an ordinary English word', () => {
   // A /(obs|cmp|dem|hyp)[a-z0-9._-]*­/ prefix pattern deleted the word
@@ -1266,13 +1267,82 @@ test('citation linking never eats an ordinary English word', () => {
   }
 });
 
-test('a parenthetical group of citations collapses to references', () => {
+test('a parenthetical group of citations collapses to one reference', () => {
   const footnotes = (id: string) => ({ 'dem-2': [6], 'dem-trend-1': [7] })[id] ?? [];
   const out = linkClaimIds('Both are falling (dem-2, dem-trend-1).', footnotes, ['dem-2', 'dem-trend-1']);
+  /* One link, not a cluster. Six claims behind one sentence used to print
+     "3 4 5 6 7 8"; the trail lives in the evidence appendix instead. */
   assert.match(out, /href="#src-6"/);
-  assert.match(out, /href="#src-7"/);
+  assert.equal(out.match(/class="ref"/g)?.length, 1, `more than one link: ${out}`);
   assert.ok(!out.includes('dem-2'), `raw id survived: ${out}`);
   assert.ok(!/\(\s*\)/.test(out), `empty parens left: ${out}`);
+});
+
+test('sizeValue folds the unit in with one spacing convention', () => {
+  assert.equal(sizeValue({ value: '20', unit: '%' }), '20%');
+  assert.equal(sizeValue({ value: '20%', unit: '%' }), '20%', 'unit already in the value');
+  assert.equal(sizeValue({ value: '8', unit: 'hours per week' }), '8 hours per week');
+  assert.equal(sizeValue({ value: '45', unit: '/mo' }), '45/mo');
+  assert.equal(sizeValue({ value: '500', unit: '' }), '500');
+  assert.equal(sizeValue({ value: '27100', unit: 'per month' }), '27,100 per month');
+  assert.equal(sizeValue({ value: '13.46', unit: 'USD' }), '$13.46', 'money reads as a prefix');
+  assert.equal(sizeValue({ value: '$45k', unit: 'USD' }), '$45k', 'no doubled sign');
+  assert.equal(sizeValue({ value: ' 500 ', unit: ' clients ' }), '500 clients');
+});
+
+test('a leading citation in a basis moves to the end', () => {
+  assert.equal(
+    normaliseBasis('From dem-4, Google data pulled 2026-08-25.'),
+    'Google data pulled 2026-08-25. (dem-4)'
+  );
+  assert.equal(normaliseBasis('From dem-4.'), 'From dem-4.', 'nothing left to say');
+  assert.equal(
+    normaliseBasis('A round number chosen to keep the arithmetic legible.'),
+    'A round number chosen to keep the arithmetic legible.'
+  );
+  assert.equal(normaliseBasis('From 2020 to 2024 the trend held.'), 'From 2020 to 2024 the trend held.');
+});
+
+test('a calendar constant is not an assumption', () => {
+  const sizing = {
+    assumptions: [
+      { label: 'Advisors on the roster', value: '30', unit: '', basis: 'Round number.' },
+      { label: 'Months in a year', value: '12', unit: '', basis: 'Calendar.' },
+      { label: 'Hours saved each week', value: '2', unit: 'hours', basis: 'Round number.' },
+    ],
+    arithmetic: '30 x 2 x 48 = 2,880 hours a year.',
+    question: 'Is that the right order of magnitude?',
+  };
+  const out = stripPaddingAssumptions({
+    standing: '',
+    questions: [],
+    opportunities: [
+      { heading: 'h', body: 'b', basis: 'b', claimIds: [], sizing },
+    ],
+    competitorSignal: { point: '', claimIds: [] },
+    blindSpots: [],
+  } as never);
+  const kept = out.opportunities[0]!.sizing!.assumptions.map((a) => a.label);
+  assert.deepEqual(kept, ['Advisors on the roster', 'Hours saved each week']);
+});
+
+test('padding is left alone when dropping it would leave one input', () => {
+  const sizing = {
+    assumptions: [
+      { label: 'Months in a year', value: '12', unit: '', basis: 'Calendar.' },
+      { label: 'Hours saved each month', value: '2', unit: 'hours', basis: 'Round number.' },
+    ],
+    arithmetic: '12 x 2 = 24 hours.',
+    question: 'Right order of magnitude?',
+  };
+  const out = stripPaddingAssumptions({
+    standing: '',
+    questions: [],
+    opportunities: [{ heading: 'h', body: 'b', basis: 'b', claimIds: [], sizing }],
+    competitorSignal: { point: '', claimIds: [] },
+    blindSpots: [],
+  } as never);
+  assert.equal(out.opportunities[0]!.sizing!.assumptions.length, 2, 'a sum needs its inputs shown');
 });
 
 test('mapWithConcurrency preserves order and bounds what is in flight', async () => {
