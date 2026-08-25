@@ -23,6 +23,13 @@ export interface RunMeta {
   runId: string;
   domain: string;
   startedAt: string;
+  /**
+   * What we call them in the document. Recorded here so a re-render produces
+   * the same masthead as the original run — scripts/rerender.mjs had to be
+   * given it by hand, which meant a re-rendered brief could quietly be
+   * addressed to a bare domain.
+   */
+  companyName?: string;
   /** Free-text from intake: "what's driving this right now". */
   trigger?: string;
   /** Optional intake hint: where they'd most want AI to help. */

@@ -13,14 +13,14 @@
    the hour that follows.
 
    THE COPY SELLS THE ANALYSIS, NOT THE CITATIONS. The first version of this
-   report led with sourced facts and a reader's verdict was "a dump of press
+   brief led with sourced facts and a reader's verdict was "a dump of press
    release headlines — ChatGPT could have spit this out". They were right, and
-   the fix was upstream. So this page promises what the report now answers:
+   the fix was upstream. So this page promises what the brief now answers:
    where you stand, where you're strong, where you're exposed, what companies
    like you did and whether it worked, and what to weigh. Sourcing is the proof,
    not the pitch.
 
-   The call is framed as course-correcting the report rather than as a sales
+   The call is framed as course-correcting the brief rather than as a sales
    call, because that is what it honestly is: the document is built entirely
    from outside, the boundary section lists what we could not see, and the
    fastest way to fix that is an hour with the people who know.
@@ -78,7 +78,7 @@ const description =
       </p>
       <p class="body">
         We built the research into a repeatable pipeline, so we can give the
-        report away. It&rsquo;s the cheapest way for us to show you how we
+        brief away. It&rsquo;s the cheapest way for us to show you how we
         think, and the cheapest way for you to find out if we&rsquo;re any good.
       </p>
     </div>
@@ -154,7 +154,7 @@ const description =
       <div class="two">
         <div>
           <p class="body">
-            Anyone can write a report full of made-up percentages. So every
+            Anyone can write a brief full of made-up percentages. So every
             figure in yours either links to its source, or shows up as
             a <span class="blankdemo">blank</span> with a note on what
             we&rsquo;d need from you to fill it in.
@@ -180,7 +180,10 @@ const description =
       </div>
 
       <p class="samplelink">
-        <a href="/sample">See a real one &rarr;</a>
+        <!-- Points at the brief we ran on ourselves. /sample is the Reality
+             Check assessment, a different document, and linking there from here
+             showed a visitor the structure of a deliverable nobody asked for. -->
+        <a href="/sample-brief">Read the one we ran on ourselves &rarr;</a>
       </p>
     </div>
   </section>
@@ -195,7 +198,7 @@ const description =
           We can read your website. What we can&rsquo;t work out is how
           you&rsquo;d describe the business in one line, or who you actually
           think of as a competitor. Those two answers are the difference
-          between a sharp report and a generic one.
+          between a sharp brief and a generic one.
         </p>
       </div>
       <ExposureRequest />
@@ -295,7 +298,7 @@ const description =
       .two { grid-template-columns: 1fr 1fr; gap: var(--sp-10); }
     }
 
-    /* Mirrors how a declared blank renders inside the report itself. */
+    /* Mirrors how a declared blank renders inside the brief itself. */
     .blankdemo {
       font-family: var(--font-mono);
       font-size: 0.9em;

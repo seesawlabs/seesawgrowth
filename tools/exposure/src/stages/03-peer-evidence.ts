@@ -44,6 +44,12 @@ import { map, scrape } from '../lib/clients/firecrawl.ts';
 import { isNearMissDomain, nameKey, registrableDomain } from '../lib/domain.ts';
 import { mapWithConcurrency, PEER_CONCURRENCY } from '../lib/concurrency.ts';
 import type { PeerCandidate } from './02-peers.ts';
+import {
+  loadPeerLedger,
+  mergePeerEvidence,
+  savePeerLedger,
+  type LedgerItem,
+} from '../lib/evidence-ledger.ts';
 
 /**
  * A statement only counts as an AI move if it says so. Without this, generic
@@ -450,6 +456,16 @@ export interface PeerEvidenceArtifact {
 export interface PeerEvidenceOptions {
   /** How many peers to research. Each costs one Perplexity call. */
   maxPeers?: number;
+  /**
+   * Where accumulated peer findings live. A live search index returns
+   * different things at different hours; a dated past event does not stop
+   * having happened. See lib/evidence-ledger.ts.
+   */
+  evidenceDir?: string;
+  /** Run id recorded against findings this run contributes. */
+  runId?: string;
+  /** Set false to read the ledger without writing to it. */
+  persistEvidence?: boolean;
   /** Crawl each peer's own site as well. Costs Firecrawl credits. */
   crawlPeerSites?: boolean;
   pagesPerPeer?: number;
@@ -490,6 +506,11 @@ export async function runPeerEvidenceStage(
   }
 
   const allDropped: DroppedStatement[] = [];
+  const evidenceDir = opts.evidenceDir;
+  const runId = opts.runId ?? now;
+  let recoveredTotal = 0;
+  let addedTotal = 0;
+  const recoveredPeers = new Set<string>();
 
   /* Concurrent across peers. The ledger's headroom check is inherently racy
      under concurrency: several calls can pass it before any of them records a
@@ -520,6 +541,27 @@ export async function runPeerEvidenceStage(
       allDropped.push(...dropped);
     } catch (error) {
       notes.push(`Perplexity failed for ${peer.domain}: ${(error as Error).message.slice(0, 160)}`);
+    }
+
+    /* Merge with everything we have ever accepted about this peer. Today's
+       search result is one sample of a moving index; the ledger is the union.
+       Nothing enters it that has not already passed every gate above. */
+    if (evidenceDir) {
+      const existing = await loadPeerLedger(evidenceDir, peer.domain);
+      const merged = mergePeerEvidence(existing, peer.domain, items, runId, now);
+      if (merged.recovered.length > 0) {
+        recoveredTotal += merged.recovered.length;
+        recoveredPeers.add(peer.domain);
+      }
+      addedTotal += merged.added.length;
+      items = merged.ledger.items.map((item: LedgerItem) => ({
+        peerName: peer.name,
+        peerDomain: peer.domain,
+        statement: item.statement,
+        observedAt: item.observedAt,
+        citations: item.citations.map((c, i) => ({ marker: i + 1, ...c })),
+      }));
+      if (opts.persistEvidence !== false) await savePeerLedger(evidenceDir, merged.ledger);
     }
 
     let ownSurface: PeerOwnSurface | undefined;
@@ -560,6 +602,21 @@ export async function runPeerEvidenceStage(
 
   const dropSummary: Record<string, number> = {};
   for (const d of allDropped) dropSummary[d.reason] = (dropSummary[d.reason] ?? 0) + 1;
+
+  /* Say where the evidence came from. A brief built partly on findings from an
+     earlier run is still honest — every item is dated and cited — but the
+     operator reading this output should know that today's search alone would
+     not have produced it. */
+  if (recoveredTotal > 0) {
+    notes.push(
+      `${recoveredTotal} finding(s) across ${recoveredPeers.size} peer(s) came from the evidence ` +
+        `ledger, not from today's search — earlier runs found them, dated and cited, and a dated ` +
+        `event does not stop having happened`
+    );
+  }
+  if (addedTotal > 0) {
+    notes.push(`${addedTotal} new finding(s) added to the evidence ledger`);
+  }
 
   const withEvidence = out.filter((p) => p.hasDatedAiEvidence).length;
   if (withEvidence === 0 && targets.length > 0) {

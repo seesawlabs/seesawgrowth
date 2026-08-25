@@ -40,7 +40,10 @@ const html = renderReportHtml({
   coverage,
   subject,
   peers,
-  companyName: process.env.COMPANY_NAME || meta.companyName,
+  /* From the run's own metadata, so a re-render is addressed to the same
+     company as the original. COMPANY_NAME overrides it for older runs, which
+     were written before the field existed. */
+  companyName: meta.companyName || process.env.COMPANY_NAME,
   bookingUrl: process.env.PUBLIC_CAL_LINK || undefined,
   synthesis: synthesis?.synthesis ?? null,
   synthesisModel: synthesis?.model,

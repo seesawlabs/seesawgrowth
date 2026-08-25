@@ -5,17 +5,17 @@
    FOUR REQUIRED FIELDS, THREE OPTIONAL, and every one of them changes the
    output — see src/lib/exposure-intake.ts for why each exists and what the live
    runs said about it. The short version: the one-liner and the competitors are
-   the two fields that decide whether the report is sharp or generic. Naming two
+   the two fields that decide whether the brief is sharp or generic. Naming two
    competitors took a real run from one peer with dated evidence to three, and
    from 90% coverage to 100%.
 
    WE DO NOT ASK FOR VOLUMES. Case counts, cycle times, headcount. Those are the
-   blanks the report leaves open on purpose; they are the agenda for the call.
+   blanks the brief leaves open on purpose; they are the agenda for the call.
 
    THE CONFIRMATION IS WHERE THE WAIT GETS SPENT. A run takes about two minutes
    measured end to end, which is an awkward amount of time to stare at — so the
    confirmation puts the booking calendar in front of them immediately rather
-   than after. Someone who books while the report builds is the outcome we want
+   than after. Someone who books while the brief builds is the outcome we want
    anyway, and someone who doesn't has lost nothing.
 
    Validation is shared with the endpoint rather than duplicated, so the message
@@ -84,7 +84,7 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
     </span>
     <textarea name="trigger" rows="3" maxlength={TRIGGER_MAX}
       placeholder="A board question, a competitor announcement, a process that keeps breaking — one line is plenty."></textarea>
-    <span class="xr__help">Steers what the report leads with.</span>
+    <span class="xr__help">Steers what the brief leads with.</span>
   </label>
 
   <label class="xr__check">
@@ -95,7 +95,7 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
     </span>
   </label>
 
-  <button class="btn xr__submit" type="submit">Send me the report</button>
+  <button class="btn xr__submit" type="submit">Send me the brief</button>
 
   <p class="xr__error" id="xr-error" hidden role="alert"></p>
 </form>
@@ -275,7 +275,7 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
     errorBox.hidden = false;
     if (submit instanceof HTMLButtonElement) {
       submit.disabled = false;
-      submit.textContent = 'Send me the report';
+      submit.textContent = 'Send me the brief';
     }
   }
 
@@ -361,7 +361,7 @@ const calLink = import.meta.env.PUBLIC_CAL_LINK ?? '/book';
 
         /* One line for both delivery modes. Promising "two minutes" or "a
            business day" invites a visitor to time us, and the honest answer
-           varies with whether a person is still reading each report before it
+           varies with whether a person is still reading each brief before it
            goes out. "Shortly" is true either way, and the email is the
            contract. */
         const link = document.getElementById('xr-bookLink');

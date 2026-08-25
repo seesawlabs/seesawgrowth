@@ -172,6 +172,7 @@ async function report(argv: string[]): Promise<void> {
     runId,
     domain,
     startedAt: now,
+    companyName: args.company,
     trigger: args.trigger,
   });
 
@@ -267,6 +268,11 @@ async function report(argv: string[]): Promise<void> {
         maxPeers: args.peers ?? 6,
         crawlPeerSites: args.peerCrawl,
         pagesPerPeer: 2,
+        /* Committed, not gitignored like runs/. It is research we paid for,
+           about public companies from public sources, and a run on another
+           machine should not start from nothing. */
+        evidenceDir: join(ROOT, 'evidence'),
+        runId,
       });
       await writeArtifact(dir, '03-peer-evidence', evidence);
       console.error(

@@ -1622,3 +1622,112 @@ test('the ideas heading never promises more ideas than it shows', () => {
   assert.match(COPY.sections.opportunities.heading, /\{n\}/, 'the count is filled at render time');
   assert.ok(!/^Three /.test(COPY.sections.opportunities.heading));
 });
+
+/* -- the evidence ledger ------------------------------------------------ */
+
+import { mergePeerEvidence, savePeerLedger, loadPeerLedger } from './lib/evidence-ledger.ts';
+
+const cite = (url: string) => [{ url, title: 't' }];
+
+test('a finding survives a run that does not return it', () => {
+  const first = mergePeerEvidence(
+    null,
+    'peer.com',
+    [{ statement: 'Launched an AI intake tool in March 2025.', observedAt: '2025-03-04', citations: cite('https://news.example/a') }],
+    'run-1',
+    '2026-08-25T00:00:00Z'
+  );
+  assert.equal(first.added.length, 1);
+  assert.equal(first.recovered.length, 0);
+
+  /* The flapping case: an hour later the same question returns nothing. */
+  const second = mergePeerEvidence(first.ledger, 'peer.com', [], 'run-2', '2026-08-25T01:00:00Z');
+  assert.equal(second.ledger.items.length, 1, 'evidence was lost');
+  assert.equal(second.recovered.length, 1);
+  assert.equal(second.added.length, 0);
+});
+
+test('the same source found twice is one finding, keeping the first wording', () => {
+  const first = mergePeerEvidence(
+    null,
+    'peer.com',
+    [{ statement: 'Launched an AI intake tool.', observedAt: '2025-03-04', citations: cite('https://news.example/a') }],
+    'run-1',
+    '2026-08-25T00:00:00Z'
+  );
+  const second = mergePeerEvidence(
+    first.ledger,
+    'peer.com',
+    [{ statement: 'Deployed automation for patient intake.', observedAt: '2025-03-04', citations: cite('https://news.example/a/') }],
+    'run-2',
+    '2026-08-25T01:00:00Z'
+  );
+  assert.equal(second.ledger.items.length, 1, 'a reworded duplicate was stored twice');
+  assert.equal(second.ledger.items[0]!.statement, 'Launched an AI intake tool.', 'wording changed under the reader');
+  assert.equal(second.ledger.items[0]!.timesSeen, 2);
+  assert.equal(second.ledger.items[0]!.firstSeenRun, 'run-1');
+  assert.equal(second.ledger.items[0]!.lastSeenRun, 'run-2');
+  assert.equal(second.added.length, 0);
+});
+
+test('two different sources are two findings, newest first', () => {
+  const merged = mergePeerEvidence(
+    null,
+    'peer.com',
+    [
+      { statement: 'Older move.', observedAt: '2025-01-02', citations: cite('https://news.example/old') },
+      { statement: 'Newer move.', observedAt: '2026-02-03', citations: cite('https://news.example/new') },
+    ],
+    'run-1',
+    '2026-08-25T00:00:00Z'
+  );
+  assert.deepEqual(merged.ledger.items.map((i) => i.statement), ['Newer move.', 'Older move.']);
+});
+
+test('merging never mutates the ledger it was given', () => {
+  const first = mergePeerEvidence(
+    null,
+    'peer.com',
+    [{ statement: 'A.', observedAt: '2025-01-01', citations: cite('https://news.example/a') }],
+    'run-1',
+    '2026-08-25T00:00:00Z'
+  );
+  const snapshot = JSON.stringify(first.ledger);
+  mergePeerEvidence(
+    first.ledger,
+    'peer.com',
+    [{ statement: 'B.', observedAt: '2025-02-01', citations: cite('https://news.example/b') }],
+    'run-2',
+    '2026-08-25T01:00:00Z'
+  );
+  assert.equal(JSON.stringify(first.ledger), snapshot, 'a dry run mutated the corpus');
+});
+
+test('a saved ledger round-trips, and an unknown peer reads as empty', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = await mkdtemp(join(tmpdir(), 'evidence-'));
+  try {
+    assert.equal(await loadPeerLedger(root, 'never-seen.com'), null);
+
+    const { ledger } = mergePeerEvidence(
+      null,
+      'peer.com',
+      [{ statement: 'A move.', observedAt: '2025-05-05', citations: cite('https://news.example/a') }],
+      'run-1',
+      '2026-08-25T00:00:00Z'
+    );
+    await savePeerLedger(root, ledger);
+    const loaded = await loadPeerLedger(root, 'peer.com');
+    assert.deepEqual(loaded, ledger);
+
+    /* A domain that would escape the directory is written inside it, not above. */
+    const nasty = mergePeerEvidence(null, '../../etc/peer.com', [], 'run-1', '2026-08-25T00:00:00Z');
+    await savePeerLedger(root, nasty.ledger);
+    const back = await loadPeerLedger(root, '../../etc/peer.com');
+    assert.equal(back?.domain, '../../etc/peer.com');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

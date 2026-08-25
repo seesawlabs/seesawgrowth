@@ -99,6 +99,32 @@ challenged.
 
 Pass `--refresh` to bypass reads for a stage whose freshness matters.
 
+### The evidence ledger
+
+`evidence/<peer-domain>.json` holds every peer finding we have ever accepted,
+and it is **committed**, unlike `cache/` and `runs/`.
+
+It exists because stage 03 asks a live search index one question per peer, and
+the answer moves. The same peer set returned two dated AI moves on one run and
+none an hour later — coverage went 100% → 80%, which is the difference between
+a brief we send and one we route to a call, decided by nothing that happened in
+the world.
+
+Every item in the ledger is a **dated past event with a citation**. A dated
+event does not stop having happened because a search index ranked it lower
+today, so findings accumulate: what was accepted once stays accepted, and a
+re-run can add to a brief but never silently subtract from it. Findings are
+keyed by source URL rather than by wording, so a re-run that describes the same
+announcement differently recognises it instead of storing a near-duplicate —
+and the reader keeps the sentence they already read.
+
+This lowers no bar. Items enter only by passing every gate in stage 03:
+attribution, an action verb, a citation, a source date, no year mismatch. When a
+run leans on the ledger it says so in its notes, with the count.
+
+Perplexity is also called at `temperature: 0`, which removes the half of the
+variance that was ours. The index moving under us is the half the ledger covers.
+
 ## Credentials
 
 See `.env.example`. **Prefer setting these as environment variables on the

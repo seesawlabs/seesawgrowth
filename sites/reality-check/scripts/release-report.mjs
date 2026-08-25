@@ -25,6 +25,9 @@
      --force          release below the coverage threshold anyway
      --ttl <days>     link lifetime (default 30)
      --base <url>     site origin for the link
+     --verify         GET the minted link and require a 200 before reporting
+                      success. Catches the one failure the store cannot: a link
+                      released against a store the site cannot read.
 --------------------------------------------------------------------------- */
 
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
@@ -143,6 +146,40 @@ console.log(`  stored   ${join(storeDir, `${reportId}.html`)}`);
 console.log(`  expires  ${ttlDays} days\n`);
 const link = linkFor(base, token);
 console.log(`  ${link}\n`);
+
+/* The disk store is per-machine. A link minted here resolves for the site only
+   if the site reads the same directory — true in local dev, false the moment
+   the site is on Vercel and this script ran on a laptop. Saying so is cheap;
+   discovering it from a client who clicked a 404 is not. */
+if (!process.env.EXPOSURE_REPORT_BASE_URL) {
+  console.log(
+    `  NOTE: stored on disk, not uploaded. This link resolves only where the site\n` +
+      `  reads ${storeDir}. Set EXPOSURE_REPORT_BASE_URL (and upload there) for a\n` +
+      `  link that works from anywhere.\n`
+  );
+}
+
+if (flag('verify')) {
+  try {
+    const res = await fetch(link, { redirect: 'follow', signal: AbortSignal.timeout(15_000) });
+    const body = res.ok ? await res.text() : '';
+    /* A 200 is not enough on its own: the route answers 200 for the brief and
+       renders a friendly page for a valid-token-missing-report, so check the
+       document is actually there. */
+    const looksLikeBrief = body.includes('AI Opportunity Brief');
+    if (!res.ok || !looksLikeBrief) {
+      console.error(
+        `  VERIFY FAILED: ${res.status}${looksLikeBrief ? '' : ' — response is not a brief'}\n` +
+          '  Do not send this link.\n'
+      );
+      process.exit(7);
+    }
+    console.log('  verified  link serves the brief\n');
+  } catch (error) {
+    console.error(`  VERIFY FAILED: ${error.message}\n  Do not send this link.\n`);
+    process.exit(7);
+  }
+}
 
 if (!flag('send')) {
   console.log('  Not sent. Add --send to email it, or paste the link above.\n');

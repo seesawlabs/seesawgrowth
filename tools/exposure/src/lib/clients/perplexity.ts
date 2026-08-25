@@ -72,9 +72,17 @@ export async function ask(
   now: string,
   opts: { model?: string; maxTokens?: number; label?: string } = {}
 ): Promise<PerplexityResponse> {
+  /* temperature 0. The same peer set returned two dated AI moves on one run and
+     none an hour later, which moved a brief from 100% coverage to 80% — the
+     difference between sendable and route-to-a-call, decided by sampling noise.
+     Zero does not make this deterministic (the live search index moves under us
+     too, which is what the evidence ledger in stage 03 is for) but it removes
+     the half of the variance that is ours. It is also in the cache key, so
+     cached answers from before this change are not reused. */
   const request = {
     model: opts.model ?? 'sonar',
     max_tokens: opts.maxTokens ?? 700,
+    temperature: 0,
     messages: [{ role: 'user', content: prompt }],
   };
 
