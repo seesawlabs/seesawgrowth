@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index, follow">
+<title>AI Opportunity Brief — SeeSaw Labs</title>
+<meta name="description" content="AI Opportunity Brief for SeeSaw Labs, compiled from public evidence by SeeSaw Labs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Pixelify+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+--primary-50:#e9f6ff;--primary-100:#d1ecff;--primary-200:#9ad4fd;--primary-300:#7eadf7;
+--primary-400:#337df0;--primary-500:#1061df;--primary-600:#0950bd;--primary-700:#033787;
+--primary-800:#002056;--primary-900:#00032e;
+--neutral-50:#f5f5f5;--neutral-100:#ededed;--neutral-200:#d4d4d4;--neutral-500:#787878;
+--neutral-700:#454545;--neutral-900:#171717;
+--amber-100:#fff3d2;--amber-500:#e0ac10;--amber-700:#876603;
+--dot:var(--neutral-200);
+--dot-grid:radial-gradient(1.5px at center,var(--dot) 0%,var(--dot) 99%,transparent 100%);
+--dot-step:40px 40px;
+--bg:#ffffff;--bg-sunk:var(--neutral-100);--bg-deep:var(--primary-900);--surface:#ffffff;
+--ink:var(--neutral-900);--ink-2:var(--neutral-700);--muted:var(--neutral-500);
+--rule:var(--neutral-200);--rule-soft:var(--neutral-100);
+--accent:var(--primary-500);--accent-deep:var(--primary-700);--accent-soft:var(--primary-50);
+--accent-ink:#ffffff;--on-deep:#ffffff;--on-deep-2:var(--primary-200);--on-deep-muted:var(--primary-300);
+--font-body:'Outfit',ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+--font-accent:'Pixelify Sans',ui-monospace,monospace;
+--font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,monospace;
+--gutter:min(6vw,32px);
+--radius-sm:.25rem;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;
+--ls-tight:-.025em;--ls-wide:.025em;--ls-widest:.1em;
+--dur-normal:.2s;--ease-out:cubic-bezier(0,0,.2,1);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--dot:#0b2a52;--bg:#00030f;--bg-sunk:#000821;--bg-deep:#00030f;--surface:#04102b;
+--ink:#eef4ff;--ink-2:#c3d6f2;--muted:#8fa7c9;--rule:#0e2a55;--rule-soft:#0a1e3d;
+--accent:#7eadf7;--accent-deep:#9ad4fd;--accent-soft:#04193f;--accent-ink:#00032e;
+--on-deep-muted:#7eadf7;
+}}
+:root[data-theme="dark"]{
+--dot:#0b2a52;--bg:#00030f;--bg-sunk:#000821;--bg-deep:#00030f;--surface:#04102b;
+--ink:#eef4ff;--ink-2:#c3d6f2;--muted:#8fa7c9;--rule:#0e2a55;--rule-soft:#0a1e3d;
+--accent:#7eadf7;--accent-deep:#9ad4fd;--accent-soft:#04193f;--accent-ink:#00032e;
+--on-deep-muted:#7eadf7;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:1rem;line-height:1.5;-webkit-font-smoothing:antialiased}
+.shell{max-width:53rem;margin:0 auto;padding:0 var(--gutter)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.internal{background:var(--amber-100);color:var(--amber-700);border-bottom:1px solid var(--amber-500)}
+.internal .shell{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;align-items:baseline;padding:.7rem var(--gutter)}
+.itag{font-family:var(--font-accent);font-size:.8rem;letter-spacing:var(--ls-wide);text-transform:uppercase;font-weight:600}
+.itext{font-size:.82rem;line-height:1.45}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .internal{background:#221a04;color:var(--amber-500);border-bottom-color:var(--amber-700)}}
+:root[data-theme="dark"] .internal{background:#221a04;color:var(--amber-500);border-bottom-color:var(--amber-700)}
+.mast{background:var(--bg-deep);color:var(--on-deep);background-image:var(--dot-grid);background-size:var(--dot-step);border-bottom:1px solid var(--rule)}
+.mast .shell{padding:4.5rem var(--gutter) 3.5rem}
+.brand{display:flex;align-items:center;gap:.55rem;margin:0 0 3rem;font-family:var(--font-accent);font-size:1rem;letter-spacing:var(--ls-wide);color:var(--on-deep)}
+.dotmark{width:9px;height:9px;border-radius:50%;background:var(--primary-400);flex:none}
+.kicker{font-family:var(--font-accent);font-size:.85rem;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--on-deep-muted);margin:0 0 1rem}
+.mast h1{font-weight:600;letter-spacing:var(--ls-tight);font-size:clamp(2.1rem,6vw,3.4rem);line-height:1.08;margin:0 0 1.25rem;text-wrap:balance;max-width:38ch}
+.subject{display:flex;flex-wrap:wrap;gap:.4rem 1rem;align-items:baseline;font-family:var(--font-mono);font-size:.8rem;color:var(--on-deep-2);margin:0 0 2rem}
+.subject .sep{color:var(--primary-700)}
+.promise{font-size:1.06rem;line-height:1.6;color:var(--on-deep-2);max-width:56ch;margin:0;padding-top:1.75rem;border-top:1px solid var(--primary-800)}
+.promise strong{color:var(--on-deep);font-weight:500}
+main{padding:0 0 5rem}
+.sec{padding:3.25rem 0 0}
+.sechead{display:flex;flex-direction:column;gap:.5rem;margin:0 0 1.75rem}
+.secnum{font-family:var(--font-accent);font-size:.85rem;letter-spacing:var(--ls-wide);color:var(--accent);text-transform:uppercase}
+.sec h2{font-weight:600;font-size:clamp(1.4rem,3.4vw,1.9rem);letter-spacing:var(--ls-tight);line-height:1.18;margin:0;text-wrap:balance;max-width:32ch}
+.intro{font-size:1rem;line-height:1.62;color:var(--ink-2);max-width:60ch;margin:.75rem 0 0}
+.empty{font-size:1rem;line-height:1.62;color:var(--muted);max-width:58ch;font-style:italic}
+ul.claims{list-style:none;margin:0;padding:0;display:grid;gap:1.15rem}
+.claim{background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:1.15rem 1.3rem}
+.claim>p{margin:0;font-size:1rem;line-height:1.62;color:var(--ink)}
+.claim q{quotes:none;font-style:italic;color:var(--ink-2)}
+.claim q::before{content:'\201C'}
+.claim q::after{content:'\201D'}
+.peer{display:inline-block;font-family:var(--font-mono);font-size:.72rem;font-weight:500;letter-spacing:var(--ls-wide);text-transform:uppercase;background:var(--accent-soft);color:var(--accent-deep);padding:.2rem .45rem;border-radius:var(--radius-sm);margin-right:.5rem;vertical-align:.08em}
+.when{display:inline-block;margin-top:.7rem;font-family:var(--font-mono);font-size:.7rem;letter-spacing:var(--ls-wide);color:var(--muted)}
+.when::before{content:"first reported "}
+a.ref{font-family:var(--font-mono);font-size:.62rem;font-weight:500;text-decoration:none;color:var(--accent-deep);background:var(--accent-soft);padding:.08rem .26rem;border-radius:2px;margin-left:.18rem;vertical-align:super;line-height:1}
+a.ref:hover{background:var(--accent);color:var(--accent-ink)}
+.blank{font-family:var(--font-mono);font-size:.86em;color:var(--accent-deep);background:var(--accent-soft);border-bottom:2px solid var(--accent);padding:.05rem .3rem;border-radius:2px 2px 0 0;white-space:nowrap}
+.claim-hyp{border-style:dashed}
+.needbox{margin-top:1rem;padding-top:.9rem;border-top:1px dashed var(--rule)}
+.needhead{font-family:var(--font-accent);font-size:.8rem;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--accent);margin:0 0 .6rem}
+ul.need{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+ul.need li{display:flex;flex-wrap:wrap;gap:.5rem;align-items:baseline}
+.needlabel{font-size:.9rem;color:var(--ink-2)}
+.unit{font-family:var(--font-mono);font-size:.72rem;color:var(--muted)}
+
+
+/* -- questions: the spine of the document ------------------------------ */
+ol.qs{list-style:none;counter-reset:q;margin:0;padding:0;display:grid;gap:1.6rem}
+li.q{counter-increment:q;background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:var(--radius-lg);padding:1.4rem 1.5rem;position:relative}
+.q__ask{margin:0 0 1rem;font-size:clamp(1.06rem,2.3vw,1.2rem);line-height:1.45;font-weight:500;color:var(--ink);max-width:56ch}
+.q__ask::before{content:counter(q,decimal-leading-zero);display:block;font-family:var(--font-accent);font-size:.8rem;font-weight:400;letter-spacing:var(--ls-wide);color:var(--accent);margin-bottom:.5rem}
+.q__meta{margin-top:.85rem}
+.q__lab{font-family:var(--font-mono);font-size:.62rem;letter-spacing:var(--ls-widest);text-transform:uppercase;color:var(--muted);margin:0 0 .3rem}
+.q__why{margin:0;font-size:.94rem;line-height:1.6;color:var(--ink-2);max-width:62ch}
+
+/* -- opportunities: things to build ------------------------------------ */
+ol.ops{list-style:none;counter-reset:o;margin:0;padding:0;display:grid;gap:1.6rem}
+li.op{counter-increment:o;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:1.5rem;position:relative}
+.op__h{font-size:clamp(1.1rem,2.4vw,1.28rem);font-weight:600;letter-spacing:var(--ls-tight);line-height:1.3;margin:0 0 .7rem;padding-right:2.5rem;color:var(--ink)}
+li.op::after{content:counter(o,decimal-leading-zero);position:absolute;top:1.5rem;right:1.5rem;font-family:var(--font-accent);font-size:1.1rem;color:var(--rule);line-height:1}
+.op__b{margin:0 0 .9rem;font-size:1rem;line-height:1.62;color:var(--ink);max-width:62ch}
+.op__basis{margin:0;font-size:.92rem;line-height:1.6;color:var(--ink-2);max-width:62ch}
+.op__lab{font-family:var(--font-mono);font-size:.62rem;letter-spacing:var(--ls-widest);text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.25rem}
+
+/* -- sizing: our numbers, labelled as ours ---------------------------- */
+.size{margin-top:1.2rem;padding:1.1rem 1.2rem;background:var(--bg-sunk);border-radius:var(--radius-md);border:1px dashed var(--rule)}
+.size__lab{font-family:var(--font-accent);font-size:.78rem;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--accent);margin:0 0 .8rem}
+ul.size__as{list-style:none;margin:0 0 1.1rem;padding:0;display:grid;gap:.7rem}
+/* One column width for every row, so the figures line up as a column of
+   figures. A minmax column rather than a fixed one: the widest chip in the
+   block sets it, and a long value grows the column instead of wrapping. */
+ul.size__as li{display:grid;grid-template-columns:minmax(6.5rem,max-content) 1fr;column-gap:1rem;row-gap:.15rem;align-items:baseline}
+.size__v{grid-column:1;grid-row:1;justify-self:stretch;text-align:right;font-family:var(--font-mono);font-size:.95rem;font-weight:500;color:var(--accent-deep);background:var(--accent-soft);padding:.22rem .5rem;border-radius:var(--radius-sm);white-space:nowrap}
+.size__l{grid-column:2;grid-row:1;font-size:.95rem;line-height:1.45;color:var(--ink)}
+.size__b{grid-column:2;grid-row:2;font-size:.82rem;line-height:1.5;color:var(--muted)}
+.size__sum{margin:0 0 .8rem;padding-top:.8rem;border-top:1px solid var(--rule);font-size:.98rem;line-height:1.6;color:var(--ink);max-width:60ch}
+.size__q{margin:0;font-size:.98rem;line-height:1.55;font-weight:500;color:var(--accent-deep);max-width:56ch}
+@media (max-width:520px){ul.size__as li{grid-template-columns:1fr}.size__v{grid-column:1;justify-self:start;text-align:left}.size__l,.size__b{grid-column:1}.size__l{grid-row:auto}.size__b{grid-row:auto}}
+/* -- analysis: the part the reader came for ---------------------------- */
+.standing{font-size:clamp(1.15rem,2.6vw,1.4rem);line-height:1.55;color:var(--ink);max-width:60ch;margin:0;font-weight:400}
+.finding{font-size:1.06rem;line-height:1.62;color:var(--ink);max-width:64ch;margin:0}
+ul.points{list-style:none;margin:0;padding:0;display:grid;gap:1.1rem}
+ul.points>li{position:relative;padding-left:1.6rem;max-width:64ch}
+ul.points>li::before{content:"";position:absolute;left:0;top:.6em;width:.7rem;height:2px;background:var(--accent)}
+ul.points>li>p{margin:0;font-size:1.02rem;line-height:1.62;color:var(--ink)}
+ol.considers{list-style:none;counter-reset:c;margin:0;padding:0;display:grid;gap:1.4rem}
+ol.considers>li{counter-increment:c;background:var(--surface);border:1px solid var(--rule);border-radius:var(--radius-lg);padding:1.3rem 1.4rem;position:relative}
+ol.considers>li::before{content:counter(c);position:absolute;top:1.3rem;right:1.4rem;font-family:var(--font-accent);font-size:1.5rem;color:var(--rule);line-height:1}
+ol.considers h3{font-size:1.05rem;font-weight:600;letter-spacing:var(--ls-tight);margin:0 0 .5rem;padding-right:2rem;color:var(--ink)}
+ol.considers p{margin:0;font-size:.98rem;line-height:1.62;color:var(--ink-2);max-width:60ch}
+
+/* -- evidence appendix: dense, secondary, checkable -------------------- */
+.evidencesec{border-top:1px solid var(--rule);margin-top:3.25rem;padding-top:2.5rem}
+.evgroup{margin-bottom:2rem}
+.evgroup h3{font-family:var(--font-mono);font-size:.72rem;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 .9rem;padding-bottom:.5rem;border-bottom:1px solid var(--rule-soft)}
+ul.evlist{list-style:none;margin:0;padding:0;display:grid;gap:.85rem}
+li.ev{display:flex;gap:.75rem;align-items:flex-start}
+.evid{font-family:var(--font-mono);font-size:.6rem;color:var(--muted);background:var(--bg-sunk);padding:.2rem .35rem;border-radius:2px;flex:none;margin-top:.15rem}
+.evbody{min-width:0}
+.evbody p{margin:0;font-size:.92rem;line-height:1.58;color:var(--ink-2)}
+.evbody .when{margin-top:.35rem;font-size:.66rem}
+.boundary{margin-top:3.25rem;background:var(--bg-deep);color:var(--on-deep);background-image:var(--dot-grid);background-size:var(--dot-step);border-radius:var(--radius-xl);padding:2.5rem 2rem}
+.boundary .secnum{color:var(--on-deep-muted)}
+.boundary h2{color:var(--on-deep)}
+.boundary .intro{color:var(--on-deep-2)}
+ul.unknowns{list-style:none;margin:1.75rem 0 0;padding:0;display:grid;gap:.1rem}
+ul.unknowns li{display:flex;gap:.8rem;align-items:baseline;padding:.8rem 0;border-top:1px solid var(--primary-800);font-size:1rem;color:var(--on-deep)}
+ul.unknowns li:last-child{border-bottom:1px solid var(--primary-800)}
+.ublank{font-family:var(--font-mono);font-size:.9rem;color:var(--primary-200);border-bottom:2px solid var(--primary-400);min-width:3.5rem;flex:none}
+.closing{margin-top:3.25rem;padding:2rem;border:1px solid var(--rule);border-radius:var(--radius-xl);background:var(--bg-sunk)}
+.closing h2{font-size:1.25rem;font-weight:600;letter-spacing:var(--ls-tight);margin:0 0 .75rem}
+.closing p{margin:0 0 1rem;font-size:1rem;line-height:1.62;color:var(--ink-2);max-width:58ch}
+.cta{display:inline-block;background:var(--accent);color:var(--accent-ink);font-weight:500;font-size:.95rem;text-decoration:none;padding:.7rem 1.3rem;border-radius:var(--radius-md);transition:background var(--dur-normal) var(--ease-out)}
+.cta:hover{background:var(--accent-deep)}
+.srcsec{margin-top:3.25rem;padding-top:2rem;border-top:1px solid var(--rule)}
+.srcsec h2{font-family:var(--font-mono);font-size:.75rem;letter-spacing:var(--ls-widest);text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 1.25rem}
+ol.sources{list-style:none;margin:0;padding:0;display:grid;gap:.85rem}
+ol.sources li{display:flex;gap:.75rem;align-items:flex-start;scroll-margin-top:1.5rem}
+ol.sources li:target .srclabel{background:var(--accent-soft)}
+.srcnum{font-family:var(--font-mono);font-size:.68rem;color:var(--accent-deep);background:var(--accent-soft);padding:.15rem .35rem;border-radius:2px;flex:none;min-width:1.6rem;text-align:center}
+.srcbody{display:grid;gap:.2rem;min-width:0}
+.srclabel{font-size:.88rem;color:var(--ink)}
+.srcurl{font-family:var(--font-mono);font-size:.7rem;word-break:break-all;color:var(--accent)}
+.srcret{font-family:var(--font-mono);font-size:.66rem;color:var(--muted)}
+.colophon{margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid var(--rule-soft);font-family:var(--font-mono);font-size:.7rem;line-height:1.7;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:640px){.boundary{padding:2rem 1.25rem;border-radius:var(--radius-lg)}.closing{padding:1.5rem}}
+</style>
+</head>
+<body><div style="background:#1a1a1a;color:#f7f6f3;padding:14px min(6vw,32px);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.72rem;line-height:1.6;letter-spacing:.02em">
+  <strong style="font-weight:600">This is a real brief, and it is about us.</strong>
+  We pointed the pipeline at seesawlabs.com and published what came out.
+  Nothing was edited afterwards, including the part where it tells us what we
+  are missing. <a href="/brief" style="color:#f7f6f3;text-decoration:underline">Get one for your company &rarr;</a>
+</div>
+
+<header class="mast">
+  <div class="shell">
+    <p class="brand"><span class="dotmark"></span>SeeSaw Labs</p>
+    <p class="kicker">AI Opportunity Brief</p>
+    <h1>Spend an hour with us. We have a lot to say about SeeSaw Labs and AI.</h1>
+    <div class="subject">
+      <span>SeeSaw Labs</span><span class="sep">/</span>
+      <span>seesawlabs.com</span><span class="sep">/</span>
+      <span>2026-08-25</span>
+    </div>
+    <p class="promise">Our numbers link to where we found them, or they’re a deliberate <span class="blank">blank</span> we can fill in together.</p>
+  </div>
+</header>
+
+<main class="shell">
+  
+  <section class="sec ">
+      <div class="sechead">
+        <p class="secnum">01 &mdash; The short version</p>
+        <h2>Our read from the research</h2>
+        
+      </div>
+      <p class="standing">You've pointed the front of the business at healthcare AI, and the site says so in the vocabulary a buyer would recognise, from machine learning through to LLMs <a class="ref" href="#src-1" aria-label="Source 1">1</a>. The work underneath reads narrower and more specific than the positioning does. Replacing fragmented spreadsheets and manual reporting inside care operations is something you've clearly done for real clients <a class="ref" href="#src-2" aria-label="Source 2">2</a>, and we'd guess your strongest credibility sits at the medication order, approval and delivery seam rather than in <q>healthcare AI</q> generally. We read six pages of yours and the public trail around eight peers, four of whom have dated AI evidence, so treat what follows as a first draft of a shared view rather than a finding.</p>
+    </section>
+  <section class="sec ">
+      <div class="sechead">
+        <p class="secnum">02 &mdash; What we’d build</p>
+        <h2>Four ideas you may not have considered</h2>
+        <p class="intro">In the order we’d do them. Where we’ve put numbers on one, they’re worked examples using our own assumptions, which we’ve listed so you can swap in your real ones.</p>
+      </div>
+      <ol class="ops"><li class="op">
+            <h3 class="op__h">A shared order-and-status core for medication logistics</h3>
+            <p class="op__b">Take the order intake, approval and delivery-status work you've already built for pharmacy and care-operations clients and pull the common parts into one core you own. Position it as a visibility and integration layer that sits beside the pharmacy system and the PBM rather than as a rival platform, so it doesn't trigger a rip-and-replace decision. First step is not code. It's a two-week read of the two existing codebases to see what's genuinely shared and what the contracts allow you to reuse.</p>
+            <p class="op__basis"><span class="op__lab">Why we think this applies to you</span> Your own case studies describe care operations running on fragmented spreadsheets and manual reporting <a class="ref" href="#src-2" aria-label="Source 2">2</a>, and that's a problem shape you've clearly solved more than once. Funded point products now sell this to hospice and home-health buyers, which means the category is proven and the bespoke version is the expensive way to compete.</p>
+            
+    <div class="size">
+      <p class="size__lab">Example ROI</p>
+      <ul class="size__as">
+        <li>
+              <span class="size__v">12 weeks</span>
+              <span class="size__l">Engineering weeks inside a build that go to order intake, approval and status</span>
+              <span class="size__b">A round number chosen to keep the arithmetic legible.</span>
+            </li><li>
+              <span class="size__v">50%</span>
+              <span class="size__l">Share of that surface that repeats from one pharmacy-logistics client to the next</span>
+              <span class="size__b">You've built against the same spreadsheet-and-manual-reporting problem more than once, so we're guessing half the surface is common <a class="ref" href="#src-2" aria-label="Source 2">2</a>.</span>
+            </li><li>
+              <span class="size__v">2 per year</span>
+              <span class="size__l">Builds of this shape you take on</span>
+              <span class="size__b">A round number chosen to make the sum checkable.</span>
+            </li>
+      </ul>
+      <p class="size__sum">12 weeks x 50% x 2 builds = 12 engineering weeks a year handed back, before any licence revenue.</p>
+      <p class="size__q">Is two a year about right, and would twelve weeks cover the cost of maintaining a core nobody is paying you to maintain?</p>
+    </div>
+          </li><li class="op">
+            <h3 class="op__h">Regression testing for shipped AI, sold as a line item</h3>
+            <p class="op__b">Build one evaluation harness you can drop onto any AI feature you ship: a fixed set of real cases, expected outputs, and a scored run that fires when a model version, prompt or vendor changes. Sell it as an acceptance gate at handover and then as a monthly check afterwards. It also protects your own margin, because a fixed-bid AI feature with no defined pass condition is a job you can't close.</p>
+            <p class="op__basis"><span class="op__lab">Why we think this applies to you</span> NineTwoThree already describes evaluation suites and human judgement inside a restructured development lifecycle <a class="ref" href="#src-11" aria-label="Source 11">11</a>, and frames AI workflow automation as things running themselves inside existing tools <a class="ref" href="#src-10" aria-label="Source 10">10</a>. Being the studio that can prove a shipped system still works is a different claim from being the studio that built it.</p>
+            
+    <div class="size">
+      <p class="size__lab">Example ROI</p>
+      <ul class="size__as">
+        <li>
+              <span class="size__v">10 features</span>
+              <span class="size__l">AI-touching features live across your client base</span>
+              <span class="size__b">A round number chosen to keep the arithmetic legible.</span>
+            </li><li>
+              <span class="size__v">4 hours each</span>
+              <span class="size__l">Hours to re-check one feature by hand after a model or prompt change</span>
+              <span class="size__b">A round number; manual spot-checking of a handful of cases plus writing up what changed.</span>
+            </li><li>
+              <span class="size__v">4 per year</span>
+              <span class="size__l">Times a year each feature realistically needs re-checking</span>
+              <span class="size__b">Quarterly, chosen as a conservative round figure rather than a measured release cadence.</span>
+            </li>
+      </ul>
+      <p class="size__sum">10 features x 4 hours x 4 times a year = 160 hours a year of re-testing that currently has no owner and no line item.</p>
+      <p class="size__q">At your rate, does 160 hours a year read as a retainer worth selling, or as noise you'd rather absorb?</p>
+    </div>
+          </li><li class="op">
+            <h3 class="op__h">One PHI data-path document, written once</h3>
+            <p class="op__b">Write a single artefact that names every place patient data touches a model in your reference architecture: which service, which region, which subprocessor, what's retained, who holds the BAA, and what a client's security team gets to inspect. Then make it the default architecture for every new build rather than a document you assemble per deal. Publish a redacted version as the thing you're known for.</p>
+            <p class="op__basis"><span class="op__lab">Why we think this applies to you</span> Your site already speaks fluently about LLMs and AI in healthcare <a class="ref" href="#src-1" aria-label="Source 1">1</a>, and healthcare buyers get to a security review before they get to a demo. Across the six pages we crawled we didn't see integrations or pricing surfaced, so we'd guess this material currently gets assembled per client rather than kept standing.</p>
+            
+    <div class="size">
+      <p class="size__lab">Example ROI</p>
+      <ul class="size__as">
+        <li>
+              <span class="size__v">8 per year</span>
+              <span class="size__l">Security questionnaires and BAA reviews you go through</span>
+              <span class="size__b">A round number chosen to keep the arithmetic legible.</span>
+            </li><li>
+              <span class="size__v">6 hours each</span>
+              <span class="size__l">Senior hours to answer one from scratch</span>
+              <span class="size__b">A round number; chasing subprocessor detail is usually the slow part.</span>
+            </li><li>
+              <span class="size__v">70%</span>
+              <span class="size__l">Share answerable straight from a standing document</span>
+              <span class="size__b">A round figure; the client-specific residue is normally scope and retention terms.</span>
+            </li>
+      </ul>
+      <p class="size__sum">8 reviews x 6 hours x 70% = about 34 senior hours a year, plus the calendar days each review adds to a deal.</p>
+      <p class="size__q">Is eight a year the right order of magnitude, and does the delay cost you more than the hours do?</p>
+    </div>
+          </li><li class="op">
+            <h3 class="op__h">An estimate-versus-actual record for AI-heavy scopes</h3>
+            <p class="op__b">Keep one structured row per proposal: what you quoted, what the AI-touching parts were, what they actually cost, and where the overrun came from. It doesn't need a tool. A disciplined table beats a model here, and after a handful of jobs you can price agentic work off comparables instead of instinct. This is the prerequisite that makes the eval harness above sellable at a defensible price.</p>
+            <p class="op__basis"><span class="op__lab">Why we think this applies to you</span> You diagnose exactly this for clients, describing operations that ran on fragmented spreadsheets and manual reporting <a class="ref" href="#src-2" aria-label="Source 2">2</a>, and estimating nondeterministic features is the place agencies most often lose margin quietly. We'd guess your own scoping history lives in proposals and memory rather than in one comparable record.</p>
+            
+          </li></ol>
+    </section>
+  <section class="sec ">
+      <div class="sechead">
+        <p class="secnum">03 &mdash; Questions</p>
+        <h2>What we’d ask you first</h2>
+        <p class="intro">A few things we couldn’t find online that would change what we’d advise.</p>
+      </div>
+      <ol class="qs"><li class="q">
+            <p class="q__ask">On the pharmacy and care-operations builds where you replaced spreadsheets and manual reporting, who owns the code, and did you keep a licence or any reusable core?</p>
+            <div class="q__meta">
+              <p class="q__lab">Why we’re asking</p>
+              <p class="q__why">Your case studies describe the same class of problem being solved more than once <a class="ref" href="#src-2" aria-label="Source 2">2</a>. Whether there's a shared core behind them decides if there's a product to package or only a pattern to sell.</p>
+            </div>
+            <div class="q__meta">
+              <p class="q__lab">What your answer changes</p>
+              <p class="q__why">Whether the first idea below is a packaging exercise or a build from scratch.</p>
+            </div>
+          </li><li class="q">
+            <p class="q__ask">In the healthcare systems you've shipped, which ones write data back into the client's EHR or pharmacy system, and which are read-only with a human keying the result in?</p>
+            <div class="q__meta">
+              <p class="q__lab">Why we’re asking</p>
+              <p class="q__why">Read is tractable. Write is where timelines and security reviews get long, and it's the single biggest determinant of what a productised version would cost you <a class="ref" href="#src-2" aria-label="Source 2">2</a>.</p>
+            </div>
+            <div class="q__meta">
+              <p class="q__lab">What your answer changes</p>
+              <p class="q__why">Whether we'd scope a visibility layer that sits alongside the system of record or a true integration.</p>
+            </div>
+          </li><li class="q">
+            <p class="q__ask">When a model provider ships a new version, whose job is it to re-test the client's shipped product, and is that written into any contract you've signed?</p>
+            <div class="q__meta">
+              <p class="q__lab">Why we’re asking</p>
+              <p class="q__why">NineTwoThree already describes evaluation suites as part of how it builds <a class="ref" href="#src-11" aria-label="Source 11">11</a>, so the language is in the market. The contractual answer is what almost nobody has.</p>
+            </div>
+            <div class="q__meta">
+              <p class="q__lab">What your answer changes</p>
+              <p class="q__why">Whether regression testing becomes a paid retainer you sell or a liability you absorb quietly.</p>
+            </div>
+          </li><li class="q">
+            <p class="q__ask">On the AI review you sell, does a prospect answer questions and get something scored back, or is the review something you run live with them?</p>
+            <div class="q__meta">
+              <p class="q__lab">Why we’re asking</p>
+              <p class="q__why">Your homepage opens with a routing prompt asking what brings someone here <a class="ref" href="#src-1" aria-label="Source 1">1</a>, and we couldn't tell from outside how much of what follows is automated.</p>
+            </div>
+            <div class="q__meta">
+              <p class="q__lab">What your answer changes</p>
+              <p class="q__why">Whether we'd suggest instrumenting what you already run or leave the funnel alone and put the effort into delivery assets.</p>
+            </div>
+          </li><li class="q">
+            <p class="q__ask">Are your hospice and home-health clients bringing you the new assessment and visit-timing requirements, or are they waiting on their EMR vendor to handle it?</p>
+            <div class="q__meta">
+              <p class="q__lab">Why we’re asking</p>
+              <p class="q__why">Documentation and scheduling rule changes land on the same operations teams you already build for, and incumbent post-acute EMRs are slow to respond. Whether the ask is reaching you tells us if there's a pull here or only a theory.</p>
+            </div>
+            <div class="q__meta">
+              <p class="q__lab">What your answer changes</p>
+              <p class="q__why">Whether we'd sequence a compliance-driven scheduling product ahead of everything else, or park it.</p>
+            </div>
+          </li></ol>
+    </section>
+  <section class="sec ">
+      <div class="sechead">
+        <p class="secnum">04 &mdash; Competitors</p>
+        <h2>What companies like you have done</h2>
+        
+      </div>
+      <p class="finding">Of the eight peers we looked at, four have dated, public AI evidence, and the pattern is named systems with named outcomes rather than positioning. NineTwoThree publishes specific builds, including a SKU-matching model it says removed 14 hours of daily busywork, an AI-powered financial-aid platform, and a prioritisation model for real-estate targeting <a class="ref" href="#src-7" aria-label="Source 7">7</a>, and describes an engineering process built on agents, evaluation suites and human judgement <a class="ref" href="#src-11" aria-label="Source 11">11</a>. Light-it runs a named Digital Health Innovation Lab with a dated PHI-protecting agent and a provider-patient conversation platform <a class="ref" href="#src-5" aria-label="Source 5">5</a>. Enspirit turned its internal AI use into a service page and opens with the line that most companies don't need to build an AI product <a class="ref" href="#src-13" aria-label="Source 13">13</a>. GoInvo is publishing a weekly design experiment series on AI-assisted design <a class="ref" href="#src-3" aria-label="Source 3">3</a>. On search, nobody in this set owns the category: GoInvo ranks for 260 US terms and appears at position 20 on one healthcare term searched 1600 times a month, while Light-it ranks for 514 terms and NineTwoThree for 1015 with none in the top 20 for a category term <a class="ref" href="#src-17" aria-label="Source 17">17</a>. The head term is not the route in either: <q>healthcare</q> runs at keyword difficulty 100 even though searches are up 11.7% over 24 months <a class="ref" href="#src-16" aria-label="Source 16">16</a>.</p>
+    </section>
+  <section class="sec boundary">
+      <div class="sechead">
+        <p class="secnum">05 &mdash; Caveats</p>
+        <h2>What we couldn’t see</h2>
+        <p class="intro">This is built from public information only, so some of it will be wrong or out of date. Here’s where we’d guess we got it wrong.</p>
+      </div>
+      <ul class="unknowns"><li><span class="ublank"></span><span><q>We already have a reusable core, we just don't talk about it.</q> If that's true, the first idea is a packaging and pricing job and we've mis-scoped it as a build.</span></li><li><span class="ublank"></span><span><q>Our healthcare clients own the IP outright.</q> Then productising the order-and-status layer is off the table in its current form, and the interesting question becomes what you can rebuild clean without touching assigned work.</span></li><li><span class="ublank"></span><span><q>We don't do fixed bids.</q> The margin argument for the estimate record and the eval harness weakens a lot if you're on time and materials, though the acceptance-gate argument survives.</span></li><li><span class="ublank"></span><span>We compared you against design and product studios. If the firms you actually lose deals to are hospice and home-health point products rather than agencies, the competitive read in this document is aimed at the wrong set.</span></li><li><span class="ublank"></span><span>Which of the steps we found actually costs you money, rather than just being easy to spot from outside</span></li><li><span class="ublank"></span><span>What you’ve already tried here, and what you decided against</span></li></ul>
+    </section>
+
+  <section class="closing">
+    <h2>Where this goes next</h2>
+    <p>An hour on a call is where we go through these with you and tell you which one we’d start with. No prep needed, and no charge.</p><p>If there’s something here we think you should build, we’ll say so. If there isn’t, we’ll say that instead.</p>
+    
+  </section>
+
+  <section class="sec evidencesec">
+      <div class="sechead">
+        <p class="secnum">06 &mdash; Sources</p>
+        <h2>Where all this came from</h2>
+        <p class="intro">Everything above traces back to one of these, and each one links to where we found it. None of it is us paraphrasing you — it’s your own words, a dated article, or a figure from a named data provider with the date we pulled it.</p>
+      </div>
+      <div class="evgroup"><h3>From your own website, quoted</h3><ul class="evlist"><li class="ev"><span class="evid">obs-manual-1</span>
+      <span class="evbody"><p>Your homepage describe a step that a person does by hand: <q>What brings you here today? Question Email Us Personality 👋🏻 What’s Cooking in The Lab - Unlocking AI Potential in Healthcare AI is transforming healthcare and insurance, but adoption faces hurdles like data security,…</q><a class="ref" href="#src-1" aria-label="Source 1">1</a></p></span></li><li class="ev"><span class="evid">obs-manual-2</span>
+      <span class="evbody"><p>Your products page describe a step that a person does by hand: <q>Their operations relied on fragmented spreadsheets and manual reporting.</q><a class="ref" href="#src-2" aria-label="Source 2">2</a></p></span></li><li class="ev"><span class="evid">obs-ai-language</span>
+      <span class="evbody"><p>Your site already talks about automation. It uses the words <q>machine learning</q>, <q>ai</q>, <q>artificial intelligence</q>, <q>ai-powered</q>, <q>llm</q>, <q>large language model</q>, so this isn't a subject you'd be raising with your market for the first time.<a class="ref" href="#src-1" aria-label="Source 1">1</a></p></span></li></ul></div><div class="evgroup"><h3>What companies like yours announced, with dates</h3><ul class="evlist"><li class="ev"><span class="evid">cmp-1</span>
+      <span class="evbody"><p><span class="peer">goinvo.com</span> Separately, a February 18, 2026 LinkedIn post attributed to GoInvo says the studio was launching a weekly design experiment series about AI-assisted design moving beyond chat into shared design spaces.<a class="ref" href="#src-3" aria-label="Source 3">3</a></p><span class="when">2026-02-18</span></span></li><li class="ev"><span class="evid">cmp-2</span>
+      <span class="evbody"><p><span class="peer">goinvo.com</span> says on its own site: <q>Skip to content # Designing AI-Powered Experiences for People and Organizations.</q><a class="ref" href="#src-4" aria-label="Source 4">4</a></p></span></li><li class="ev"><span class="evid">cmp-3</span>
+      <span class="evbody"><p><span class="peer">lightit.io</span> Light-it appears to have announced or deployed at least three specific AI-related initiatives in dated published sources: Puppeteer, an AI-powered platform for automating provider-patient conversations, announced on January 7, 2025; an AI agent from Light-it’s Digital Health Innovation Lab designed to assist medical staff while protecting PHI, referenced in an April 15, 2024 LinkedIn post; and Lumia, a meditation app using generative AI and text-to-speech to create personalized relaxation sessions, described in a dated project page updated August 16, 2026.<a class="ref" href="#src-5" aria-label="Source 5">5</a></p><span class="when">2024-04-15</span></span></li><li class="ev"><span class="evid">cmp-4</span>
+      <span class="evbody"><p><span class="peer">lightit.io</span> Light-it’s Digital Health Innovation Lab built an AI agent to help medical staff with healthcare-related tasks while protecting PHI, mentioned on April 15, 2024.<a class="ref" href="#src-5" aria-label="Source 5">5</a></p><span class="when">2024-04-15</span></span></li><li class="ev"><span class="evid">cmp-5</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> In 2025, NineTwoThree said it built a custom SKU-matching machine learning model and LLM architecture for K&amp;L Wines that eliminated 14 hours of daily busywork.<a class="ref" href="#src-7" aria-label="Source 7">7</a></p><span class="when">2025-11-12</span></span></li><li class="ev"><span class="evid">cmp-6</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> In 2025, NineTwoThree said it built Award Advisor for Vermont Student Assistance Corporation, an AI-powered mobile and web platform that helps students compare college financial aid offers and gives admins lead-generation and analytics tools.<a class="ref" href="#src-8" aria-label="Source 8">8</a></p><span class="when">2025-11-12</span></span></li><li class="ev"><span class="evid">cmp-7</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> In 2025, NineTwoThree said it built a machine learning model for DataFlik that generates prioritized lists of motivated sellers and improves real-estate marketing targeting.<a class="ref" href="#src-9" aria-label="Source 9">9</a></p><span class="when">2025-11-12</span></span></li><li class="ev"><span class="evid">cmp-8</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> In 2026, NineTwoThree described its AI workflow automation service as deploying AI into existing tools so repetitive tasks like data entry, document handling, and routing run themselves.<a class="ref" href="#src-10" aria-label="Source 10">10</a></p><span class="when">2026-04-30</span></span></li><li class="ev"><span class="evid">cmp-9</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> In 2026, NineTwoThree said its AI engineering process uses AI agents, evaluation suites, and human judgment within a restructured software development lifecycle.<a class="ref" href="#src-11" aria-label="Source 11">11</a></p><span class="when">2026-08-12</span></span></li><li class="ev"><span class="evid">cmp-10</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> says on its own site: <q>See all the aspects of a digital venture a team needs to learn before launching.\\ \\ Read Article → \\ **Machine Learning And Environmental Remediation** \\ Nuclear plants use a lot of water, and understanding their…</q><a class="ref" href="#src-12" aria-label="Source 12">12</a></p></span></li><li class="ev"><span class="evid">cmp-11</span>
+      <span class="evbody"><p><span class="peer">Enspirit</span> Enspirit appears to have publicly documented a few specific AI-related initiatives, all on its own website: it launched AI product offerings and AI integration services, described internal AI use across design, development, and QA, and said its products AURA, Tenet, and Rekindle use AI to analyze customer data for release confidence, design governance, and codebase modernization.<a class="ref" href="#src-13" aria-label="Source 13">13</a></p><span class="when">2026-02-23</span></span></li><li class="ev"><span class="evid">cmp-12</span>
+      <span class="evbody"><p><span class="peer">Enspirit</span> Enspirit published an AI Transformation Services page describing work to build LLM integrations, NLP pipelines, and production-ready AI features, dated February 23, 2026.<a class="ref" href="#src-13" aria-label="Source 13">13</a></p><span class="when">2026-02-23</span></span></li><li class="ev"><span class="evid">cmp-13</span>
+      <span class="evbody"><p><span class="peer">Enspirit</span> Enspirit published a March 17, 2026 article saying it uses AI internally across design, development, code review, and release validation as part of its workflow.<a class="ref" href="#src-14" aria-label="Source 14">14</a></p><span class="when">2026-08-12</span></span></li><li class="ev"><span class="evid">cmp-14</span>
+      <span class="evbody"><p><span class="peer">Enspirit</span> says on its own site: <q>Enspirit acquires Svaas Wellness.→Read more × Start a Conversation AI Integration # Make your operations _smarter._ Most companies don't need to build an AI product.</q><a class="ref" href="#src-15" aria-label="Source 15">15</a></p></span></li><li class="ev"><span class="evid">dem-peer-goinvo-com</span>
+      <span class="evbody"><p><span class="peer">goinvo.com</span> ranks for 260 US Google search terms, including <q>healthcare issues in america</q> at position 20, on a term searched 1600 times a month (pulled 2026-08-25).<a class="ref" href="#src-17" aria-label="Source 17">17</a></p></span></li><li class="ev"><span class="evid">dem-peer-lightit-io</span>
+      <span class="evbody"><p><span class="peer">lightit.io</span> ranks for 514 US Google search terms, but none in the top 20 for a term in your category (pulled 2026-08-25).<a class="ref" href="#src-17" aria-label="Source 17">17</a></p></span></li><li class="ev"><span class="evid">dem-peer-ninetwothree-co</span>
+      <span class="evbody"><p><span class="peer">ninetwothree.co</span> ranks for 1015 US Google search terms, but none in the top 20 for a term in your category (pulled 2026-08-25).<a class="ref" href="#src-17" aria-label="Source 17">17</a></p></span></li></ul></div><div class="evgroup"><h3>Search demand, with the date we pulled it</h3><ul class="evlist"><li class="ev"><span class="evid">dem-1</span>
+      <span class="evbody"><p><q>software</q> gets 368000 US searches a month, $7.2 cost-per-click, keyword difficulty 33. Most of those searches look transactional (Google data last refreshed 2026-07-16, pulled 2026-08-25).<a class="ref" href="#src-16" aria-label="Source 16">16</a></p></span></li><li class="ev"><span class="evid">dem-2</span>
+      <span class="evbody"><p><q>healthcare</q> gets 165000 US searches a month, $12.8 cost-per-click, keyword difficulty 100. Most of those searches look informational (Google data last refreshed 2026-08-22, pulled 2026-08-25).<a class="ref" href="#src-16" aria-label="Source 16">16</a></p></span></li><li class="ev"><span class="evid">dem-3</span>
+      <span class="evbody"><p><q>studio building</q> gets 480 US searches a month, $0.37 cost-per-click, keyword difficulty 7. Most of those searches look navigational (Google data last refreshed 2026-08-21, pulled 2026-08-25).<a class="ref" href="#src-16" aria-label="Source 16">16</a></p></span></li><li class="ev"><span class="evid">dem-4</span>
+      <span class="evbody"><p><q>design-led</q> gets 50 US searches a month, keyword difficulty 13. Most of those searches look informational (Google data last refreshed 2026-07-16, pulled 2026-08-25).<a class="ref" href="#src-16" aria-label="Source 16">16</a></p></span></li><li class="ev"><span class="evid">dem-trend-1</span>
+      <span class="evbody"><p>Searches for <q>healthcare</q> are rising. The last 12 months averaged 149417 a month against 133750 the 12 months before, a change of 11.7% across 24 months of Google's own numbers (data from 2026-08-22, pulled 2026-08-25).<a class="ref" href="#src-16" aria-label="Source 16">16</a></p></span></li></ul></div>
+    </section>
+
+  <section class="srcsec">
+    <h2>Sources &amp; retrieval dates</h2>
+    <ol class="sources"><li id="src-1">
+        <span class="srcnum">1</span>
+        <span class="srcbody">
+          <span class="srclabel">Digital Product Design, AI &amp; UX/UI Services | SeeSaw Labs</span>
+          <a class="srcurl" href="https://seesawlabs.com" target="_blank" rel="noopener noreferrer">https://seesawlabs.com</a>
+          <span class="srcret">retrieved 2026-08-25</span>
+        </span>
+      </li><li id="src-2">
+        <span class="srcnum">2</span>
+        <span class="srcbody">
+          <span class="srclabel">Fractional CTO Services for Growing Product Teams | SeeSaw Labs</span>
+          <a class="srcurl" href="https://seesawlabs.com/cto-services" target="_blank" rel="noopener noreferrer">https://seesawlabs.com/cto-services</a>
+          <span class="srcret">retrieved 2026-08-25</span>
+        </span>
+      </li><li id="src-3">
+        <span class="srcnum">3</span>
+        <span class="srcbody">
+          <span class="srclabel">AI Interaction Beyond Chat: Exploring New Interfaces - LinkedIn</span>
+          <a class="srcurl" href="https://www.linkedin.com/posts/udanium_goinvo-design-experiments-activity-7429900701721579520-kj46" target="_blank" rel="noopener noreferrer">https://www.linkedin.com/posts/udanium_goinvo-design-experiments-activity-7429900701721579520-kj46</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-4">
+        <span class="srcnum">4</span>
+        <span class="srcbody">
+          <span class="srclabel">https://www.goinvo.com/ai</span>
+          <a class="srcurl" href="https://www.goinvo.com/ai" target="_blank" rel="noopener noreferrer">https://www.goinvo.com/ai</a>
+          <span class="srcret">retrieved 2026-08-25</span>
+        </span>
+      </li><li id="src-5">
+        <span class="srcnum">5</span>
+        <span class="srcbody">
+          <span class="srclabel">Javier Lempert - healthtech #healthcareinnovation - LinkedIn</span>
+          <a class="srcurl" href="https://www.linkedin.com/posts/javier-lempert_healthtech-healthcareinnovation-activity-7185659596718436352-Y_5F" target="_blank" rel="noopener noreferrer">https://www.linkedin.com/posts/javier-lempert_healthtech-healthcareinnovation-activity-7185659596718436352-Y_5F</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-6">
+        <span class="srcnum">6</span>
+        <span class="srcbody">
+          <span class="srclabel">AI in Healthcare: Light-it and Puppeteer Set a New Standard for ...</span>
+          <a class="srcurl" href="https://finance.yahoo.com/news/ai-healthcare-light-puppeteer-set-144200306.html" target="_blank" rel="noopener noreferrer">https://finance.yahoo.com/news/ai-healthcare-light-puppeteer-set-144200306.html</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-7">
+        <span class="srcnum">7</span>
+        <span class="srcbody">
+          <span class="srclabel">A Custom SKU Matching ML Model Saves 14+ Hours Daily</span>
+          <a class="srcurl" href="https://www.ninetwothree.co/case-studies/klwines" target="_blank" rel="noopener noreferrer">https://www.ninetwothree.co/case-studies/klwines</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-8">
+        <span class="srcnum">8</span>
+        <span class="srcbody">
+          <span class="srclabel">AI App Reduces Financial Aid Comparison Time by 70%</span>
+          <a class="srcurl" href="https://www.ninetwothree.co/case-studies/vsac" target="_blank" rel="noopener noreferrer">https://www.ninetwothree.co/case-studies/vsac</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-9">
+        <span class="srcnum">9</span>
+        <span class="srcbody">
+          <span class="srclabel">DataFlik | Predicting House Sales With 85% Accuracy</span>
+          <a class="srcurl" href="https://www.ninetwothree.co/case-studies/dataflik" target="_blank" rel="noopener noreferrer">https://www.ninetwothree.co/case-studies/dataflik</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-10">
+        <span class="srcnum">10</span>
+        <span class="srcbody">
+          <span class="srclabel">AI Workflow Automation Services | Automate Repetitive Work</span>
+          <a class="srcurl" href="https://www.ninetwothree.co/services/ai-workflow-automation" target="_blank" rel="noopener noreferrer">https://www.ninetwothree.co/services/ai-workflow-automation</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-11">
+        <span class="srcnum">11</span>
+        <span class="srcbody">
+          <span class="srclabel">How NineTwoThree Does AI Engineering | Our SDLC</span>
+          <a class="srcurl" href="https://www.ninetwothree.co/blog/ai-engineering-sdlc" target="_blank" rel="noopener noreferrer">https://www.ninetwothree.co/blog/ai-engineering-sdlc</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-12">
+        <span class="srcnum">12</span>
+        <span class="srcbody">
+          <span class="srclabel">https://www.ninetwothree.co/in-the-news</span>
+          <a class="srcurl" href="https://www.ninetwothree.co/in-the-news" target="_blank" rel="noopener noreferrer">https://www.ninetwothree.co/in-the-news</a>
+          <span class="srcret">retrieved 2026-08-25</span>
+        </span>
+      </li><li id="src-13">
+        <span class="srcnum">13</span>
+        <span class="srcbody">
+          <span class="srclabel">AI Transformation Services</span>
+          <a class="srcurl" href="https://enspirit.co/services/ai-transformation" target="_blank" rel="noopener noreferrer">https://enspirit.co/services/ai-transformation</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-14">
+        <span class="srcnum">14</span>
+        <span class="srcbody">
+          <span class="srclabel">Enterprise AI Integration: A Practical Playbook for Product Leaders</span>
+          <a class="srcurl" href="https://enspirit.co/journal/ai-integration-strategy-for-enterprise-products" target="_blank" rel="noopener noreferrer">https://enspirit.co/journal/ai-integration-strategy-for-enterprise-products</a>
+          <span class="srcret">retrieved 2026-08-25 · web</span>
+        </span>
+      </li><li id="src-15">
+        <span class="srcnum">15</span>
+        <span class="srcbody">
+          <span class="srclabel">https://enspirit.co/services/ai-integration</span>
+          <a class="srcurl" href="https://enspirit.co/services/ai-integration" target="_blank" rel="noopener noreferrer">https://enspirit.co/services/ai-integration</a>
+          <span class="srcret">retrieved 2026-08-25</span>
+        </span>
+      </li><li id="src-16">
+        <span class="srcnum">16</span>
+        <span class="srcbody">
+          <span class="srclabel">DataForSEO Labs keyword_overview — &quot;software&quot;, Google data of 2026-07-16</span>
+          <a class="srcurl" href="https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_overview/live" target="_blank" rel="noopener noreferrer">https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_overview/live</a>
+          <span class="srcret">retrieved 2026-08-25 · DataForSEO (Google Ads data)</span>
+        </span>
+      </li><li id="src-17">
+        <span class="srcnum">17</span>
+        <span class="srcbody">
+          <span class="srclabel">DataForSEO Labs ranked_keywords</span>
+          <a class="srcurl" href="https://api.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live" target="_blank" rel="noopener noreferrer">https://api.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live</a>
+          <span class="srcret">retrieved 2026-08-25 · DataForSEO (Google SERP data)</span>
+        </span>
+      </li></ol>
+    <p class="colophon">
+      27 claims, 17 distinct sources, analysis by claude-opus-5.<br>
+      A numeral anywhere in this document either carries a source above or appears as a declared blank.
+      That rule is enforced in code, on the analysis as well as the evidence.<br>
+      
+      Compiled from public sources by SeeSaw Labs · questions to calvin@seesawlabs.com
+    </p>
+  </section>
+</main>
+</body>
+</html>

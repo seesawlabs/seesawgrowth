@@ -59,6 +59,7 @@ actively trying to do less of it.
 | └ AI Opportunity Brief pipeline | Calvin | **Runs end to end. Named for the client, generated, released, served over a magic link** |
 | └ ─ Brief generation (`tools/exposure`) | Calvin | **Working. ~$1.40 and 6–11 min a run. Stage 03 is non-deterministic — same peers, different evidence hours apart** |
 | └ ─ Landing page + intake (`/brief`) | Calvin | **Built. Intake validated against hostile payloads** |
+| └ ─ Public sample (`/sample-brief`) | Calvin | **We ran the brief on ourselves. 100% coverage, published unedited** |
 | └ ─ Delivery emails | Calvin | **Written and wired. Nothing sends until `RESEND_TOKEN` is set in Vercel** |
 | └ ─ Magic link + report store | Calvin | **Built and verified locally. Prod storage undecided — Vercel Blob is the proposal** |
 | └ ─ Booking | Calvin | **Wired on the confirmation screen and on the brief itself. Needs a real `PUBLIC_CAL_LINK`** |

@@ -28,7 +28,12 @@ if (!dir) {
 }
 
 const SITE_ROOT = resolve(new URL('.', import.meta.url).pathname, '..');
-const OUT_DIR = join(SITE_ROOT, 'public', 'sample-brief');
+/* Not public/. A directory index under public/ serves at /sample-brief on
+   Vercel but 404s at that exact path in `astro dev`, and a route that behaves
+   differently in dev than in production is a trap. The file is imported by
+   src/pages/sample-brief.astro with Vite's ?raw and served from there, so one
+   route definition covers both. */
+const OUT_DIR = join(SITE_ROOT, 'src', 'content');
 
 let html = await readFile(join(dir, 'report.html'), 'utf8');
 const coverage = JSON.parse(await readFile(join(dir, 'coverage.json'), 'utf8'));
@@ -56,10 +61,10 @@ html = html.includes('<body>')
   : html.replace(/(<main[^>]*>)/, `${banner}$1`);
 
 await mkdir(OUT_DIR, { recursive: true });
-await writeFile(join(OUT_DIR, 'index.html'), html);
+await writeFile(join(OUT_DIR, 'sample-brief.html'), html);
 
 const pct = Math.round(coverage.score * 100);
-console.error(`wrote public/sample-brief/index.html — coverage ${pct}%${coverage.sufficient ? '' : ' (BELOW THRESHOLD)'}`);
+console.error(`wrote src/content/sample-brief.html — coverage ${pct}%${coverage.sufficient ? '' : ' (BELOW THRESHOLD)'}`);
 if (!coverage.sufficient) {
   console.error('Publishing our own thin brief as the sample would advertise the weakness. Regenerate first.');
   process.exit(4);
