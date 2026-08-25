@@ -182,13 +182,16 @@ export function renderReportHtml(input: RenderInput): string {
   const prose = (text: string) =>
     withQuotes(linkClaimIds(withBlanks(text), footnotesFor, [...byId.keys()]));
 
-  const sec = (s: Sec, body: string, extraClass = '') => {
+  /** Spelled-out counts, so a heading reads as prose rather than as a field. */
+  const WORDS = ['no', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+
+  const sec = (s: Sec, body: string, extraClass = '', vars: Record<string, string> = {}) => {
     if (!body.trim()) return '';
-    const intro = s.intro ? `<p class="intro">${esc(s.intro)}</p>` : '';
+    const intro = s.intro ? `<p class="intro">${esc(fill(s.intro, vars))}</p>` : '';
     return `<section class="sec ${extraClass}">
       <div class="sechead">
         <p class="secnum">${esc(s.num)} &mdash; ${esc(s.eyebrow)}</p>
-        <h2>${esc(s.heading)}</h2>
+        <h2>${esc(fill(s.heading, vars))}</h2>
         ${intro}
       </div>
       ${body}
@@ -350,7 +353,7 @@ ${banner}
   <div class="shell">
     <p class="brand"><span class="dotmark"></span>SeeSaw Labs</p>
     <p class="kicker">${esc(copy.kicker)}</p>
-    <h1>${esc(copy.headline)}</h1>
+    <h1>${esc(fill(copy.headline, { company }))}</h1>
     <div class="subject">
       <span>${esc(company)}</span><span class="sep">/</span>
       <span>${esc(input.subject.domain)}${redirected ? ` &rarr; ${esc(input.subject.effectiveDomain)}` : ''}</span><span class="sep">/</span>
@@ -363,7 +366,9 @@ ${banner}
 <main class="shell">
   ${noAnalysis}
   ${sec(copy.sections.standing, standing)}
-  ${sec(copy.sections.opportunities, opportunities)}
+  ${sec(copy.sections.opportunities, opportunities, '', {
+    n: WORDS[synthesis?.opportunities.length ?? 0] ?? String(synthesis?.opportunities.length ?? 0),
+  })}
   ${sec(copy.sections.questions, questions)}
   ${sec(copy.sections.peers, peerSignal)}
   ${sec(copy.sections.blindSpots, blindSpots, 'boundary')}

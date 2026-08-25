@@ -63,6 +63,29 @@ export const VOICE_PATTERNS: VoicePattern[] = [
     budget: 0,
   },
   {
+    id: 'over-hedging',
+    /* Counted across the document rather than per sentence. Each of these is
+       honest once. A draft carrying five of them read as though we were unsure
+       of everything and handing the work back to the reader, which was the
+       note: "don't need to stuff all the 'we'll probably be wrong' in here".
+       There is a section for the caveat; it belongs there. */
+    re: /\bfrom the outside\b|\bprovisional\b|\bwe(?:'ve| have) only read\b|\bcorrect us\b|\bsome of (?:this|it) will be wrong\b|\bwe (?:may|might|could) (?:well )?be wrong\b|\btake (?:all of )?this as\b/gi,
+    note: 'Hedging repeated across the document. Say the caveat once, in the section for it, and never in the opening line.',
+    budget: 2,
+  },
+  {
+    id: 'adversarial',
+    re: /\bargue with\b|\btell us how (?:far off|wrong)\b|\bcorrect (?:us|them)\b|\bprove us wrong\b|\bchallenge (?:us|this)\b/gi,
+    note: 'Frames the reader as an opponent. We are offering a shared first draft, not a dare.',
+    budget: 0,
+  },
+  {
+    id: 'faint-praise',
+    re: /\bwin on [^.,]{3,40} rather than\b|\brather than on the quality\b|\b(?:an|in an) unusual (?:spot|position)\b|\byou'?re in an unusual\b/gi,
+    note: 'Praises one thing by implying another is weak, or calls their position strange. Say what they are good at without the contrast.',
+    budget: 0,
+  },
+  {
     id: 'triad',
     re: /\bno [a-z]{3,12}, no [a-z]{3,12}(?:,| and) no [a-z]{3,12}\b/gi,
     note: 'A three-item list used for rhythm rather than because there are three things.',

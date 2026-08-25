@@ -1398,6 +1398,7 @@ test('a figure in an idea body still needs a source — only arithmetic is exemp
    ======================================================================== */
 
 import { checkVoice, describeFlags, textFromHtml } from './lib/voice.ts';
+import { COPY } from './render/copy.ts';
 import { synthesisProse } from './stages/06-synthesis.ts';
 
 test('plain prose raises no flags', () => {
@@ -1496,4 +1497,58 @@ test('the voice check ignores the client’s own quoted words', () => {
     checkVoice(textFromHtml('<p>We will unlock your potential.</p>')).some((f) => f.id === 'jargon'),
     'our own jargon is still caught'
   );
+});
+
+/* ===========================================================================
+   Feedback from the Cultivate Advisors read, 2026-08-25. Every pattern here is
+   a line someone objected to in a real draft.
+   ======================================================================== */
+
+test('hedging is allowed twice, not five times', () => {
+  // "Don't need to stuff all the 'we'll probably be wrong' in here."
+  const once = 'Our read is that advisor capacity is the ceiling. Some of this will be wrong.';
+  assert.deepEqual(checkVoice(once), [], 'one caveat is honest');
+
+  const overdone =
+    'From the outside it looks like you sell advising. Everything here is provisional. ' +
+    'We have only read your website. Correct us early. Some of this will be wrong.';
+  const flags = checkVoice(overdone);
+  assert.ok(flags.some((f) => f.id === 'over-hedging'), `expected over-hedging: ${JSON.stringify(flags)}`);
+});
+
+test('the reader is not an opponent', () => {
+  // "Specific enough to argue with" and "correct them" both read as a dare.
+  for (const t of [
+    'Specific enough to argue with.',
+    'Tell us how far off we are.',
+    'Our guesses — correct them.',
+  ]) {
+    assert.ok(checkVoice(t).some((f) => f.id === 'adversarial'), `should flag: ${t}`);
+  }
+});
+
+test('praise built out of a contrast is caught', () => {
+  // "You win on judgement rather than on the quality of an answer" tells a
+  // professional-services firm their answers are not the good part.
+  assert.ok(
+    checkVoice('You win on judgement, memory and accountability rather than on the quality of an answer.')
+      .some((f) => f.id === 'faint-praise')
+  );
+  // "Unusual spot" reads as ignorant — it says we have not seen many like them.
+  assert.ok(
+    checkVoice("If that's right, you're in an unusual spot.").some((f) => f.id === 'faint-praise')
+  );
+  // Plain praise is fine.
+  assert.deepEqual(checkVoice('You are good at judgement, memory and accountability.'), []);
+});
+
+test('the report headline is addressed to the company by name', () => {
+  assert.match(COPY.headline, /\{company\}/, 'the opening line names them');
+  assert.ok(!/if we had an hour/.test(COPY.headline));
+});
+
+test('the ideas heading never promises more ideas than it shows', () => {
+  // A dropped idea left the heading saying "Three ideas" above two of them.
+  assert.match(COPY.sections.opportunities.heading, /\{n\}/, 'the count is filled at render time');
+  assert.ok(!/^Three /.test(COPY.sections.opportunities.heading));
 });

@@ -58,33 +58,32 @@ export interface ReportCopy {
 
 export const COPY: ReportCopy = {
   kicker: 'AI Exposure Report',
-  headline: 'What we\u2019d tell you about AI if we had an hour',
+  headline: 'Spend an hour with us. We have a lot to say about {company} and AI.',
   promise:
-    'Every number here either links to where we got it, or it\u2019s a {blank} for you to fill in. We ' +
-    'haven\u2019t quietly estimated anything. When we ran out of evidence, we stopped and said so.',
+    'Our numbers link to where we found them, or they\u2019re a deliberate {blank} we can fill in ' +
+    'together.',
 
   sections: {
     standing: {
       num: '01',
-      eyebrow: 'First read',
-      heading: 'What we think is going on',
+      eyebrow: 'The short version',
+      heading: 'Our read from the research',
       intro: '',
     },
     opportunities: {
       num: '02',
       eyebrow: 'What we\u2019d build',
-      heading: 'Three ideas you may not have considered',
+      heading: '{n} ideas you may not have considered',
       intro:
-        'Specific enough to argue with, in the order we\u2019d do them. Where we\u2019ve put numbers on ' +
-        'one, they\u2019re our guesses and we\u2019ve said so. Tell us how far off we are.',
+        'In the order we\u2019d do them. Where we\u2019ve put numbers on one, they\u2019re worked ' +
+        'examples using our own assumptions, which we\u2019ve listed so you can swap in your real ones.',
     },
     questions: {
       num: '03',
       eyebrow: 'Questions',
       heading: 'What we\u2019d ask you first',
       intro:
-        'We\u2019ve only read your website. These are the questions whose answers would change the ' +
-        'advice above.',
+        'A few things we couldn\u2019t find online that would change what we\u2019d advise.',
     },
     peers: {
       num: '04',
@@ -112,14 +111,13 @@ export const COPY: ReportCopy = {
   },
   whyLabel: 'Why we’re asking',
   changesLabel: 'What your answer changes',
-  assumptionsLabel: 'Our guesses — correct them',
+  assumptionsLabel: 'Example ROI',
 
   closing: {
     heading: 'Where this goes next',
     body: [
-      'We wrote this from the outside, so some of it will be wrong. An hour on a call is where you tell us ' +
-        'which parts, and we tell you which of these ideas we\u2019d actually start with. No prep needed, ' +
-        'and no charge.',
+      'An hour on a call is where we go through these with you and tell you which one we\u2019d ' +
+        'start with. No prep needed, and no charge.',
       'If there\u2019s something here we think you should build, we\u2019ll say so. If there isn\u2019t, ' +
         'we\u2019ll say that instead.',
     ],

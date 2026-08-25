@@ -152,7 +152,10 @@ const SynthesisSchema = z.object({
     .describe('The questions that would sharpen the ideas above. 4-5.'),
   opportunities: z
     .array(OpportunitySchema)
-    .describe('The ideas. Three is the target; four only if the fourth genuinely earns it.'),
+    .describe(
+      'The ideas. Aim for four so that at least three survive review — one is routinely dropped for ' +
+        'carrying a figure we cannot source. Four strong ones, not three plus filler.'
+    ),
   competitorSignal: z
     .object({
       point: z.string().describe('What comparable companies have actually done, and whether it worked.'),
@@ -408,7 +411,19 @@ WHAT THIS DOCUMENT IS. Free consulting, in the shape of a first call. Not a rese
 
 So the centre of this document is a small number of specific, non-obvious ideas for their business in the age of AI — things they may not have thought of, that we would actually build. Three is the target: enough to prove we understand their operation, few enough that each one earns its place. The questions exist to sharpen those ideas and to give them the sense that the next hour would be worth having. It should leave them wanting more, which means being genuinely useful now rather than withholding.
 
-ASK, DO NOT TELL. You have read their website. That is all. You do not know how their operation actually works, what they have already tried, or what they decided against and why — and writing as though you do is both wrong and irritating to read. Every conclusion you reach from outside is provisional. Phrase it that way, and then ask.
+ASK, DO NOT TELL. You have read their website. You do not know how their operation actually works, what they have already tried, or what they decided against and why. Writing as though you do is both wrong and irritating to read, so where you are inferring, ask instead of concluding.
+
+HEDGE ONCE. This is the correction to overdoing the rule above. A draft that said "from the outside", "provisional", "we've only read your website", "correct us" and "some of this will be wrong" in five separate places read as though we were unsure of everything and handing the work back to the reader. Pick the one place the caveat belongs and leave it there. Do not open with it — never begin the document with "From the outside it looks like". Start with what you think, then qualify inside the sentence if you must.
+
+NOT ADVERSARIAL. We are not challenging them. "Specific enough to argue with", "correct us", "tell us how far off we are" all frame the reader as an opponent. We are offering a first draft of a shared view. Invite, don't dare.
+
+DO NOT DIAGNOSE WHAT IS WRONG WITH THEM. Read back what you think you know about their business, then say what you would build. Three ways this goes wrong, all seen in a real draft:
+
+  - Telling them their position is strange. "You're in an unusual spot" reads as ignorant: it usually means we have not seen many businesses like theirs, which is our limitation, not their oddity.
+  - Praising one thing by implying another is weak. "You win on judgement rather than on the quality of an answer" tells a professional-services firm their answers are not the good part. Say what they are good at; do not build it out of a contrast.
+  - Anything that reads as an audit of their failings. They asked for ideas, not a report card.
+
+CHECK WHAT THEY ALREADY SELL. Before recommending anything, look at what is already in their product line and say how yours differs, or drop it. A real draft recommended building a structured assessment to a firm whose own funnel is a free assessment they have been running for years. Recommending someone's own product back to them ends the conversation.
 
   telling  "Prior authorization is the one to price first."
   asking   "Is prior auth where the time actually goes? It's the thing you
@@ -546,7 +561,8 @@ Research their industry so that we can ask them sharp questions and recommend co
 2. What the known hard parts are: where projects in this space typically stall, and what the failure modes are.
 3. What a business like this one plausibly runs on — the systems, the manual handoffs, the seasonal or volume pressures. Say when you are inferring.
 4. What is genuinely new in the last year or two that someone in this industry might not have noticed yet.
-5. What you would want to ask an owner of a business like this that they probably have not been asked.
+5. What this company already sells or already runs. Look at their own product pages, tools, apps and funnel. If they have an assessment, a portal, a calculator or a piece of software of their own, find it and describe it — we must not recommend building something they already have.
+6. What you would want to ask an owner of a business like this that they probably have not been asked.
 
 Write a briefing for a colleague, not a report for a client: dense, specific, no preamble, and blunt about what you are unsure of. Where a figure matters, say where it came from — we will not be quoting your numbers, only your judgement.`;
 
