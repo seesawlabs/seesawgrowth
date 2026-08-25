@@ -18,7 +18,7 @@
    from ids is exactly where a traversal bug would land, and the check is free.
 --------------------------------------------------------------------------- */
 
-import { isSafeReportId } from './magic-link';
+import { isSafeReportId, storageNameFor } from './magic-link';
 
 export type StoreKind = 'remote' | 'disk' | 'sample' | 'none';
 
@@ -30,6 +30,12 @@ export interface StoredReport {
 export interface StoreConfig {
   baseUrl?: string;
   dir?: string;
+  /**
+   * The link secret, used to derive the stored object name. Without it a
+   * remote store cannot be read at all, which is the intended failure: an
+   * unsigned guess at a filename must not resolve to a client's brief.
+   */
+  secret?: string;
 }
 
 /** Reads config from the environment. Astro exposes these on import.meta.env. */
@@ -38,7 +44,11 @@ export function storeConfig(env: Record<string, unknown> = {}): StoreConfig {
     const v = env[k] ?? (typeof process !== 'undefined' ? process.env?.[k] : undefined);
     return typeof v === 'string' && v.trim() ? v.trim() : undefined;
   };
-  return { baseUrl: pick('EXPOSURE_REPORT_BASE_URL'), dir: pick('EXPOSURE_REPORT_DIR') };
+  return {
+    baseUrl: pick('EXPOSURE_REPORT_BASE_URL'),
+    dir: pick('EXPOSURE_REPORT_DIR'),
+    secret: pick('EXPOSURE_LINK_SECRET'),
+  };
 }
 
 export function describeStore(cfg: StoreConfig): StoreKind {
@@ -60,7 +70,13 @@ export async function loadReport(
   if (!isSafeReportId(id)) return null;
 
   if (cfg.baseUrl) {
-    const url = `${cfg.baseUrl.replace(/\/+$/, '')}/${encodeURIComponent(id)}.html`;
+    /* Never the readable id — see `storageNameFor`. No secret, no read. */
+    if (!cfg.secret) {
+      console.error('[report-store] EXPOSURE_LINK_SECRET unset — cannot derive the stored name');
+      return null;
+    }
+    const name = storageNameFor(id, cfg.secret);
+    const url = `${cfg.baseUrl.replace(/\/+$/, '')}/${encodeURIComponent(name)}.html`;
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
       if (!res.ok) return null;
@@ -75,7 +91,10 @@ export async function loadReport(
       const { readFile } = await import('node:fs/promises');
       const { join, resolve, sep } = await import('node:path');
       const root = resolve(cfg.dir);
-      const file = resolve(join(root, `${id}.html`));
+      /* Same name as the remote store when a secret is available, so switching
+         backends does not orphan what is already released. */
+      const name = cfg.secret ? storageNameFor(id, cfg.secret) : id;
+      const file = resolve(join(root, `${name}.html`));
       // Belt and braces: the id is already validated, but a path that escapes
       // the configured root is never served regardless of how it got here.
       if (file !== root && !file.startsWith(root + sep)) return null;

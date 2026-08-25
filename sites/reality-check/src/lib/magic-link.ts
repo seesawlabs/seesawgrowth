@@ -146,6 +146,26 @@ export function reportIdFor(domain: string, runId: string): string {
   return `${d}--${r}`.slice(0, 120);
 }
 
+/**
+ * The name a brief is stored under, which is deliberately not its id.
+ *
+ * `reportIdFor` produces "acmehealth.com--2026-08-25T09-14-02-113Z": readable,
+ * and fine as an identity. As an object name on a public store it is a
+ * liability — every object store worth using serves over plain HTTPS with no
+ * auth, so anyone who knows the bucket and guesses a customer's domain plus a
+ * timestamp reads their brief, and a bucket left listable exposes all of them
+ * at once. The magic-link token is supposed to be the gate.
+ *
+ * So the stored name is an HMAC of the id under the same secret that signs the
+ * links. The site derives it from the token it just verified; nobody without
+ * the secret can derive it at all. Rotating the secret orphans stored briefs
+ * along with the links that point at them, which is the correct blast radius.
+ */
+export function storageNameFor(reportId: string, secret: string): string {
+  if (!secret) throw new Error('storageNameFor needs the link secret');
+  return sign(`store:${reportId}`, secret).slice(0, 43);
+}
+
 /** Absolute magic link. `base` is the site origin, no trailing slash needed. */
 export function linkFor(base: string, token: string): string {
   return `${base.replace(/\/+$/, '')}/r/${encodeURIComponent(token)}`;

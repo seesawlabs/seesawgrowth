@@ -33,7 +33,13 @@
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
-import { mintToken, linkFor, reportIdFor, DEFAULT_TTL_DAYS } from '../src/lib/magic-link.ts';
+import {
+  mintToken,
+  linkFor,
+  reportIdFor,
+  storageNameFor,
+  DEFAULT_TTL_DAYS,
+} from '../src/lib/magic-link.ts';
 import { readyEmail, sendEmail } from '../src/lib/email.ts';
 
 const HERE = new URL('.', import.meta.url).pathname;
@@ -133,8 +139,13 @@ if (!coverage.sufficient && !flag('force')) {
    instead once this runs somewhere other than a laptop. */
 const storeDir = process.env.EXPOSURE_REPORT_DIR ?? join(SITE_ROOT, '.reports');
 const reportId = reportIdFor(domain, runId);
+/* Not the readable id: an object store serves over plain HTTPS with no auth,
+   so a filename containing the client's domain is a brief anyone can guess at.
+   See storageNameFor in src/lib/magic-link.ts. */
+const storedName = `${storageNameFor(reportId, secret)}.html`;
+const storedPath = join(storeDir, storedName);
 await mkdir(storeDir, { recursive: true });
-await writeFile(join(storeDir, `${reportId}.html`), html);
+await writeFile(storedPath, html);
 
 const ttlDays = Number(arg('ttl', DEFAULT_TTL_DAYS));
 const base = arg('base', process.env.PUBLIC_SITE_ORIGIN ?? 'https://realitycheck.seesawlabs.com');
@@ -142,7 +153,7 @@ const token = mintToken({ reportId, email, ttlDays }, secret);
 
 console.log(`\n  ${domain} · run ${runId}`);
 console.log(`  coverage ${pct}%${coverage.sufficient ? '' : '  (released with --force)'}`);
-console.log(`  stored   ${join(storeDir, `${reportId}.html`)}`);
+console.log(`  stored   ${storedPath}`);
 console.log(`  expires  ${ttlDays} days\n`);
 const link = linkFor(base, token);
 console.log(`  ${link}\n`);
@@ -151,12 +162,24 @@ console.log(`  ${link}\n`);
    if the site reads the same directory — true in local dev, false the moment
    the site is on Vercel and this script ran on a laptop. Saying so is cheap;
    discovering it from a client who clicked a 404 is not. */
-if (!process.env.EXPOSURE_REPORT_BASE_URL) {
+const remoteBase = process.env.EXPOSURE_REPORT_BASE_URL;
+if (!remoteBase) {
   console.log(
     `  NOTE: stored on disk, not uploaded. This link resolves only where the site\n` +
       `  reads ${storeDir}. Set EXPOSURE_REPORT_BASE_URL (and upload there) for a\n` +
       `  link that works from anywhere.\n`
   );
+} else {
+  /* We print the command rather than run it, deliberately. The upload target is
+     whatever bucket or blob store the base URL points at, and a hand-rolled
+     integration against one vendor's API — untested against a real token —
+     would be a worse failure than one copied command: it would look like it
+     worked. The Slack alert takes the same approach with the fulfil command. */
+  console.log('  Upload it, then re-run with --verify:\n');
+  console.log(`    vercel blob put ${storedPath} --pathname briefs/${storedName}`);
+  console.log(`    # or:  aws s3 cp ${storedPath} s3://<bucket>/briefs/${storedName} \\`);
+  console.log('    #            --content-type text/html\n');
+  console.log(`  The site reads it from ${remoteBase.replace(/\/+$/, '')}/${storedName}\n`);
 }
 
 if (flag('verify')) {
