@@ -44,7 +44,10 @@ const html = renderReportHtml({
      company as the original. COMPANY_NAME overrides it for older runs, which
      were written before the field existed. */
   companyName: meta.companyName || process.env.COMPANY_NAME,
-  bookingUrl: process.env.PUBLIC_CAL_LINK || undefined,
+  /* Matches the CLI: our own origin so the link survives a calendar change. */
+  bookingUrl: process.env.PUBLIC_SITE_ORIGIN
+    ? `${process.env.PUBLIC_SITE_ORIGIN.replace(/\/+$/, '')}/book-call`
+    : process.env.PUBLIC_CAL_LINK || undefined,
   synthesis: synthesis?.synthesis ?? null,
   synthesisModel: synthesis?.model,
 });

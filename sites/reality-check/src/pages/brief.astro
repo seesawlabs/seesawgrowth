@@ -8,7 +8,7 @@
    you hand someone before a conversation, which is exactly what this is.
 
    TOP OF THE LADDER, and a different promise from the Reality Check. This one
-   is free and automated: we read your public surface, find what comparable
+   is free and automated: we read your public pages, find what comparable
    companies have actually done, and write you an analysis. The Reality Check is
    the hour that follows.
 
@@ -34,7 +34,7 @@ import ExposureRequest from '../components/ExposureRequest.astro';
 
 const title = 'Your free AI Opportunity Brief — SeeSaw Labs';
 const description =
-  'A free, sourced analysis of where your company stands on AI: what comparable companies have actually done, and what it puts in front of you. Every number carries a source, or is left blank for you to fill in.';
+  'A free analysis of where your company stands on AI: three or four things we\u2019d build if it were our business, what comparable companies have actually done, and the questions we\u2019d ask you first. Every figure says where it came from.';
 ---
 
 <Base title={title} description={description}>
@@ -48,16 +48,18 @@ const description =
       </h1>
       <p class="lede hero__lede">
         We read your website, dig up what companies like yours have actually
-        done with AI, and send you three ideas we&rsquo;d build if it were our
-        business. Plus the questions we&rsquo;d want to ask you. Every number
-        links to where we got it, or we leave it blank rather than guess.
+        done with AI, and send you three or four ideas we&rsquo;d build if it
+        were our business. Plus the questions we&rsquo;d want to ask you. Every
+        figure says where it came from &mdash; found, left blank, or chosen by
+        us and labelled as ours.
       </p>
       <div class="hero__cta">
         <a href="#request" class="btn">Get my brief</a>
         <a href="#inside" class="btn btn--ghost">What's in it</a>
       </div>
       <p class="hero__fine">
-        No charge and no follow-up sequence. One email, one private link.
+        No charge and no follow-up sequence. Two emails: one to say we&rsquo;re
+        on it, one with your private link.
       </p>
     </div>
   </section>
@@ -105,17 +107,18 @@ const description =
           </p>
         </li>
         <li class="card">
-          <h3 class="card__h">Three ideas we&rsquo;d build</h3>
+          <h3 class="card__h">Three or four ideas we&rsquo;d build</h3>
           <p class="card__b">
-            Specific enough to argue with, in the order we&rsquo;d do them. Not
-            &ldquo;add AI to your operation&rdquo;.
+            Specific enough to disagree with, in the order we&rsquo;d do them.
+            Not &ldquo;add AI to your operation&rdquo;.
           </p>
         </li>
         <li class="card">
-          <h3 class="card__h">A rough size on each one</h3>
+          <h3 class="card__h">A rough size, where we can</h3>
           <p class="card__b">
-            Where we can, some arithmetic on what an idea might be worth. Our
-            guesses are labelled as guesses so you can correct them.
+            Where we can, some arithmetic on what an idea might be worth. The
+            numbers we chose are labelled as ours, with the reason we chose
+            them, so you can swap in yours.
           </p>
         </li>
         <li class="card">
@@ -148,21 +151,26 @@ const description =
     <div class="wrap">
       <div class="head">
         <p class="eyebrow">The rule we hold ourselves to</p>
-        <h2 class="h2">Every number links to where we got it</h2>
+        <h2 class="h2">Three kinds of number, and we always say which</h2>
       </div>
 
       <div class="two">
         <div>
           <p class="body">
-            Anyone can write a brief full of made-up percentages. So every
-            figure in yours either links to its source, or shows up as
-            a <span class="blankdemo">blank</span> with a note on what
-            we&rsquo;d need from you to fill it in.
+            Anyone can write a brief full of made-up percentages. So each
+            figure in yours is one of three things, and it is always obvious
+            which: something we found, linked to where we found it;
+            a <span class="blankdemo">blank</span>, where the number exists but
+            we couldn&rsquo;t see it from outside; or a number we picked
+            ourselves to size an idea, printed next to the reason we picked it
+            so you can swap in your real one.
           </p>
           <p class="body">
             That rule lives in our code, not in a style guide. If we can&rsquo;t
             trace a number, the sentence containing it gets dropped before you
-            see it. The check runs over our analysis too, not just the evidence.
+            see it &mdash; and the check runs over our analysis, not just the
+            evidence underneath it. The one place we&rsquo;re allowed to choose
+            a number is an example ROI, and only if every input is declared.
           </p>
         </div>
         <div>

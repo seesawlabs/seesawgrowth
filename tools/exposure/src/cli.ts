@@ -391,7 +391,13 @@ async function report(argv: string[]): Promise<void> {
     subject,
     peers,
     companyName: company,
-    bookingUrl: process.env.PUBLIC_CAL_LINK || undefined,
+    /* Our own origin, not the calendar itself. A brief sits in an inbox for a
+       month; a raw calendar URL written into it dies the day we change
+       scheduling tools, in every brief already sent. /book-call redirects to
+       whatever is configured now. */
+    bookingUrl: process.env.PUBLIC_SITE_ORIGIN
+      ? `${process.env.PUBLIC_SITE_ORIGIN.replace(/\/+$/, '')}/book-call`
+      : process.env.PUBLIC_CAL_LINK || undefined,
     synthesis: synthesis?.synthesis ?? null,
     synthesisModel: synthesis?.model,
   });
