@@ -10,7 +10,14 @@
  *
  *   npm run check:intake
  */
-import { coerceIntake, validate, normalise, scoreIntake, operatorAction } from '../src/lib/intake.ts';
+import {
+  coerceIntake,
+  validate,
+  normalise,
+  scoreIntake,
+  operatorAction,
+  fulfilCommands,
+} from '../src/lib/intake.ts';
 
 /* A submission that should pass cleanly. The qualifying answers are required
    now: they decide whether the session is offered at all, and a form that lets
@@ -108,6 +115,25 @@ check(
     'a competitor typed as a name is kept but not treated as a domain',
     intake.competitors.length === 2 && intake.competitorDomains.length === 1,
     JSON.stringify({ competitors: intake.competitors, domains: intake.competitorDomains })
+  );
+}
+
+/* The alert's two commands are the whole operator interface. If the recipient
+   stops riding along in the first one, releasing goes back to retyping an email
+   address by hand, which is how a client's analysis reaches a stranger. */
+{
+  const intake = normalise(
+    coerceIntake({ ...good, email: 'dana@cultivateadvisors.com', competitors: ['eosworldwide.com'] })
+  );
+  const { generate, release } = fulfilCommands(intake);
+  check('the run command carries the recipient', generate.includes('dana@cultivateadvisors.com'), generate);
+  check('the run command carries the one-liner', generate.includes('--category'), generate);
+  check('a named competitor is seeded', generate.includes('--peer eosworldwide.com'), generate);
+  check('the release command needs only the domain', /--domain \S+ --release/.test(release), release);
+  check(
+    'the release command carries no address to mistype',
+    !release.includes('@'),
+    release
   );
 }
 

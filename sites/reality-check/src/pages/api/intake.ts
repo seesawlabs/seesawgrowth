@@ -25,7 +25,7 @@ import {
   normalise,
   scoreIntake,
   operatorAction,
-  fulfilCommand,
+  fulfilCommands,
   type Intake,
   type NormalisedIntake,
 } from '../../lib/intake';
@@ -106,8 +106,10 @@ function bookingUrl(): string | undefined {
 /**
  * The human gate. This message IS the queue until there is a real one, so it
  * carries the score, the routing, and the exact command to fulfil the request.
- * The command is built by `fulfilCommand` from the same spec the form collects,
- * so a field we ask for and a field the pipeline receives cannot diverge.
+ * The commands are built by `fulfilCommands` from the same spec the form
+ * collects, so a field we ask for and a field the pipeline receives cannot
+ * diverge — and the recipient rides along in the first one, so releasing needs
+ * no retyped email address.
  */
 async function alertOperator(
   intake: NormalisedIntake,
@@ -115,6 +117,7 @@ async function alertOperator(
 ): Promise<void> {
   const hook = import.meta.env.SLACK_WEBHOOK;
   const route = verdict.route ?? 'unrouted';
+  const cmds = fulfilCommands(intake);
   const emoji =
     route === 'auto_book' ? ':large_green_circle:' : route === 'manual_review' ? ':large_yellow_circle:' : ':white_circle:';
 
@@ -138,9 +141,13 @@ async function alertOperator(
     /* Everyone can book, so the alert has to say what to do about it. */
     operatorAction(route === 'unrouted' ? null : verdict.route),
     '',
-    'To fulfil — read it before releasing:',
+    '*1. Run it* — about nine minutes, then read the brief it points you at:',
     '```',
-    `cd tools/exposure && ${fulfilCommand(intake)}`,
+    `cd sites/reality-check && ${cmds.generate}`,
+    '```',
+    '*2. Send it* — only after reading. Nothing to retype; the recipient travels with the run:',
+    '```',
+    `cd sites/reality-check && ${cmds.release}`,
     '```',
   ].filter(Boolean);
 

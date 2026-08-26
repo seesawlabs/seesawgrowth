@@ -259,19 +259,30 @@ export function operatorAction(route: Route | null): string {
 }
 
 /**
- * The command that fulfils a request, built from the same spec the form
- * collects so a field we ask for and a field the pipeline receives cannot
- * diverge. It goes in the Slack alert verbatim: an alert that needs you to go
- * and look something up is an alert that gets ignored.
+ * The two commands that fulfil a request, for pasting out of Slack.
+ *
+ * Built from the same spec the form collects, so a field we ask for and a field
+ * the pipeline receives cannot diverge. Crucially the first line carries the
+ * recipient as well as the research arguments: the second pass reads them back
+ * from the run directory, so nobody ever retypes an email address to release a
+ * client's analysis. An alert that needs you to go and look something up is an
+ * alert that gets ignored; one that needs you to retype an address is worse.
  */
-export function fulfilCommand(i: NormalisedIntake): string {
+export function fulfilCommands(i: NormalisedIntake): { generate: string; release: string } {
+  const q = (v: string) => JSON.stringify(v);
   const parts = [
-    'npm run report --',
-    i.domain,
-    `--company ${JSON.stringify(i.company)}`,
-    `--category ${JSON.stringify(i.oneLiner)}`,
+    'npm run fulfil --',
+    `--domain ${i.domain}`,
+    `--email ${i.email}`,
+    `--name ${q(i.name)}`,
+    `--company ${q(i.company)}`,
+    `--category ${q(i.oneLiner)}`,
   ];
   for (const d of i.competitorDomains) parts.push(`--peer ${d}`);
-  if (i.tried) parts.push(`--trigger ${JSON.stringify(i.tried.slice(0, 200))}`);
-  return parts.join(' ');
+  if (i.tried) parts.push(`--trigger ${q(i.tried.slice(0, 200))}`);
+
+  return {
+    generate: parts.join(' '),
+    release: `npm run fulfil -- --domain ${i.domain} --release --send`,
+  };
 }
