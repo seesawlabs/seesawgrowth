@@ -8,8 +8,20 @@
 
    ORDER MATTERS HERE. Log the raw submission first, before scoring, routing or
    any integration, so a bug anywhere below cannot lose a lead. Then score,
-   then answer the visitor. The integrations fan out without being awaited: a
-   Slack outage must not turn into a visitor staring at a spinner.
+   then answer the visitor. The integrations fan out without the visitor
+   waiting on them: a Slack outage must not turn into a spinner.
+
+   NOT AWAITED IS NOT THE SAME AS NOT GUARANTEED. A first version fired the
+   integrations with a bare `void Promise.allSettled(...)` and returned
+   immediately after. That is a real bug on a serverless platform, not a style
+   choice: Vercel is free to freeze the function the instant the response is
+   sent, and whatever hadn't resolved yet — often the Slack POST — simply never
+   finishes. It is not a crash and there is no error to see; the request that
+   should have alerted the team just goes quiet, and it will not happen on
+   every request, only whichever ones lose the race. `waitUntil`, from
+   `@vercel/functions`, is Vercel's own answer to this: it keeps the function
+   alive until the promise passed to it settles, which is the guarantee this
+   endpoint actually needs.
 
    THE SCORE DECIDES NOTHING THE VISITOR SEES. Everyone is offered the calendar
    and everyone gets the ack email; the score tells the operator what to do,
@@ -31,6 +43,7 @@ import {
 } from '../../lib/intake';
 import { ackEmail, sendEmail } from '../../lib/email';
 import { serverEnv } from '../../lib/server-env';
+import { waitUntil } from '@vercel/functions';
 import { mintActionToken, actionLink } from '../../lib/run-link';
 
 export const prerender = false;
@@ -79,10 +92,14 @@ export const POST: APIRoute = async ({ request }) => {
   const duplicate = isDuplicate(`${intake.email}|${intake.domain}`);
 
   if (!duplicate) {
-    void Promise.allSettled([alertOperator(intake, verdict), acknowledge(intake)]).then((rs) =>
-      rs.forEach((r, i) => {
-        if (r.status === 'rejected') console.error(`[intake] fanout ${i} failed`, r.reason);
-      })
+    /* waitUntil, not a bare void promise: see the header comment. Vercel keeps
+       the function alive until this resolves, response already sent. */
+    waitUntil(
+      Promise.allSettled([alertOperator(intake, verdict), acknowledge(intake)]).then((rs) =>
+        rs.forEach((r, i) => {
+          if (r.status === 'rejected') console.error(`[intake] fanout ${i} failed`, r.reason);
+        })
+      )
     );
   }
 
