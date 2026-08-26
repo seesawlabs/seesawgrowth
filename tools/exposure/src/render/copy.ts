@@ -117,14 +117,16 @@ export const COPY: ReportCopy = {
   citedBasis: 'A measured figure, not one we chose.',
 
   closing: {
-    heading: 'Where this goes next',
+    heading: 'The 45 minutes',
+    /* Not a fresh ask. The session came with the analysis, so this reminds them
+       what it is for and gives them the link if they have not booked yet. */
     body: [
-      'An hour on a call is where we go through these with you and tell you which one we\u2019d ' +
-        'start with. No prep needed, and no charge.',
-      'If there\u2019s something here we think you should build, we\u2019ll say so. If there isn\u2019t, ' +
-        'we\u2019ll say that instead.',
+      'This is the half of it we do together. We open with what you have just read, you tell ' +
+        'us where it is wrong, and we tell you which one we would start with and why.',
+      'If there is something here we think you should build, we will say so. If there is not, ' +
+        'we will say that instead \u2014 inside the 45 minutes, not in a follow-up.',
     ],
-    ctaLabel: 'Book the hour',
+    ctaLabel: 'Book your 45 minutes',
   },
 
   sourcesHeading: 'Sources & retrieval dates',

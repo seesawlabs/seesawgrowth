@@ -1,15 +1,19 @@
 ---
 import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier';
+import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
 ---
 
 <section class="q" id="qualifier" aria-labelledby="q-title">
   <div class="q__head">
-    <h2 id="q-title">Book your AI Reality Check</h2>
+    <h2 id="q-title">Get your analysis and your session</h2>
     <p class="lede">
-      One hour with our team. A written assessment in three business days —
-      yours to keep whether or not we ever work together.
+      A researched analysis of where AI pays off in your business, and 45
+      minutes with the people who wrote it. Both free, both yours to keep.
     </p>
-    <p class="q__micro">A few quick things about your situation. Takes about a minute.</p>
+    <p class="q__micro">
+      Eleven questions, most of them multiple choice. Two minutes, and the
+      answers are what aim the research.
+    </p>
   </div>
 
   <form class="q__form" id="q-form" novalidate>
@@ -84,6 +88,22 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
           placeholder="Pilot stalled at integration."></textarea>
       </fieldset>
 
+      <fieldset class="q__set">
+        <legend>
+          Who are your closest competitors?
+          <span class="q__optional">Optional, up to 3</span>
+        </legend>
+        <p class="q__hint">
+          You know your market better than our search does. We look up everyone
+          you name here, and naming even one sharpens the comparison a lot.
+        </p>
+        <div class="q__comps">
+          <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 1" />
+          <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 2" />
+          <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 3" />
+        </div>
+      </fieldset>
+
       <div class="q__btns">
         <button type="button" class="btn" data-go="3">Continue</button>
         <button type="button" class="btn btn--ghost" data-go="1">Back</button>
@@ -113,7 +133,20 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
       <div class="q__row">
         <label class="q__lab" for="q-website">Company website</label>
         <input type="text" id="q-website" name="website" placeholder="company.com" />
-        <p class="q__hint" id="q-website-hint">So we can do our homework before the call.</p>
+        <p class="q__hint" id="q-website-hint">Where the research starts.</p>
+      </div>
+
+      <div class="q__row">
+        <label class="q__lab" for="q-oneliner">In one line, what does the company do?</label>
+        <textarea id="q-oneliner" name="oneLiner" rows="2" maxlength={ONE_LINER_MAX}
+          placeholder="Specialty pharmacy handling prior authorization and patient onboarding for prescribers"></textarea>
+        <p class="q__hint">
+          Your words, not your homepage's. This is what we search on, and it
+          decides whether the analysis is about your market or your industry.
+        </p>
+        <p class="q__err" id="q-err-oneliner" role="alert">
+          A sentence, please. At least {ONE_LINER_MIN} characters.
+        </p>
       </div>
 
       <div class="q__row">
@@ -169,57 +202,82 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
   <!-- ---------------- outcomes ---------------- -->
 
   <div class="q__out" data-out="auto_book" hidden>
-    <h3>Let's talk.</h3>
+    <h3>We&rsquo;re on it. Now pick your 45 minutes.</h3>
     <p>
-      Pick a time below. You'll be talking to the two people who'd actually do
-      the work — not a salesperson.
+      The analysis is being built and lands in your inbox as a private link. The
+      session is the other half, and it&rsquo;s worth booking now &mdash; before
+      the document arrives is fine, we&rsquo;ll have read it either way.
     </p>
-    <p class="q__lab-sm">What to expect</p>
+    <p class="q__lab-sm">What the 45 minutes is</p>
     <ul class="q__list">
-      <li>One hour. We'll ask about the workflow, the systems, and what happened last time.</li>
-      <li><strong>Bring one person who knows the process end to end.</strong> It makes the hour twice as useful.</li>
-      <li>We record the call so we can build your assessment — you'll have it within <strong>three business days</strong>.</li>
+      <li>
+        <strong>We open with what we found.</strong> No twenty minutes of
+        background. You tell us where our read is wrong.
+      </li>
+      <li>
+        <strong>We put the questions to you.</strong> The ones that would change
+        our recommendation, which the analysis names explicitly.
+      </li>
+      <li>
+        <strong>We say what we&rsquo;ve watched fail.</strong> Nobody publishes
+        the pilot that died in security review. We&rsquo;ve seen those.
+      </li>
+      <li>
+        <strong>You leave with a sequence.</strong> What to do first, what to
+        park, what has to be true before the next thing starts.
+      </li>
     </ul>
+    <p>
+      You&rsquo;ll be talking to the two people who would actually do the work.
+      If there&rsquo;s no fit we&rsquo;ll say so inside the 45 minutes.
+    </p>
     <div class="q__sched" id="q-sched">
       <p class="q__sched-note">
-        Scheduler embed — Cal.com, collective on Jeff + Calvin.
+        Scheduler embed &mdash; Cal.com, collective on Jeff + Calvin.
         <br />Set <code>PUBLIC_CAL_LINK</code> to go live.
       </p>
     </div>
   </div>
 
   <div class="q__out" data-out="manual_review" hidden>
-    <h3>Got it — thanks for the detail.</h3>
+    <h3>We&rsquo;re on it. A time follows by email.</h3>
     <p>
-      We read every one of these properly. You'll hear back by end of day
-      tomorrow with times — or with a straight answer if we don't think we're
-      the right fit for this.
+      The analysis is being built and comes to you as a private link. We read
+      every one of these properly before booking the session, so you&rsquo;ll
+      hear from one of us with times &mdash; or with a straight answer if we
+      don&rsquo;t think we&rsquo;re the right fit.
     </p>
-    <p>Either way you'll hear from a person, not an autoresponder.</p>
+    <p>Either way it comes from a person, not an autoresponder.</p>
   </div>
 
   <div class="q__out" data-out="not_yet" hidden>
-    <h3>Here's what we'd suggest instead.</h3>
+    <h3>We&rsquo;d be guessing, so we&rsquo;ll say so.</h3>
     <p>
-      Based on where you are, an hour with us probably isn't the most useful
-      thing we could give you yet — we'd be guessing, and you'd get a thin
-      report. We'd rather say that than take the hour.
+      Our work starts at around $50k, and at your stage the honest answer is
+      that a session with us would be two people speculating about your
+      business at your expense. You&rsquo;d get a thin analysis and forty-five
+      minutes of generalities. We&rsquo;d rather tell you that now.
     </p>
-    <p class="q__lab-sm">More useful right now</p>
+    <p class="q__lab-sm">What is actually useful today</p>
     <ul class="q__list">
       <li>
-        <a href="/sample">Read what's in the assessment</a> — the six things
-        that determine whether an AI initiative reaches production. Most of it
-        you can work through yourself.
+        <a href="/sample-brief">Read the analysis we ran on ourselves</a>. It is
+        a real one, unedited, including the parts where it tells us what
+        we&rsquo;re missing. The structure is the useful bit: you can work
+        through the same questions about your own business for free.
       </li>
       <li>
-        We're standing up a small monthly group session. Leave your email on the
-        form and we'll tell you when the first one is.
+        The four ideas in it cost us nothing but research. Most of what makes AI
+        work at your size is sequencing something boring before anything called
+        AI &mdash; a data path, a record nobody keeps, one cheap test that saves
+        a big build.
       </li>
     </ul>
     <p>
-      And if something changes — a project stalls, or your board asks for a
-      number — <a href="/book">come straight back</a>.
+      When that changes &mdash; a stalled project, a board asking for a number,
+      revenue where a real build makes sense &mdash;
+      <a href="/">come straight back</a>. We keep no list, so there is nothing
+      to unsubscribe from and nothing stopping you.
     </p>
   </div>
 
@@ -228,7 +286,7 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
     <p>
       Something on our end failed, not yours. Email <a
         href="mailto:hello@seesawlabs.com">hello@seesawlabs.com</a> and we'll
-      sort it out — or try again in a minute.
+      sort it out, or try again in a minute.
     </p>
   </div>
 </section>
@@ -452,12 +510,12 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
         website.value = d;
         website.classList.add('is-prefilled');
         websiteSource = 'prefilled';
-        websiteHint.textContent = 'Pre-filled from your email — correct it if that’s not right.';
+        websiteHint.textContent = 'Pre-filled from your email. Correct it if that’s not right.';
       } else if (!usable && websiteSource === 'prefilled') {
         website.value = '';
         website.classList.remove('is-prefilled');
         websiteSource = 'blank';
-        websiteHint.textContent = 'So we can do our homework before the call.';
+        websiteHint.textContent = 'Where the research starts.';
       }
     };
 
@@ -468,7 +526,7 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
       if (websiteSource === 'prefilled') {
         websiteSource = 'user_corrected';
         website.classList.remove('is-prefilled');
-        websiteHint.textContent = 'So we can do our homework before the call.';
+        websiteHint.textContent = 'Where the research starts.';
       }
     });
 
@@ -509,7 +567,9 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
       });
     });
 
-    const collect = (): Answers => ({
+    /* Answers plus the two fields the analysis is aimed with. `evaluate` reads
+       only the Answers half, so the fallback routing below still works. */
+    const collect = () => ({
       role: pick('role') as Answers['role'],
       roleTitle: val('q-role-title') || undefined,
       revenue: pick('revenue') as Answers['revenue'],
@@ -523,6 +583,10 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
       industry: industry.value === 'ind_other' ? val('q-ind-other') : industry.value,
       referredBy: val('q-ref') || undefined,
       budgetAck: $<HTMLInputElement>('#q-ack').checked,
+      oneLiner: val('q-oneliner'),
+      competitors: [...form.querySelectorAll<HTMLInputElement>('input[name="competitor"]')]
+        .map((i) => i.value.trim())
+        .filter(Boolean),
     });
 
     const reveal = (route: Route | 'error', bookingUrl?: string) => {
@@ -535,7 +599,7 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
         slot.innerHTML = '';
         const f = document.createElement('iframe');
         f.src = bookingUrl;
-        f.title = 'Pick a time for your AI Reality Check';
+        f.title = 'Pick a time for your session';
         f.loading = 'lazy';
         slot.appendChild(f);
       }
@@ -547,10 +611,18 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
       clearErrs();
 
       const a = collect();
+      let bad = false;
       if (!a.name || !a.email || !a.company || !a.website || !a.industry) {
         showErr('q-err-contact');
-        return;
+        bad = true;
       }
+      /* Mirrors ONE_LINER_MIN in lib/intake.ts. The server is the authority;
+         this just saves a round trip on the field people rush. */
+      if (a.oneLiner.length < 20) {
+        showErr('q-err-oneliner');
+        bad = true;
+      }
+      if (bad) return;
 
       const submit = $<HTMLButtonElement>('#q-submit');
       submit.disabled = true;
@@ -562,14 +634,22 @@ import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier'
       } catch { /* best-effort */ }
 
       try {
-        const res = await fetch('/api/reality-check', {
+        const res = await fetch('/api/intake', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...a, attribution }),
         });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
-        reveal(data.route as Route, data.bookingUrl);
+        /* The server answers with an offer, not a score. Routes and offers map
+           one to one — see offerFor in lib/intake.ts — so the panes stay keyed
+           by route and the fallback path below can share them. */
+        const byOffer = {
+          brief_and_booking: 'auto_book',
+          brief_and_email: 'manual_review',
+          no_fit: 'not_yet',
+        } as const;
+        reveal(byOffer[data.offer as keyof typeof byOffer] ?? 'error', data.bookingUrl);
       } catch {
         /* No adapter yet, or the endpoint is down. The routing logic is
            deterministic and shared, so we can still show the right outcome

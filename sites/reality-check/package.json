@@ -14,7 +14,9 @@
     "check:email": "node --experimental-strip-types scripts/check-email.mjs",
     "check:intake": "node --experimental-strip-types scripts/check-intake.mjs",
     "publish:sample": "node --experimental-strip-types scripts/publish-sample.mjs",
-    "check:links": "node --experimental-strip-types scripts/check-links.mjs"
+    "check:links": "node --experimental-strip-types scripts/check-links.mjs",
+    "check:build": "node --experimental-strip-types scripts/check-build.mjs",
+    "check:all": "npm run check:build && npm run check:prose && npm run check:email && npm run check:intake && npm run check:links"
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.6",

@@ -1,12 +1,12 @@
 ---
 /* ---------------------------------------------------------------------------
-   / — the free AI Opportunity Brief offer, and the site's front door.
+   / — the package, and the site's only offer.
 
-   IT LEADS WITH THE BRIEF because the brief is the bottom rung. It costs a
-   visitor four fields and no calendar, where the Reality Check costs them an
-   hour on a call with strangers. The front door used to sell the hour and list
-   the brief in the nav, which asked the most of someone who knew the least
-   about us. The hour is now the step after, on /reality-check.
+   ONE OFFER, ONE PAGE. It used to be two rungs: a free analysis, and an hour
+   on a call if they wanted it. The call is now half of what is promised at the
+   top (docs/10-package-plan.md), which fixes the weakest joint in the funnel:
+   an analysis that lands in an inbox and hopes. /reality-check and
+   /book are redirects; there is no second offer to send anyone to.
 
    The path this route took: /exposure read as fear-mongering, and a URL is the
    first words a visitor sees. /report was accurate and dull, and it promised
@@ -35,32 +35,32 @@
    vertical, so landing Decision #1 does not invalidate the page.
 --------------------------------------------------------------------------- */
 import Base from '../layouts/Base.astro';
-import ExposureRequest from '../components/ExposureRequest.astro';
+import IntakeForm from '../components/IntakeForm.astro';
 
-const title = 'Your free AI Opportunity Brief — SeeSaw Labs';
+const title = 'Free AI analysis and a 45-minute session — SeeSaw Labs';
 const description =
-  'Three or four AI ideas for your business that nobody has pitched you yet, each one sized so you can judge it. Researched from your surface, your category and your competitors\u2019 actual moves. Free, and yours to keep.';
+  'A researched analysis of where AI pays off in your business, plus 45 minutes with the people who wrote it. We open with what we found rather than asking you to explain your business. Free, and yours to keep.';
 ---
 
 <Base title={title} description={description}>
   <!-- ------------------------------ hero ------------------------------ -->
   <section class="hero">
     <div class="wrap hero__in">
-      <p class="eyebrow">Free · No catch · Yours to keep</p>
+      <p class="eyebrow">Free · Analysis + 45 minutes · Yours to keep</p>
       <h1 class="hero__h">
-        The AI ideas for your business<br />
-        <span class="hero__em">that nobody has pitched you yet.</span>
+        You&rsquo;ve had the call where you explain<br />
+        your business to someone taking notes.<br />
+        <span class="hero__em">This isn&rsquo;t that.</span>
       </h1>
       <p class="lede hero__lede">
-        Three or four things we&rsquo;d build if this were our company, each
-        one sized so you can judge whether it&rsquo;s worth the effort. Plus
-        what we&rsquo;d want to know before starting. It&rsquo;s the first
-        working session of a strategic engagement, done before you&rsquo;ve
-        spent anything.
+        We research your company first, write up the three or four things
+        we&rsquo;d build if it were ours, and then spend 45 minutes with you on
+        what to do about it. You get the analysis either way, and we open the
+        call with our read rather than a blank page.
       </p>
       <div class="hero__cta">
-        <a href="#request" class="btn">Get my brief</a>
-        <a href="#inside" class="btn btn--ghost">What's in it</a>
+        <a href="#request" class="btn">Get mine</a>
+        <a href="#session" class="btn btn--ghost">What the 45 minutes is</a>
       </div>
     </div>
   </section>
@@ -154,6 +154,65 @@ const description =
     </div>
   </section>
 
+  <!-- ------------------------- the session ---------------------------- -->
+  <section class="section" id="session">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">The other half</p>
+        <h2 class="h2">45 minutes that start where a first call usually ends</h2>
+        <p class="lede">
+          A normal discovery call spends its first twenty minutes on background,
+          and its last five on next steps. We do the background beforehand, in
+          writing, so the time goes on the decisions.
+        </p>
+      </div>
+
+      <ol class="steps">
+        <li class="step">
+          <h3 class="step__h">We open with what we found</h3>
+          <p class="step__b">
+            Our read of your business, out loud, in the first five minutes. You
+            tell us where it&rsquo;s wrong. Nothing sharpens a recommendation
+            faster than the person who knows the operation correcting it.
+          </p>
+        </li>
+        <li class="step">
+          <h3 class="step__h">We put our questions to you</h3>
+          <p class="step__b">
+            The handful whose answers would change what we&rsquo;d recommend:
+            your volumes, your cycle times, which manual step is quietly costing
+            the most. The analysis names them, so you see the agenda before you
+            agree to the call.
+          </p>
+        </li>
+        <li class="step">
+          <h3 class="step__h">We tell you what we&rsquo;ve watched fail</h3>
+          <p class="step__b">
+            The part research can&rsquo;t give you. Nobody publishes the pilot
+            that died in security review, or the model that worked and shipped
+            to nobody. We build this in healthcare operations, including the
+            platform that cut medication approvals 5x at Hospice Pharmacy
+            Solutions, and we&rsquo;ve seen the expensive dead ends up close.
+          </p>
+        </li>
+        <li class="step">
+          <h3 class="step__h">You leave with a sequence, not a list</h3>
+          <p class="step__b">
+            What to do first, what to park, and what has to be true before the
+            next thing starts. Ordered against your capacity rather than our
+            enthusiasm.
+          </p>
+        </li>
+      </ol>
+
+      <p class="sessionnote">
+        You&rsquo;ll be talking to the two people who would lead the work, not a
+        salesperson. And if there&rsquo;s no fit, we say so inside the 45
+        minutes rather than in a follow-up sequence.
+      </p>
+    </div>
+  </section>
+
   <!-- ------------------------ the honesty promise --------------------- -->
   <section class="section section--sunk">
     <div class="wrap">
@@ -217,25 +276,25 @@ const description =
           about your market rather than your industry.
         </p>
       </div>
-      <ExposureRequest />
+      <IntakeForm />
     </div>
   </section>
 
   <!-- ------------------------------- close ---------------------------- -->
   <section class="section section--deep">
     <div class="wrap-narrow close">
-      <p class="eyebrow">And then</p>
-      <h2 class="close__h">Turn it into a plan.</h2>
+      <p class="eyebrow">What it costs</p>
+      <h2 class="close__h">Nothing, and we mean the whole thing.</h2>
       <p class="lede">
-        An hour with the two people who would lead the work. You fill in what
-        we could not see, we sequence the ideas against your actual capacity,
-        and you leave with a written assessment of what to do first. That hour
-        is the AI Reality Check. It is free as well, and the assessment is
-        yours whether or not you work with us.
+        The analysis and the 45 minutes are both free, and both yours to keep.
+        We do it because it is the most honest way to be judged: on the quality
+        of the thinking, with the sources attached. If we go on to build
+        together, engagements start at $50k. If we don&rsquo;t, you still have
+        a researched view of where AI pays off in your business.
       </p>
       <div class="close__ctas">
-        <a href="/book" class="btn btn--on-deep">Book the hour</a>
-        <a href="/reality-check" class="close__more">What the hour covers &rarr;</a>
+        <a href="#request" class="btn btn--on-deep">Get mine</a>
+        <a href="/sample-brief" class="close__more">Read the one we ran on ourselves &rarr;</a>
       </div>
     </div>
   </section>
@@ -332,6 +391,37 @@ const description =
 
     .samplelink { margin: var(--sp-10) 0 0; font-size: var(--text-lg); }
     .samplelink a { color: var(--accent-deep); font-weight: 500; }
+
+    /* The session steps: numbered, because the order is the point. */
+    ol.steps {
+      list-style: none;
+      counter-reset: st;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: var(--sp-8);
+      max-width: var(--page-narrow);
+    }
+    .step { counter-increment: st; display: grid; gap: var(--sp-2); position: relative; padding-left: var(--sp-10); }
+    .step::before {
+      content: counter(st);
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-family: var(--font-accent);
+      font-size: var(--text-lg);
+      line-height: 1.1;
+      color: var(--accent);
+    }
+    .step__h { font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--ls-tight); margin: 0; }
+    .step__b { margin: 0; color: var(--ink-2); line-height: var(--lh-body); max-width: 62ch; }
+    .sessionnote {
+      margin: var(--sp-10) 0 0;
+      padding-top: var(--sp-6);
+      border-top: 1px solid var(--rule);
+      color: var(--ink-2);
+      max-width: 62ch;
+    }
 
     .close { display: grid; gap: var(--sp-5); justify-items: start; }
     .close__ctas { display: flex; flex-wrap: wrap; gap: var(--sp-5); align-items: center; }

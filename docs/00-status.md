@@ -52,17 +52,17 @@ actively trying to do less of it.
 | Case-study rebuild (6, metric-led) | Calvin | Not started |
 | Website rebuild (7 items) | Calvin | Not started |
 | The offer as a product (Roadmap page + booking flow) | Calvin | **Plan drafted — awaiting team alignment** |
-| The free offer (AI Reality Check + report pipeline) | Calvin | **Spec'd — build starts week of Aug 17** |
-| └ Qualifier form | Calvin | **Spec'd + prototyped. Scoring validated against 14 personas** |
+| The free offer (analysis + 45-min session, sold as one package) | Calvin | **Built end to end. Deployed; awaiting env vars and the calendar** |
+| └ Qualifier form | Calvin | **Now the single intake for the package. Scoring unchanged, still validated against 14 personas** |
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric** |
 | └ Website build (page, form, scheduler) | Calvin | **Built and deployed to Vercel (SeeSaw-owned). Stack landed: Astro. Scheduler not yet wired** |
 | └ AI Opportunity Brief pipeline | Calvin | **Runs end to end. Named for the client, generated, released, served over a magic link** |
 | └ ─ Brief generation (`tools/exposure`) | Calvin | **Working. ~$1.40 and 6–11 min a run. Stage 03 is non-deterministic — same peers, different evidence hours apart** |
-| └ ─ Landing page + intake (site root) | Calvin | **The brief is now the front door. The Reality Check hour moved to `/reality-check`** |
+| └ ─ Landing page + intake (site root) | Calvin | **One offer, one page. `/reality-check`, `/book`, `/brief` and `/sample` are redirects — see `docs/10-package-plan.md`** |
 | └ ─ Public sample (`/sample-brief`) | Calvin | **We ran the brief on ourselves. 100% coverage, published unedited** |
 | └ ─ Delivery emails | Calvin | **Written and wired. Nothing sends until `RESEND_TOKEN` is set in Vercel** |
 | └ ─ Magic link + report store | Calvin | **Built and verified locally. Prod storage undecided — Vercel Blob is the proposal** |
-| └ ─ Booking | Calvin | **Wired on the confirmation screen and on the brief itself. Needs a real `PUBLIC_CAL_LINK`** |
+| └ ─ Booking | Calvin | **Embedded on the confirmation for qualified leads only. Needs a 45-minute `PUBLIC_CAL_LINK`** |
 | └ Program breakdown (11 projects) | Calvin | **Outlined. Awaiting owner + capacity assignment** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |

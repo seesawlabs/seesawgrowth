@@ -21,11 +21,17 @@ After it deploys, these should all answer:
 
 | Route | Expect |
 |---|---|
-| `/` | the Opportunity Brief offer, with the intake form |
-| `/brief` | 301 to `/` |
-| `/reality-check` | the hour |
-| `/sample-brief` | the brief we ran on ourselves |
+| `/` | the package — analysis plus session — with the intake form |
+| `/sample-brief` | the analysis we ran on ourselves |
 | `/book-call` | 302 to the calendar |
+| `/brief` | 301 to `/` |
+| `/sample` | 301 to `/sample-brief` |
+| `/book` | 302 to `/#request` |
+| `/reality-check` | 302 to `/#session` |
+
+The last four are retired routes kept as redirects. There is one offer and one
+page now — see `docs/10-package-plan.md`. `POST /api/intake` is the only
+endpoint; `/api/exposure-request` and `/api/reality-check` are gone.
 
 ## 2. Environment variables
 
@@ -49,9 +55,10 @@ next request.
 
 ## 3. The calendar
 
-`.env.example` has always named the intended event:
-`https://cal.com/seesawlabs/reality-check`, a **collective** event on Jeff and
-Calvin. Two things to do:
+The session is **45 minutes**, not the hour the old Reality Check ran. Create a
+collective event on Jeff and Calvin at that length — the old
+`https://cal.com/seesawlabs/reality-check` link in `.env.example` predates the
+package and will need repointing or renaming. Two things to do:
 
 1. Create it (or confirm it exists) and open the URL in a private window. If it
    does not load for a stranger, it will not load for a lead.
@@ -62,9 +69,12 @@ Briefs point at `/book-call` on our own origin rather than at the calendar
 directly, so changing tools later is one variable and every brief already in
 someone's inbox follows it. Nothing needs reissuing.
 
-The qualifier at `/book` embeds the same link as an iframe after its questions.
-Someone arriving from a brief skips that and goes straight to the calendar —
-they have already told us who they are.
+The form embeds that link as an iframe on its confirmation screen, but only for
+a lead the scoring routes to `auto_book`. A `manual_review` lead is told a time
+follows by email, and a `not_yet` lead is told plainly that we are not the right
+fit — so the calendar is never put in front of someone we would then have to
+turn down. Someone arriving from a released analysis goes straight to the
+calendar through `/book-call`; they have already told us who they are.
 
 ## 4. Where released briefs live
 
@@ -99,6 +109,9 @@ having read it — a thin brief to a good prospect is worse than none.
 - Check the ack email in a client that strips styling — both emails ship a
   plain-text half for exactly that.
 - `npm run check:prose && npm run check:email && npm run check:intake && npm run check:links`
+- Submit once at each routing outcome and confirm the confirmation screen matches:
+  a mid-market stalled initiative should see a calendar, a $10–50M company should
+  be told a time follows, and a sub-$10M company should get the honest no.
 
 ## Operator machine
 

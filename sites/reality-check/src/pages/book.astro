@@ -1,17 +1,10 @@
 ---
-import Base from '../layouts/Base.astro';
-import Qualifier from '../components/Qualifier.astro';
+/* /book was the qualifier's own page when the call was a separate offer. The
+   package sells both halves on one page, and the form there is the qualifier —
+   so this route would be a second copy of it with a different heading. Kept as
+   a redirect because it is in a Slack thread and probably a calendar invite.
+   302, not 301: if the offer splits again, a permanent redirect cached in
+   people's browsers would be the hard part to undo. */
+export const prerender = false;
+return Astro.redirect('/#request', 302);
 ---
-
-<Base
-  title="Book your AI Reality Check — SeeSaw Labs"
-  description="A few quick questions, then pick a time. One hour with our team and a written assessment in three business days."
->
-  <div class="book">
-    <Qualifier />
-  </div>
-
-  <style>
-    .book { padding-block: clamp(var(--sp-12), 8vw, var(--sp-20)); }
-  </style>
-</Base>
