@@ -23,6 +23,7 @@
     "@astrojs/vercel": "^11.0.6",
     "@fontsource-variable/outfit": "^5.1.0",
     "@fontsource/pixelify-sans": "^5.1.0",
+    "@vercel/blob": "^2.8.0",
     "astro": "^7.2.3"
   }
 }

@@ -42,7 +42,9 @@ otherwise a preview deploy silently behaves differently from production.
 |---|---|---|
 | `SLACK_WEBHOOK` | **A submitted request reaches nobody.** It is logged to the Vercel function log and that is all | Effectively required. The alert carries the exact command to fulfil the request |
 | `EXPOSURE_LINK_SECRET` | **Every magic link fails to verify.** The route logs it loudly | `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`. The operator machine needs the *same* value |
-| `EXPOSURE_REPORT_BASE_URL` | A verified link 404s: the site has nowhere to read briefs from | Public prefix of the bucket or blob store, e.g. `https://….public.blob.vercel-storage.com/briefs` |
+| `EXPOSURE_REPORT_BASE_URL` | A verified link 404s: the site has nowhere to read briefs from | Public prefix of the blob store, e.g. `https://….public.blob.vercel-storage.com/briefs` |
+| `GITHUB_DISPATCH_TOKEN` | No one-click runs; the alert prints commands instead | See §3a |
+| `PUBLIC_SITE_ORIGIN` | The alert cannot build absolute links | `https://seesawgrowth.vercel.app` |
 | `PUBLIC_CAL_LINK` | The booking block is hidden on the confirmation, and `/book-call` falls back to `/book` | See §3 |
 | `RESEND_TOKEN` | Neither email sends. Both no-op loudly in the log | Sender domain must be verified in Resend first |
 | `PUBLIC_PLAUSIBLE_DOMAIN` | No analytics | Optional |
@@ -101,6 +103,47 @@ qualified lead told to wait for one costs the lead. The score reaches the team
 in the Slack alert with an explicit instruction, including cancelling a meeting
 a poor-fit lead has booked — so read those alerts. Someone arriving from a
 released analysis goes straight to the calendar through `/book-call`.
+
+## 3a. One-click runs from Slack
+
+The alert carries a signed link that runs the analysis, and the workflow posts
+back with a second link that sends it. Two clicks, the review still between
+them, and no laptop with six API keys on it.
+
+`.github/workflows/analysis.yml` is the runner. To turn it on:
+
+**A GitHub token, in Vercel.** Fine-grained, this repository only, Repository
+permissions → **Actions: Read and write**. Nothing else. Set it as
+`GITHUB_DISPATCH_TOKEN`. Also set `PUBLIC_SITE_ORIGIN` to
+`https://seesawgrowth.vercel.app`, or the alert cannot build absolute links and
+falls back to printing commands.
+
+**The pipeline keys, as Actions secrets** (Settings → Secrets and variables →
+Actions): `FIRECRAWL_API_KEY`, `EXA_API_KEY`, `PERPLEXITY_API_KEY`,
+`DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD`, `EXPOSURE_ANTHROPIC_KEY`,
+`EXPOSURE_LINK_SECRET` (identical to the one in Vercel), `RESEND_TOKEN`,
+`SLACK_WEBHOOK`, `BLOB_READ_WRITE_TOKEN`.
+
+**And as Actions *variables*** (not secrets, since they are not secret):
+`EXPOSURE_REPORT_BASE_URL`, `PUBLIC_SITE_ORIGIN`, `PUBLIC_CAL_LINK`, and
+optionally `EXPOSURE_RUN_BUDGET_USD`.
+
+The workflow only needs to exist on the branch it is dispatched against, which
+defaults to `claude/seesaw-labs-growth-u5ou0b` — the repository's default
+branch, and the one Vercel builds. Override with `GITHUB_DISPATCH_REF`.
+
+Three things worth knowing about the design:
+
+- **A GET never acts.** Slack fetches links to build previews, as do mail
+  clients and phone prefetchers, so the link renders a confirmation page and the
+  run needs a POST from it. The alert also asks Slack not to unfurl. One extra
+  click is the price of a URL that cannot be spent by a bot.
+- **The links are signed** with `EXPOSURE_LINK_SECRET`, and the action is inside
+  the signature, so a "run" link cannot be edited into a "send" link. They are
+  signed, not encrypted: the lead's name and email can be decoded out of one, so
+  they belong in our Slack and nowhere else.
+- **Runs are serialised per company** by a concurrency group, so a
+  double-clicked link queues rather than spending twice.
 
 ## 4. Where released briefs live
 

@@ -8,6 +8,7 @@
  *
  *   npm run check:links
  */
+import { mintActionToken, verifyActionToken } from '../src/lib/run-link.ts';
 import {
   mintToken,
   verifyToken,
@@ -53,6 +54,37 @@ try {
   threw = true;
 }
 check('deriving a name without a secret throws', threw);
+
+/* -- action links: they spend money, so the signature is the whole defence -- */
+const action = {
+  a: 'run',
+  domain: 'acmehealth.com',
+  email: 'dana@acmehealth.com',
+  name: 'Dana Whitfield',
+  company: 'Acme Health',
+  category: 'Specialty pharmacy handling prior authorization.',
+  peers: ['other.com'],
+};
+
+const runTok = mintActionToken({ ...action }, SECRET);
+check('a run link verifies', verifyActionToken(runTok, SECRET).ok);
+check('the wrong secret cannot mint one', !verifyActionToken(runTok, OTHER).ok);
+
+/* The action is inside the signature, so a run link cannot be edited into a
+   send link — which would email a client a brief nobody had read. */
+const sendTok = mintActionToken({ ...action, a: 'send', run: 'r1' }, SECRET);
+check('run and send are different tokens', runTok !== sendTok);
+check('a run link stays a run link', verifyActionToken(runTok, SECRET).payload?.a === 'run');
+check('a send link carries the run id', verifyActionToken(sendTok, SECRET).payload?.run === 'r1');
+
+const [enc, mac] = runTok.split('.');
+const flipped = `${enc.slice(0, 12)}${enc[12] === 'A' ? 'B' : 'A'}${enc.slice(13)}.${mac}`;
+check('a tampered payload is refused', verifyActionToken(flipped, SECRET).reason === 'bad_signature');
+check(
+  'an expired action link is refused',
+  verifyActionToken(mintActionToken({ ...action, ttlDays: -1 }, SECRET), SECRET).reason === 'expired'
+);
+check('a garbage token is refused', !verifyActionToken('nonsense', SECRET).ok);
 
 if (failed > 0) {
   console.log(`\n${failed} invariant(s) broken.\n`);

@@ -1,0 +1,166 @@
+# Runs one AI Opportunity Brief, or sends one that was already run.
+#
+# Fired by POST /api/run in sites/reality-check, which is reached by a signed
+# link in the Slack alert. Two modes so the review gate survives being turned
+# into links: `run` generates and posts a link to read, `send` emails it. The
+# operator reads the brief between the two.
+#
+# The recipient never reaches this workflow by hand — the signed token carries
+# the intake, so the inputs here are provably the values the form collected.
+name: analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: run (generate) or send (email the link)
+        required: true
+        default: run
+      domain:
+        description: Company domain to analyse
+        required: true
+      email:
+        description: Recipient
+        required: true
+      name:
+        description: Recipient's name
+        required: true
+      company:
+        description: Company name, as it appears in the document
+        required: true
+      category:
+        description: The one-liner. Aims peer discovery
+        required: false
+        default: ''
+      peers:
+        description: Comma-separated competitor domains
+        required: false
+        default: ''
+      trigger:
+        description: What is driving it. Steers the analysis, never cited
+        required: false
+        default: ''
+      runId:
+        description: For mode=send, the run being released. The run mode fills this in
+        required: false
+        default: ''
+
+# One at a time per company. A double-clicked link should queue, not spend
+# twice, and two runs writing the same stored object would race.
+concurrency:
+  group: analysis-${{ inputs.domain }}
+  cancel-in-progress: false
+
+permissions:
+  # Only for pushing the evidence ledger back. Nothing here needs more.
+  contents: write
+
+jobs:
+  fulfil:
+    runs-on: ubuntu-latest
+    # Generation is about nine minutes today. The ceiling is deliberately well
+    # above that: unbounded research is the slow part and it grows.
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            tools/exposure/package-lock.json
+            sites/reality-check/package-lock.json
+
+      - name: Install
+        run: |
+          npm ci --prefix tools/exposure
+          npm ci --prefix sites/reality-check
+
+      - name: Generate the analysis
+        if: inputs.mode == 'run'
+        working-directory: tools/exposure
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          DATAFORSEO_LOGIN: ${{ secrets.DATAFORSEO_LOGIN }}
+          DATAFORSEO_PASSWORD: ${{ secrets.DATAFORSEO_PASSWORD }}
+          EXPOSURE_ANTHROPIC_KEY: ${{ secrets.EXPOSURE_ANTHROPIC_KEY }}
+          EXPOSURE_RUN_BUDGET_USD: ${{ vars.EXPOSURE_RUN_BUDGET_USD || '5' }}
+          PUBLIC_SITE_ORIGIN: ${{ vars.PUBLIC_SITE_ORIGIN }}
+          # Form-derived values reach the shell as environment variables, never
+          # as ${{ }} interpolations. GitHub expands those before bash parses
+          # the line, so a company name containing a quote and a semicolon
+          # would execute here. The token that carries them is signed, but it
+          # is signed over data a stranger typed into a public form.
+          IN_DOMAIN: ${{ inputs.domain }}
+          IN_COMPANY: ${{ inputs.company }}
+          IN_CATEGORY: ${{ inputs.category }}
+          IN_TRIGGER: ${{ inputs.trigger }}
+          IN_PEERS: ${{ inputs.peers }}
+        run: |
+          set -euo pipefail
+          args=(report "$IN_DOMAIN" --quiet --company "$IN_COMPANY")
+          [ -n "$IN_CATEGORY" ] && args+=(--category "$IN_CATEGORY")
+          [ -n "$IN_TRIGGER" ]  && args+=(--trigger "$IN_TRIGGER")
+          IFS=',' read -ra peers <<< "$IN_PEERS"
+          for p in "${peers[@]}"; do
+            p="$(echo "$p" | tr -d '[:space:]')"
+            [ -n "$p" ] && args+=(--peer "$p")
+          done
+          node --experimental-strip-types src/cli.ts "${args[@]}"
+
+      # The evidence ledger is research we paid for, and a run on a fresh
+      # machine starts from nothing without it. Committing it back means the
+      # next run — here or on a laptop — keeps what this one learned.
+      - name: Commit new peer evidence
+        if: inputs.mode == 'run'
+        env:
+          IN_DOMAIN: ${{ inputs.domain }}
+        run: |
+          if [ -n "$(git status --porcelain tools/exposure/evidence)" ]; then
+            git config user.name  "seesaw-analysis[bot]"
+            git config user.email "analysis@seesawlabs.com"
+            git add tools/exposure/evidence
+            git commit -m "Evidence ledger: findings from $IN_DOMAIN"
+            git push
+          else
+            echo "No new evidence to commit."
+          fi
+
+      - name: Release it
+        working-directory: sites/reality-check
+        env:
+          EXPOSURE_LINK_SECRET: ${{ secrets.EXPOSURE_LINK_SECRET }}
+          EXPOSURE_REPORT_BASE_URL: ${{ vars.EXPOSURE_REPORT_BASE_URL }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          RESEND_TOKEN: ${{ secrets.RESEND_TOKEN }}
+          PUBLIC_SITE_ORIGIN: ${{ vars.PUBLIC_SITE_ORIGIN }}
+          PUBLIC_CAL_LINK: ${{ vars.PUBLIC_CAL_LINK }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          # Same rule as above: through the environment, not through ${{ }}.
+          IN_MODE: ${{ inputs.mode }}
+          IN_DOMAIN: ${{ inputs.domain }}
+          IN_EMAIL: ${{ inputs.email }}
+          IN_NAME: ${{ inputs.name }}
+          IN_COMPANY: ${{ inputs.company }}
+          IN_RUN_ID: ${{ inputs.runId }}
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/ci-release.mjs \
+            --mode "$IN_MODE" --domain "$IN_DOMAIN" --email "$IN_EMAIL" \
+            --name "$IN_NAME" --company "$IN_COMPANY" --run "$IN_RUN_ID" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      # Kept for a fortnight so a released brief can be re-read or re-sent
+      # without paying for the research again.
+      - name: Keep the run
+        if: always() && inputs.mode == 'run'
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-${{ inputs.domain }}-${{ github.run_id }}
+          path: tools/exposure/runs/
+          retention-days: 14
+          if-no-files-found: warn

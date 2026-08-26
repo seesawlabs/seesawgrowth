@@ -31,6 +31,7 @@ import {
 } from '../../lib/intake';
 import { ackEmail, sendEmail } from '../../lib/email';
 import { serverEnv } from '../../lib/server-env';
+import { mintActionToken, actionLink } from '../../lib/run-link';
 
 export const prerender = false;
 
@@ -119,6 +120,30 @@ async function alertOperator(
   const hook = serverEnv('SLACK_WEBHOOK');
   const route = verdict.route ?? 'unrouted';
   const cmds = fulfilCommands(intake);
+
+  /* The one-click path. Signed, so the URL is the authorisation: a Slack
+     message gets forwarded and screenshotted, and a run spends real money. */
+  const secret = serverEnv('EXPOSURE_LINK_SECRET');
+  const origin = serverEnv('PUBLIC_SITE_ORIGIN');
+  const runLink =
+    secret && origin
+      ? actionLink(
+          origin,
+          mintActionToken(
+            {
+              a: 'run',
+              domain: intake.domain,
+              email: intake.email,
+              name: intake.name,
+              company: intake.company,
+              category: intake.oneLiner,
+              peers: intake.competitorDomains,
+              trigger: intake.tried?.slice(0, 200),
+            },
+            secret
+          )
+        )
+      : null;
   const emoji =
     route === 'auto_book' ? ':large_green_circle:' : route === 'manual_review' ? ':large_yellow_circle:' : ':white_circle:';
 
@@ -142,13 +167,16 @@ async function alertOperator(
     /* Everyone can book, so the alert has to say what to do about it. */
     operatorAction(route === 'unrouted' ? null : verdict.route),
     '',
-    '*1. Run it* — about nine minutes, then read the brief it points you at:',
+    runLink
+      ? `:arrow_forward: *<${runLink}|Run the analysis>* — nine minutes, then it posts back here with a link to read. Nothing is sent until you click again.`
+      : ':warning: No one-click runner: EXPOSURE_LINK_SECRET or PUBLIC_SITE_ORIGIN is unset. Use the commands below.',
+    '',
+    /* The commands stay. The link is the convenient path; these are the path
+       that works when the runner is misconfigured, which is exactly when you
+       need one. */
+    '_Or from a laptop:_',
     '```',
     `cd sites/reality-check && ${cmds.generate}`,
-    '```',
-    '*2. Send it* — only after reading. Nothing to retype; the recipient travels with the run:',
-    '```',
-    `cd sites/reality-check && ${cmds.release}`,
     '```',
   ].filter(Boolean);
 
@@ -162,7 +190,7 @@ async function alertOperator(
   const res = await fetch(hook, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text: lines.join('\n') }),
+    body: JSON.stringify({ text: lines.join('\n'), unfurl_links: false, unfurl_media: false }),
   });
   const body = await res.text().catch(() => '');
   console.log(
