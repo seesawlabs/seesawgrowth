@@ -15,19 +15,20 @@
    act on — either way the answer is "ask us for a fresh link".
 --------------------------------------------------------------------------- */
 import { verifyToken, daysUntil } from '../../lib/magic-link';
+import { serverEnv } from '../../lib/server-env';
 import { loadReport, storeConfig, describeStore } from '../../lib/report-store';
 
 export const prerender = false;
 
 const token = Astro.params.token ?? '';
-const secret = (import.meta.env.EXPOSURE_LINK_SECRET ?? '') as string;
+const secret = serverEnv('EXPOSURE_LINK_SECRET') ?? '';
 
 const verdict = verifyToken(token, secret);
 let html: string | null = null;
 let expiresInDays = 0;
 
 if (verdict.ok) {
-  const cfg = storeConfig(import.meta.env as unknown as Record<string, unknown>);
+  const cfg = storeConfig();
   const stored = await loadReport(verdict.payload.r, cfg);
   if (stored) {
     html = stored.html;

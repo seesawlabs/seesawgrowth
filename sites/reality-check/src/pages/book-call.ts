@@ -12,11 +12,12 @@
    time slot. Someone arriving from a brief has already told us who they are.
 --------------------------------------------------------------------------- */
 import type { APIRoute } from 'astro';
+import { serverEnv } from '../lib/server-env';
 
 export const prerender = false;
 
 export const GET: APIRoute = ({ redirect }) => {
-  const link = import.meta.env.PUBLIC_CAL_LINK;
+  const link = serverEnv('PUBLIC_CAL_LINK');
 
   /* No calendar configured. The qualifier is the honest destination here — it
      ends in a scheduler when one exists, and asks for a time by hand when it

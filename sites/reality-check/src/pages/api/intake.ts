@@ -30,6 +30,7 @@ import {
   type NormalisedIntake,
 } from '../../lib/intake';
 import { ackEmail, sendEmail } from '../../lib/email';
+import { serverEnv } from '../../lib/server-env';
 
 export const prerender = false;
 
@@ -96,7 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
 /* -- integrations: env-guarded, no-op loudly ---------------------------- */
 
 function bookingUrl(): string | undefined {
-  const link = import.meta.env.PUBLIC_CAL_LINK;
+  const link = serverEnv('PUBLIC_CAL_LINK');
   if (!link) return undefined;
   const url = new URL(link);
   url.searchParams.set('hide_event_type_details', '1');
@@ -115,7 +116,7 @@ async function alertOperator(
   intake: NormalisedIntake,
   verdict: ReturnType<typeof scoreIntake>
 ): Promise<void> {
-  const hook = import.meta.env.SLACK_WEBHOOK;
+  const hook = serverEnv('SLACK_WEBHOOK');
   const route = verdict.route ?? 'unrouted';
   const cmds = fulfilCommands(intake);
   const emoji =
@@ -155,11 +156,20 @@ async function alertOperator(
     console.log('[intake] Slack skipped — SLACK_WEBHOOK unset\n' + lines.join('\n'));
     return;
   }
-  await fetch(hook, {
+  /* Slack answers 200 "ok" or 4xx with a reason like "invalid_payload" or
+     "channel_not_found". Not checking meant a webhook that was configured but
+     rejecting could look identical to one that worked. */
+  const res = await fetch(hook, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text: lines.join('\n') }),
   });
+  const body = await res.text().catch(() => '');
+  console.log(
+    res.ok
+      ? `[intake] Slack alerted (${body.slice(0, 20) || 'no body'})`
+      : `[intake] Slack REJECTED ${res.status}: ${body.slice(0, 200)}`
+  );
 }
 
 /**
@@ -174,7 +184,7 @@ async function acknowledge(intake: NormalisedIntake): Promise<void> {
     bookingUrl: bookingUrl(),
   });
   const result = await sendEmail(intake.email, message, {
-    RESEND_TOKEN: import.meta.env.RESEND_TOKEN,
+    RESEND_TOKEN: serverEnv('RESEND_TOKEN'),
   });
   console.log(
     result.sent

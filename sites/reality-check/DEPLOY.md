@@ -49,9 +49,35 @@ otherwise a preview deploy silently behaves differently from production.
 | `EXPOSURE_DELIVERY` | Stays `reviewed`, which is what we want | Only set to `instant` when the review gate retires |
 | `HUBSPOT_TOKEN` | No CRM push | The CRM function is still a stub — leave unset |
 
-Nothing above is read at build time, so a change needs a redeploy only to take
-effect on already-built pages; the API routes and `/r/<token>` pick it up on the
-next request.
+### These are read at runtime, and that took a fix to be true
+
+The first version of this file claimed it. It was wrong, and the failure was
+silent: Vite statically replaces `import.meta.env.ANYTHING` while bundling, so
+`import.meta.env.SLACK_WEBHOOK` compiled to the literal `undefined` and the
+`fetch` beneath its guard was eliminated from the deployed bundle. Setting the
+webhook in the dashboard changed nothing, and the function logged "SLACK_WEBHOOK
+unset" while insisting it was doing its job.
+
+Server values now go through `serverEnv()` in `src/lib/server-env.ts`, which
+reads `process.env` first. Adding or rotating one takes effect on the next
+request, no redeploy.
+
+The exception is any `PUBLIC_`-prefixed value used in client-side code: those are
+meant to be inlined and do need a rebuild. `PUBLIC_CAL_LINK` is currently read
+server-side only, so it does not.
+
+### Checking it worked
+
+`GET /api/health` reports which integrations the environment actually serving
+that request can see — booleans only, never values:
+
+```
+curl -s https://seesawgrowth.vercel.app/api/health
+```
+
+`blocking` lists the ones that break the flow rather than degrade it: without
+Slack a request reaches nobody, and without the link secret every magic link
+fails. Check this before hunting anywhere else.
 
 ## 3. The calendar
 
@@ -112,7 +138,10 @@ takes the recipient explicitly.
 
 ## 5. Before the first real lead
 
-- Submit the form on production and confirm the Slack alert arrives.
+- `curl /api/health` and confirm `blocking` is empty.
+- Submit the form on production and confirm the Slack alert arrives. If it does
+  not, the function log now distinguishes "skipped" (not configured) from
+  "REJECTED 404: no_team" (configured, but Slack refused it).
 - Release the brief for a domain you own and click the link from a phone, not
   just the machine that made it.
 - Check the ack email in a client that strips styling — both emails ship a

@@ -19,6 +19,7 @@
 --------------------------------------------------------------------------- */
 
 import { isSafeReportId, storageNameFor } from './magic-link';
+import { serverEnv } from './server-env';
 
 export type StoreKind = 'remote' | 'disk' | 'sample' | 'none';
 
@@ -38,12 +39,13 @@ export interface StoreConfig {
   secret?: string;
 }
 
-/** Reads config from the environment. Astro exposes these on import.meta.env. */
-export function storeConfig(env: Record<string, unknown> = {}): StoreConfig {
-  const pick = (k: string) => {
-    const v = env[k] ?? (typeof process !== 'undefined' ? process.env?.[k] : undefined);
-    return typeof v === 'string' && v.trim() ? v.trim() : undefined;
-  };
+/**
+ * Reads config from the live environment. Not from `import.meta.env` directly:
+ * Vite bakes those at build time, so a store configured in the dashboard after
+ * a deploy would read as unset. See lib/server-env.ts.
+ */
+export function storeConfig(): StoreConfig {
+  const pick = (k: string) => serverEnv(k);
   return {
     baseUrl: pick('EXPOSURE_REPORT_BASE_URL'),
     dir: pick('EXPOSURE_REPORT_DIR'),
