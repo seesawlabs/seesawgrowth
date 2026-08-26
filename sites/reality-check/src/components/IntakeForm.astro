@@ -178,8 +178,8 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
 
       <div class="q__ack">
         <p>
-          The Reality Check is free and yours to keep. If we end up building
-          together, engagements start at $50k.
+          The analysis and the session are both free and both yours to keep.
+          If we end up building together, engagements start at $50k.
         </p>
         <label class="q__check">
           <input type="checkbox" id="q-ack" name="budgetAck" />
@@ -188,20 +188,20 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       </div>
 
       <div class="q__btns">
-        <button type="submit" class="btn" id="q-submit">Book my Reality Check</button>
+        <button type="submit" class="btn" id="q-submit">Get my analysis and session</button>
         <button type="button" class="btn btn--ghost" data-go="2">Back</button>
       </div>
 
       <p class="q__privacy">
-        We'll only use this to prepare for your call. No list, no sequence you
-        didn't ask for. <a href="/privacy">Privacy</a>.
+        We'll only use this to prepare your analysis and your session. No list,
+        no sequence you didn't ask for. <a href="/privacy">Privacy</a>.
       </p>
     </div>
   </form>
 
   <!-- ---------------- outcomes ---------------- -->
 
-  <div class="q__out" data-out="auto_book" hidden>
+  <div class="q__out" data-out="booked" hidden>
     <h3>We&rsquo;re on it. Now pick your 45 minutes.</h3>
     <p>
       The analysis is being built and lands in your inbox as a private link. The
@@ -237,48 +237,6 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         <br />Set <code>PUBLIC_CAL_LINK</code> to go live.
       </p>
     </div>
-  </div>
-
-  <div class="q__out" data-out="manual_review" hidden>
-    <h3>We&rsquo;re on it. A time follows by email.</h3>
-    <p>
-      The analysis is being built and comes to you as a private link. We read
-      every one of these properly before booking the session, so you&rsquo;ll
-      hear from one of us with times &mdash; or with a straight answer if we
-      don&rsquo;t think we&rsquo;re the right fit.
-    </p>
-    <p>Either way it comes from a person, not an autoresponder.</p>
-  </div>
-
-  <div class="q__out" data-out="not_yet" hidden>
-    <h3>We&rsquo;d be guessing, so we&rsquo;ll say so.</h3>
-    <p>
-      Our work starts at around $50k, and at your stage the honest answer is
-      that a session with us would be two people speculating about your
-      business at your expense. You&rsquo;d get a thin analysis and forty-five
-      minutes of generalities. We&rsquo;d rather tell you that now.
-    </p>
-    <p class="q__lab-sm">What is actually useful today</p>
-    <ul class="q__list">
-      <li>
-        <a href="/sample-brief">Read the analysis we ran on ourselves</a>. It is
-        a real one, unedited, including the parts where it tells us what
-        we&rsquo;re missing. The structure is the useful bit: you can work
-        through the same questions about your own business for free.
-      </li>
-      <li>
-        The four ideas in it cost us nothing but research. Most of what makes AI
-        work at your size is sequencing something boring before anything called
-        AI &mdash; a data path, a record nobody keeps, one cheap test that saves
-        a big build.
-      </li>
-    </ul>
-    <p>
-      When that changes &mdash; a stalled project, a board asking for a number,
-      revenue where a real build makes sense &mdash;
-      <a href="/">come straight back</a>. We keep no list, so there is nothing
-      to unsubscribe from and nothing stopping you.
-    </p>
   </div>
 
   <div class="q__out" data-out="error" hidden>
@@ -482,8 +440,8 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
 </style>
 
 <script>
-  import { evaluate, emailDomain, isFreeEmail } from '../lib/qualifier';
-  import type { Answers, Route } from '../lib/qualifier';
+  import { emailDomain, isFreeEmail } from '../lib/qualifier';
+  import type { Answers } from '../lib/qualifier';
 
   const $ = <T extends HTMLElement>(sel: string) => document.querySelector(sel) as T;
   const form = $<HTMLFormElement>('#q-form');
@@ -567,8 +525,9 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       });
     });
 
-    /* Answers plus the two fields the analysis is aimed with. `evaluate` reads
-       only the Answers half, so the fallback routing below still works. */
+    /* The qualifier's answers plus the two fields the analysis is aimed with.
+       Scoring happens server-side only: the visitor's outcome no longer depends
+       on it, so there is nothing for the browser to compute. */
     const collect = () => ({
       role: pick('role') as Answers['role'],
       roleTitle: val('q-role-title') || undefined,
@@ -589,12 +548,12 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         .filter(Boolean),
     });
 
-    const reveal = (route: Route | 'error', bookingUrl?: string) => {
+    const reveal = (pane: 'booked' | 'error', bookingUrl?: string) => {
       form.hidden = true;
       $<HTMLDivElement>('.q__head').hidden = true;
-      const out = document.querySelector<HTMLElement>(`[data-out="${route}"]`);
+      const out = document.querySelector<HTMLElement>(`[data-out="${pane}"]`);
       if (out) out.hidden = false;
-      if (route === 'auto_book' && bookingUrl) {
+      if (pane === 'booked' && bookingUrl) {
         const slot = $<HTMLDivElement>('#q-sched');
         slot.innerHTML = '';
         const f = document.createElement('iframe');
@@ -641,29 +600,16 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
-        /* The server answers with an offer, not a score. Routes and offers map
-           one to one — see offerFor in lib/intake.ts — so the panes stay keyed
-           by route and the fallback path below can share them. */
-        const byOffer = {
-          brief_and_booking: 'auto_book',
-          brief_and_email: 'manual_review',
-          no_fit: 'not_yet',
-        } as const;
-        reveal(byOffer[data.offer as keyof typeof byOffer] ?? 'error', data.bookingUrl);
+        reveal('booked', data.bookingUrl);
       } catch {
-        /* No adapter yet, or the endpoint is down. The routing logic is
-           deterministic and shared, so we can still show the right outcome
-           rather than dead-ending the visitor. The submission is lost, which
-           is why the error copy names an email address. */
-        const v = evaluate(a);
-        if (v.route) {
-          reveal(v.route);
-        } else {
-          reveal('error');
-        }
+        /* The endpoint is down, or the network is. This used to fall back to
+           scoring in the browser and showing the matching confirmation, which
+           was a lie: the submission was lost and the page said we were on it.
+           Say what happened and name an address instead. */
+        reveal('error');
       } finally {
         submit.disabled = false;
-        submit.textContent = 'Book my Reality Check';
+        submit.textContent = 'Get my analysis and session';
       }
     });
   }

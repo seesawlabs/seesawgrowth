@@ -11,9 +11,11 @@
    then answer the visitor. The integrations fan out without being awaited: a
    Slack outage must not turn into a visitor staring at a spinner.
 
-   THE SCORE DOES NOT DECIDE WHETHER WE RUN A BRIEF — a human does, reading the
-   alert. It decides what this response offers: a calendar, or a promise of a
-   time, or an honest no. See `offerFor` in lib/intake.ts.
+   THE SCORE DECIDES NOTHING THE VISITOR SEES. Everyone is offered the calendar
+   and everyone gets the ack email; the score tells the operator what to do,
+   including cancelling a meeting a poor-fit lead has booked. A cancelled
+   meeting costs one email. A qualified lead told to wait for one costs the
+   lead. See `operatorAction` in lib/intake.ts.
 --------------------------------------------------------------------------- */
 import type { APIRoute } from 'astro';
 
@@ -22,7 +24,7 @@ import {
   validate,
   normalise,
   scoreIntake,
-  offerFor,
+  operatorAction,
   fulfilCommand,
   type Intake,
   type NormalisedIntake,
@@ -65,7 +67,6 @@ export const POST: APIRoute = async ({ request }) => {
 
   const intake = normalise(raw as Intake);
   const verdict = scoreIntake(intake);
-  const offer = offerFor(verdict.route);
 
   /* Before any judgement, so a bug in the routing below never loses a lead. */
   console.log(
@@ -76,7 +77,7 @@ export const POST: APIRoute = async ({ request }) => {
   const duplicate = isDuplicate(`${intake.email}|${intake.domain}`);
 
   if (!duplicate) {
-    void Promise.allSettled([alertOperator(intake, verdict), acknowledge(intake, offer)]).then((rs) =>
+    void Promise.allSettled([alertOperator(intake, verdict), acknowledge(intake)]).then((rs) =>
       rs.forEach((r, i) => {
         if (r.status === 'rejected') console.error(`[intake] fanout ${i} failed`, r.reason);
       })
@@ -86,10 +87,9 @@ export const POST: APIRoute = async ({ request }) => {
   return json({
     ok: true,
     duplicate,
-    offer,
-    /* The score and the gate stay server-side. The visitor gets an offer, not
-       a mark out of nine — and a rejection reads worse with a number on it. */
-    bookingUrl: offer === 'brief_and_booking' ? bookingUrl() : undefined,
+    /* The score and the gate stay server-side. A visitor has no use for a mark
+       out of nine, and it is not a number we would want forwarded. */
+    bookingUrl: bookingUrl(),
   });
 };
 
@@ -135,11 +135,8 @@ async function alertOperator(
       : null,
     intake.freeMail ? ':warning: consumer email address' : null,
     '',
-    route === 'auto_book'
-      ? 'They can book straight away. The brief wants to exist before that call.'
-      : route === 'manual_review'
-        ? 'No calendar offered. Decide, then send a time by hand.'
-        : 'Told them we are probably not the right fit. No brief promised.',
+    /* Everyone can book, so the alert has to say what to do about it. */
+    operatorAction(route === 'unrouted' ? null : verdict.route),
     '',
     'To fulfil — read it before releasing:',
     '```',
@@ -159,24 +156,15 @@ async function alertOperator(
 }
 
 /**
- * The "we got it" email, sent immediately to everyone we are going to work on.
- * Not to a `no_fit` lead: an email that says "here is what is coming" after a
- * page that said "we are probably not the right fit" would be a mixed message
- * at best, and the page already tells them what to do instead.
+ * The "we got it" email, sent immediately to everyone. A lead the team decides
+ * against gets a separate note from a person, which is a better rejection than
+ * silence from a form and better than an autoresponder trying to soften it.
  */
-async function acknowledge(
-  intake: NormalisedIntake,
-  offer: ReturnType<typeof offerFor>
-): Promise<void> {
-  if (offer === 'no_fit') {
-    console.log(`[intake] no ack email — routed no_fit (${intake.email})`);
-    return;
-  }
-
+async function acknowledge(intake: NormalisedIntake): Promise<void> {
   const message = ackEmail({
     name: intake.name,
     company: intake.company,
-    bookingUrl: offer === 'brief_and_booking' ? bookingUrl() : undefined,
+    bookingUrl: bookingUrl(),
   });
   const result = await sendEmail(intake.email, message, {
     RESEND_TOKEN: import.meta.env.RESEND_TOKEN,

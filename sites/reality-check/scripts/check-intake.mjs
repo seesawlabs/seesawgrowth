@@ -10,7 +10,7 @@
  *
  *   npm run check:intake
  */
-import { coerceIntake, validate, normalise, scoreIntake, offerFor } from '../src/lib/intake.ts';
+import { coerceIntake, validate, normalise, scoreIntake, operatorAction } from '../src/lib/intake.ts';
 
 /* A submission that should pass cleanly. The qualifying answers are required
    now: they decide whether the session is offered at all, and a form that lets
@@ -63,18 +63,17 @@ for (const [label, body, expectedErrors] of cases) {
   if (!ok) failed += 1;
 }
 
-/* -- routing: what a lead is actually offered ------------------------------
-   The score decides the offer, and the offer decides whether a calendar goes
-   in front of someone. These are the cases where getting it wrong is
-   expensive: a sub-$10M company booking 45 minutes, or a perfect-fit lead
-   being told to wait for an email. */
+/* -- routing: what the operator is told ------------------------------------
+   Every lead is shown the calendar now, so the score no longer gates anything
+   the visitor sees. It still has to be right, because it decides what the team
+   is told to do — including that a poor-fit lead has a meeting to cancel. */
 
 const routed = [
-  ['a stalled mid-market CTO books instantly', { ...good, role: 'cto', revenue: '250-1b', stage: 'stalled', budgetAck: true }, 'brief_and_booking'],
-  ['ICP override: stalled beats a low score', { ...good, role: 'other', revenue: '50-250', stage: 'stalled', budgetAck: false }, 'brief_and_booking'],
-  ['secondary ICP is capped at review', { ...good, role: 'ceo', revenue: '10-50', stage: 'stalled', budgetAck: true }, 'brief_and_email'],
-  ['under $10M gets an honest no', { ...good, role: 'ceo', revenue: 'lt10', stage: 'stalled', budgetAck: true }, 'no_fit'],
-  ['just exploring, no budget nod', { ...good, role: 'other', revenue: '50-250', stage: 'exploring', budgetAck: false }, 'no_fit'],
+  ['a stalled mid-market CTO', { ...good, role: 'cto', revenue: '250-1b', stage: 'stalled', budgetAck: true }, 'auto_book'],
+  ['ICP override: stalled beats a low score', { ...good, role: 'other', revenue: '50-250', stage: 'stalled', budgetAck: false }, 'auto_book'],
+  ['secondary ICP is capped at review', { ...good, role: 'ceo', revenue: '10-50', stage: 'stalled', budgetAck: true }, 'manual_review'],
+  ['under $10M is not a fit', { ...good, role: 'ceo', revenue: 'lt10', stage: 'stalled', budgetAck: true }, 'not_yet'],
+  ['just exploring, no budget nod', { ...good, role: 'other', revenue: '50-250', stage: 'exploring', budgetAck: false }, 'not_yet'],
 ];
 
 for (const [label, body, expected] of routed) {
@@ -84,10 +83,22 @@ for (const [label, body, expected] of routed) {
     check(label, false, `fixture does not validate: ${errors.map((e) => e.field).join(', ')}`);
     continue;
   }
-  const intake = normalise(coerced);
-  const offer = offerFor(scoreIntake(intake).route);
-  check(`${label} → ${expected}`, offer === expected, `got ${offer}`);
+  const verdict = scoreIntake(normalise(coerced));
+  check(`${label} → ${expected}`, verdict.route === expected, `got ${verdict.route}`);
 }
+
+/* The one instruction that has to be there: a poor-fit lead can book, so
+   somebody has to be told to cancel it. */
+check(
+  'a not_yet lead is flagged for cancellation',
+  /cancel the meeting/i.test(operatorAction('not_yet')),
+  operatorAction('not_yet')
+);
+check(
+  'a good-fit lead is not',
+  !/cancel/i.test(operatorAction('auto_book')),
+  operatorAction('auto_book')
+);
 
 /* The competitor domains are what seed peer discovery, so a name that is not a
    host must not silently become one. */

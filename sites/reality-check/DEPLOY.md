@@ -69,12 +69,12 @@ Briefs point at `/book-call` on our own origin rather than at the calendar
 directly, so changing tools later is one variable and every brief already in
 someone's inbox follows it. Nothing needs reissuing.
 
-The form embeds that link as an iframe on its confirmation screen, but only for
-a lead the scoring routes to `auto_book`. A `manual_review` lead is told a time
-follows by email, and a `not_yet` lead is told plainly that we are not the right
-fit — so the calendar is never put in front of someone we would then have to
-turn down. Someone arriving from a released analysis goes straight to the
-calendar through `/book-call`; they have already told us who they are.
+The form embeds that link as an iframe on its confirmation screen for **every**
+lead. Scoring does not gate it: a booked meeting we cancel costs one email, a
+qualified lead told to wait for one costs the lead. The score reaches the team
+in the Slack alert with an explicit instruction, including cancelling a meeting
+a poor-fit lead has booked — so read those alerts. Someone arriving from a
+released analysis goes straight to the calendar through `/book-call`.
 
 ## 4. Where released briefs live
 
@@ -109,9 +109,9 @@ having read it — a thin brief to a good prospect is worse than none.
 - Check the ack email in a client that strips styling — both emails ship a
   plain-text half for exactly that.
 - `npm run check:prose && npm run check:email && npm run check:intake && npm run check:links`
-- Submit once at each routing outcome and confirm the confirmation screen matches:
-  a mid-market stalled initiative should see a calendar, a $10–50M company should
-  be told a time follows, and a sub-$10M company should get the honest no.
+- Submit once as a poor-fit lead (sub-$10M, exploring) and confirm the alert
+  says to cancel the meeting. That line is the only thing standing between a
+  booking and someone turning up to a call we did not mean to take.
 
 ## Operator machine
 

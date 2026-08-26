@@ -13,7 +13,7 @@
    SCORING IS NOT REIMPLEMENTED HERE. `qualifier.ts` is the single source of
    truth for gates, weights and routing, validated against 14 personas in
    docs/06 §5. This module composes it with the research fields and the
-   contact details. Never fork that logic — see CLAUDE.md.
+   contact details. Never fork that logic (see CLAUDE.md).
 
    WHAT WE DELIBERATELY STILL DO NOT ASK. Volumes, cycle times, headcount,
    spend. Those are the blanks the brief leaves open on purpose, and they are
@@ -49,7 +49,7 @@ export interface Intake {
   /** Up to three competitor domains or names. */
   competitors: string[];
 
-  /* what qualifies them — the shapes come from qualifier.ts */
+  /* what qualifies them; the shapes come from qualifier.ts */
   industry?: string;
   role?: Answers['role'];
   roleTitle?: string;
@@ -155,7 +155,7 @@ export function validate(input: Partial<Intake>): FieldError[] {
   else if (!normaliseSite(input.website)) push('website', 'That does not look like a website address.');
 
   const one = (input.oneLiner ?? '').trim();
-  if (!one) push('oneLiner', 'One line about what you do — this is what we search on.');
+  if (!one) push('oneLiner', 'One line about what you do. This is what we search on.');
   else if (one.length < ONE_LINER_MIN)
     push('oneLiner', `A few more words, please — at least ${ONE_LINER_MIN} characters.`);
   else if (one.length > ONE_LINER_MAX)
@@ -239,21 +239,23 @@ export function scoreIntake(intake: NormalisedIntake): Verdict {
 }
 
 /**
- * What the confirmation screen offers.
+ * Every lead sees the calendar.
  *
- * Only `auto_book` puts a calendar in front of someone. `manual_review` says a
- * time is coming, and `not_yet` says plainly that we are not the right fit for
- * a build at this stage — a run costs real money and nine minutes of operator
- * attention, and the strategy this sits inside counts qualified opportunities
- * rather than leads. The operator can still choose to run a brief for anyone;
- * the page just does not commit us to it.
+ * The scoring used to decide this: only `auto_book` was shown a scheduler, so
+ * the page never put a calendar in front of someone we would then have to turn
+ * down. That was reversed deliberately — see docs/10 — because a booked meeting
+ * we cancel costs one email, and a qualified lead who was told to wait for one
+ * costs the lead. The team reads the score in the alert and handles the few
+ * that are not a fit by hand.
+ *
+ * The verdict is still computed and still recorded. It drives what the operator
+ * is told to do, not what the visitor is allowed to do.
  */
-export type Offer = 'brief_and_booking' | 'brief_and_email' | 'no_fit';
-
-export function offerFor(route: Route | null): Offer {
-  if (route === 'auto_book') return 'brief_and_booking';
-  if (route === 'manual_review') return 'brief_and_email';
-  return 'no_fit';
+export function operatorAction(route: Route | null): string {
+  if (route === 'auto_book') return 'Good fit. Run the analysis before the call if you can.';
+  if (route === 'manual_review')
+    return 'Secondary ICP. Worth the call; decide on the analysis when you read this.';
+  return 'Not a fit on the numbers. They can still book, so cancel the meeting and send the no.';
 }
 
 /**
