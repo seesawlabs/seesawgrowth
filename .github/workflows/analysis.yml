@@ -157,20 +157,38 @@ jobs:
       # The evidence ledger is research we paid for, and a run on a fresh
       # machine starts from nothing without it. Committing it back means the
       # next run — here or on a laptop — keeps what this one learned.
+      #
+      # Best-effort, deliberately. A run takes ~7-9 minutes, long enough for
+      # someone to push to this branch while it's in flight, so `git push`
+      # here can lose a fast-forward race against completely unrelated work.
+      # Rebasing and retrying recovers from that; if it still can't land after
+      # a few tries, this warns and moves on rather than failing the job — the
+      # evidence is only a cache of research already paid for, and losing it
+      # must never be the reason a finished, paid-for report fails to reach
+      # Release it below (a step's failure skips every later step by default).
       - name: Commit new peer evidence
         if: inputs.mode == 'run'
         env:
           IN_DOMAIN: ${{ inputs.domain }}
         run: |
-          if [ -n "$(git status --porcelain tools/exposure/evidence)" ]; then
-            git config user.name  "seesaw-analysis[bot]"
-            git config user.email "analysis@seesawlabs.com"
-            git add tools/exposure/evidence
-            git commit -m "Evidence ledger: findings from $IN_DOMAIN"
-            git push
-          else
+          if [ -z "$(git status --porcelain tools/exposure/evidence)" ]; then
             echo "No new evidence to commit."
+            exit 0
           fi
+          git config user.name  "seesaw-analysis[bot]"
+          git config user.email "analysis@seesawlabs.com"
+          git add tools/exposure/evidence
+          git commit -m "Evidence ledger: findings from $IN_DOMAIN"
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt/5) — the branch moved. Rebasing onto the new tip and retrying."
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME" || { echo "::warning::Evidence commit for $IN_DOMAIN could not be rebased cleanly. Dropping it — the report itself is unaffected."; exit 0; }
+            sleep $((attempt * 3))
+          done
+          echo "::warning::Could not push the evidence ledger for $IN_DOMAIN after 5 attempts. This run's findings are lost; a future run will re-pay to relearn them. The report itself is unaffected."
 
       - name: Release it
         working-directory: sites/reality-check
