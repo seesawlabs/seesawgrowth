@@ -450,6 +450,16 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     margin: 0;
   }
   .q__sched iframe { width: 100%; min-height: 640px; border: 0; }
+  /* Once Cal's embed mounts it owns this box: drop the placeholder chrome and
+     give it a height to lay out in, since the inline embed takes the size of
+     its container rather than declaring its own. */
+  .q__sched.is-live {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    min-height: 640px;
+    overflow: hidden;
+  }
 
   /* The booking is the one action on this screen, so it gets a frame around it
      rather than sitting in the flow of the reassurance copy. */
@@ -578,6 +588,83 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         .filter(Boolean),
     });
 
+    /* ---------------------------------------------------------------------
+       The scheduler.
+
+       Pointing an iframe at a Cal.com booking URL is not an embed, and the
+       failure is quiet: Cal renders its meta column — avatar, host, event
+       title — and no calendar at all, which reads as a broken or empty
+       calendar rather than a misuse of the page. Cal's embed API mounts the
+       real booker, sizes itself, and is the supported path.
+
+       Loaded on reveal rather than on page load: most visitors never reach
+       the confirmation, and this is a third-party script.
+    --------------------------------------------------------------------- */
+    const CAL_EMBED_SRC = 'https://app.cal.com/embed/embed.js';
+
+    /* Cal's own loader stub, kept close to their published snippet. It queues
+       calls made before embed.js arrives, which is why we can call Cal()
+       immediately below without waiting on a load event. */
+    const loadCal = () => {
+      const w = window as any;
+      if (w.Cal) return;
+      const push = (a: any, ar: any) => a.q.push(ar);
+      w.Cal = function () {
+        const cal = w.Cal;
+        const ar = arguments as any;
+        if (!cal.loaded) {
+          cal.ns = {};
+          cal.q = cal.q || [];
+          document.head.appendChild(document.createElement('script')).src = CAL_EMBED_SRC;
+          cal.loaded = true;
+        }
+        if (ar[0] === 'init') {
+          const api: any = function () { push(api, arguments); };
+          const namespace = ar[1];
+          api.q = api.q || [];
+          if (typeof namespace === 'string') {
+            cal.ns[namespace] = cal.ns[namespace] || api;
+            push(cal.ns[namespace], ar);
+            push(cal, ['initNamespace', namespace]);
+          } else push(cal, ar);
+          return;
+        }
+        push(cal, ar);
+      };
+    };
+
+    const mountScheduler = (bookingUrl: string) => {
+      const slot = document.getElementById('q-sched');
+      if (!slot) return;
+
+      /* PUBLIC_CAL_LINK is a full URL, because /book-call redirects to it and
+         the delivery email links it. Cal's embed wants just the path. */
+      let calLink: string;
+      try {
+        calLink = new URL(bookingUrl).pathname.replace(/^\/+|\/+$/g, '');
+      } catch {
+        return;
+      }
+      if (!calLink) return;
+
+      slot.innerHTML = '';
+      slot.classList.add('is-live');
+      try {
+        loadCal();
+        const Cal = (window as any).Cal;
+        Cal('init');
+        Cal('inline', {
+          elementOrSelector: slot,
+          calLink,
+          config: { layout: 'month_view' },
+        });
+      } catch {
+        /* Leave the block empty rather than half-mounted; the "open it in a
+           new tab" line below is already visible and still works. */
+        slot.classList.remove('is-live');
+      }
+    };
+
     const reveal = (
       pane: 'booked' | 'error',
       opts: { bookingUrl?: string; company?: string; email?: string } = {}
@@ -602,13 +689,7 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
           });
         }
         if (opts.bookingUrl) {
-          const slot = $<HTMLDivElement>('#q-sched');
-          slot.innerHTML = '';
-          const f = document.createElement('iframe');
-          f.src = opts.bookingUrl;
-          f.title = 'Pick a time for your session';
-          f.loading = 'lazy';
-          slot.appendChild(f);
+          mountScheduler(opts.bookingUrl);
           /* Privacy extensions and strict corporate proxies block third-party
              scheduler frames, and a blank box reads as "no times available".
              The escape hatch goes through our own /book-call so the calendar
