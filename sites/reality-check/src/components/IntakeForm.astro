@@ -617,7 +617,12 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
           if (alt) alt.hidden = false;
         }
       }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      /* Scroll the outcome into view, not the top of the document. The form is
+         the seventh section of a long page, so scrollTo({top:0}) landed the
+         visitor back on the hero with the confirmation rendered far below the
+         fold — indistinguishable from the submit having done nothing at all.
+         Same treatment the step navigation already gets. */
+      (out ?? form).scrollIntoView({ block: 'start', behavior: 'smooth' });
     };
 
     form.addEventListener('submit', async (e) => {
