@@ -1,0 +1,22 @@
+{
+  "domain": "diademsports.com",
+  "updatedAt": "2026-08-27T17:30:13.002Z",
+  "items": [
+    {
+      "statement": "I found one specific, dated AI-related initiative for Diadem Sports: on January 18, 2026, Diadem Pickleball Complex announced a partnership to deploy PlaySight SmartCourt technology across its Florida locations, adding AI-powered automated video capture, live streaming, performance review, highlights, and data-driven insights.",
+      "observedAt": "2026-01-18",
+      "citations": [
+        {
+          "marker": 1,
+          "url": "https://playsight.com/press-releases/diadem-pickleball-partnership/",
+          "title": "PlaySight and Diadem Pickleball Announce Major Partnership",
+          "publisher": "web",
+          "date": "2026-01-18"
+        }
+      ],
+      "firstSeenRun": "2026-08-27T17-30-13-002Z",
+      "lastSeenRun": "2026-08-27T17-30-13-002Z",
+      "timesSeen": 1
+    }
+  ]
+}

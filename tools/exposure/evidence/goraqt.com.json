@@ -1,0 +1,22 @@
+{
+  "domain": "goraqt.com",
+  "updatedAt": "2026-08-27T17:30:13.002Z",
+  "items": [
+    {
+      "statement": "On April 29, 2025, a racket-sports industry roundup described the GoRaqt system as including a smart kiosk, companion app, and integrated third-party apps “including AI sensors and shot tracking and analysis.”",
+      "observedAt": "2025-04-29",
+      "citations": [
+        {
+          "marker": 2,
+          "url": "https://racketbusiness.com/p/racket-sports-tech-for-may-2025-d36a0feb210d983b",
+          "title": "Racket Sports Tech for May 2025",
+          "publisher": "web",
+          "date": "2025-04-29"
+        }
+      ],
+      "firstSeenRun": "2026-08-27T17-30-13-002Z",
+      "lastSeenRun": "2026-08-27T17-30-13-002Z",
+      "timesSeen": 1
+    }
+  ]
+}
