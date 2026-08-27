@@ -254,9 +254,9 @@ await slack(
     short,
     `For ${name} <${email}>`,
     '',
-    `:eyes: *Read it first:* ${readLink}`,
-    `:pencil2: *Want changes? Revise it:* ${reviseLink}`,
-    `:outbox_tray: *Then send it:* ${sendLink}`,
+    `:eyes: *<${readLink}|Read it first>*`,
+    `:pencil2: *<${reviseLink}|Want changes? Revise it>*`,
+    `:outbox_tray: *<${sendLink}|Then send it>*`,
     runUrl ? `\n_${runUrl}_` : '',
   ]
     .filter(Boolean)
