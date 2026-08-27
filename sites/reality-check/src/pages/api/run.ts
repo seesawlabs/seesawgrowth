@@ -66,26 +66,48 @@ const detail = (p: RunPayload) => `<dl>
   ${p.peers.length ? `<dt>Named peers</dt><dd>${esc(p.peers.join(', '))}</dd>` : ''}
 </dl>`;
 
+const TITLES: Record<RunPayload['a'], string> = {
+  run: 'Run the analysis?',
+  send: 'Send the analysis?',
+  revise: 'Revise the analysis?',
+};
+
 export const GET: APIRoute = ({ url }) => {
   const token = url.searchParams.get('t') ?? '';
   const verdict = verifyActionToken(token, serverEnv('EXPOSURE_LINK_SECRET') ?? '');
   if (!verdict.ok) return badToken(verdict.reason);
 
   const p = verdict.payload;
-  const isRun = p.a === 'run';
+
+  const explain =
+    p.a === 'run'
+      ? 'This spends about <strong>$1.90</strong> of research budget and takes about nine minutes. It posts back to Slack with a link to read before anything is sent.'
+      : p.a === 'send'
+        ? 'This emails the private link to the recipient below. Only do this if you have read the analysis.'
+        : 'This rewrites the draft to fit your notes, reusing the research already done. It costs a few cents rather than the full run, and takes under a minute.';
+
+  /* Notes are not part of the token. They are decided after reading the
+     document, which is after the link was minted, so they can only travel in
+     the form submission. See lib/run-link.ts for what a signature here does
+     and does not authorise. */
+  const notesField =
+    p.a === 'revise'
+      ? `<label style="display:block;margin:4px 0 18px">
+           <span class="muted" style="display:block;margin-bottom:6px">What should change</span>
+           <textarea name="notes" required rows="4" placeholder="e.g. Reframe the second idea around onboarding paperwork instead of scheduling. Leave the rest alone."
+             style="width:100%;font:inherit;padding:10px 12px;border-radius:8px;border:1px solid #d8d6d0;resize:vertical"></textarea>
+         </label>`
+      : '';
 
   return page(
-    isRun ? 'Run the analysis?' : 'Send the analysis?',
-    `<h1>${isRun ? 'Run the analysis?' : 'Send it to the client?'}</h1>
-     <p>${
-       isRun
-         ? 'This spends about <strong>$1.90</strong> of research budget and takes about nine minutes. It posts back to Slack with a link to read before anything is sent.'
-         : 'This emails the private link to the recipient below. Only do this if you have read the analysis.'
-     }</p>
+    TITLES[p.a],
+    `<h1>${TITLES[p.a]}</h1>
+     <p>${explain}</p>
      ${detail(p)}
      <form method="POST">
        <input type="hidden" name="t" value="${esc(token)}">
-       <button type="submit">${isRun ? 'Run it' : 'Send it'}</button>
+       ${notesField}
+       <button type="submit">${p.a === 'run' ? 'Run it' : p.a === 'send' ? 'Send it' : 'Revise it'}</button>
      </form>
      <p class="muted" style="margin-top:18px">Nothing has happened yet. Closing this page does nothing.</p>`
   );
@@ -98,6 +120,16 @@ export const POST: APIRoute = async ({ request }) => {
   const token = String(form?.get('t') ?? '');
   const verdict = verifyActionToken(token, serverEnv('EXPOSURE_LINK_SECRET') ?? '');
   if (!verdict.ok) return badToken(verdict.reason);
+
+  const notes = String(form?.get('notes') ?? '').trim();
+  if (verdict.payload.a === 'revise' && !notes) {
+    return page(
+      'Nothing to revise with',
+      `<h1>Say what should change</h1>
+       <p>A revise needs notes. Go back and describe what to fix.</p>`,
+      400
+    );
+  }
 
   const ghToken = serverEnv('GITHUB_DISPATCH_TOKEN');
   if (!ghToken) {
@@ -136,6 +168,7 @@ export const POST: APIRoute = async ({ request }) => {
           peers: p.peers.join(','),
           trigger: p.trigger ?? '',
           runId: p.run ?? '',
+          notes,
         },
       }),
       signal: AbortSignal.timeout(15_000),
@@ -157,14 +190,17 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   console.log(`[run] dispatched mode=${p.a} domain=${p.domain}`);
+  const startedHead = p.a === 'run' ? 'Running now' : p.a === 'send' ? 'Sending now' : 'Revising now';
+  const startedBody =
+    p.a === 'run'
+      ? 'About nine minutes. It posts back to Slack with the coverage figure and a link to read.'
+      : p.a === 'send'
+        ? 'The email is on its way, and Slack will confirm.'
+        : 'Under a minute — it only rewrites, it does not re-research. Slack gets a fresh read/send/revise set when it lands.';
   return page(
     'Started',
-    `<h1>${p.a === 'run' ? 'Running now' : 'Sending now'}</h1>
-     <p>${
-       p.a === 'run'
-         ? 'About nine minutes. It posts back to Slack with the coverage figure and a link to read.'
-         : 'The email is on its way, and Slack will confirm.'
-     }</p>
+    `<h1>${startedHead}</h1>
+     <p>${startedBody}</p>
      ${detail(p)}
      <p><a href="https://github.com/${REPO}/actions/workflows/${WORKFLOW}">Watch the run &rarr;</a></p>`
   );

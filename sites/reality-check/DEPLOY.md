@@ -106,9 +106,10 @@ released analysis goes straight to the calendar through `/book-call`.
 
 ## 3a. One-click runs from Slack
 
-The alert carries a signed link that runs the analysis, and the workflow posts
-back with a second link that sends it. Two clicks, the review still between
-them, and no laptop with six API keys on it.
+The alert carries a signed link that runs the analysis. The workflow posts
+back with two more: **revise it**, which rewrites the draft against typed
+notes without re-paying for research, and **send it**, which emails it. Each
+click, the review still between them, and no laptop with six API keys on it.
 
 `.github/workflows/analysis.yml` is the runner. To turn it on:
 
@@ -144,6 +145,13 @@ Three things worth knowing about the design:
   they belong in our Slack and nowhere else.
 - **Runs are serialised per company** by a concurrency group, so a
   double-clicked link queues rather than spending twice.
+- **A revise costs cents, not dollars.** It rereads stages 01-05 off a bundle
+  the prior release uploaded next to the client's html (workflows start from a
+  fresh checkout every time, so nothing on disk survives between clicks) and
+  pays only for the writing stage — no Firecrawl, Exa, Perplexity or
+  DataForSEO credential is even given to that step. Notes are typed on the
+  confirmation page, not carried in the link: they are decided after reading
+  the document, which is after the link was minted.
 
 ## 4. Where released briefs live
 

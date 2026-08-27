@@ -77,6 +77,19 @@ check('run and send are different tokens', runTok !== sendTok);
 check('a run link stays a run link', verifyActionToken(runTok, SECRET).payload?.a === 'run');
 check('a send link carries the run id', verifyActionToken(sendTok, SECRET).payload?.run === 'r1');
 
+const reviseTok = mintActionToken({ ...action, a: 'revise', run: 'r1' }, SECRET);
+check('a revise link verifies', verifyActionToken(reviseTok, SECRET).ok);
+check('revise is distinct from both run and send', reviseTok !== runTok && reviseTok !== sendTok);
+check('a revise link carries the run id', verifyActionToken(reviseTok, SECRET).payload?.run === 'r1');
+/* Notes are typed on the confirmation page, after the link is minted — see
+   api/run.ts. They must never be part of what the signature covers, or a
+   revise link would need to be re-minted every time someone edited a word. */
+check(
+  'the revise payload carries no notes field to sign',
+  !('notes' in (verifyActionToken(reviseTok, SECRET).payload ?? {})),
+  JSON.stringify(verifyActionToken(reviseTok, SECRET).payload)
+);
+
 const [enc, mac] = runTok.split('.');
 const flipped = `${enc.slice(0, 12)}${enc[12] === 'A' ? 'B' : 'A'}${enc.slice(13)}.${mac}`;
 check('a tampered payload is refused', verifyActionToken(flipped, SECRET).reason === 'bad_signature');

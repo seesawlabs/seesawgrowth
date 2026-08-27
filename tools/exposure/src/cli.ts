@@ -32,7 +32,7 @@
      --quiet              suppress the report on stdout; still writes files
 --------------------------------------------------------------------------- */
 
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { scoreCoverage, summarizeCoverage, partitionClaims } from './lib/claim.ts';
@@ -141,6 +141,189 @@ function parseArgs(argv: string[]): Args {
 function normalizeDomain(input: string): string {
   const trimmed = input.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   return registrableDomain(trimmed) || trimmed.toLowerCase();
+}
+
+/* -- revise: same draft, edited, without re-paying for research --------- */
+
+interface ReviseArgs {
+  domain: string;
+  run?: string;
+  notes: string;
+  budget?: number;
+  quiet: boolean;
+  research: boolean;
+}
+
+function parseReviseArgs(argv: string[]): ReviseArgs {
+  const args: ReviseArgs = { domain: '', notes: '', quiet: false, research: false };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--run') args.run = argv[++i];
+    else if (a === '--notes') args.notes = argv[++i] ?? '';
+    else if (a === '--budget') args.budget = Number(argv[++i]);
+    else if (a === '--quiet') args.quiet = true;
+    else if (a === '--with-research') args.research = true;
+    else if (!a.startsWith('-') && !args.domain) args.domain = a;
+  }
+  return args;
+}
+
+async function newestRunId(runsDir: string): Promise<string | null> {
+  try {
+    const entries = await readdir(runsDir);
+    return entries.filter((e) => !e.startsWith('.')).sort().at(-1) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Re-run stage 06 only, against a person's notes on the last draft.
+ *
+ * WHY THIS EXISTS. The review gate this whole pipeline is built around only
+ * works if looking again is cheap. The first pass costs about $1.90 and nine
+ * minutes, almost all of it stages 01-04 — crawling, peer discovery, evidence,
+ * demand. None of that changes because a reader wants the second idea
+ * reframed around EHR integration instead of scheduling. So a revise reads
+ * everything stages 01-05 already produced, straight off disk, and pays only
+ * for the one stage that writes prose: a few cents to a few dozen cents,
+ * a fraction of the model cost the first pass carries, and under a minute.
+ *
+ * WHAT IT DELIBERATELY CANNOT DO. Notes asking for a competitor that was
+ * never researched, or evidence nobody looked for, cannot be honored by
+ * rewriting — that needs stages 01-04 to actually run, which means a fresh
+ * `report`, not a `revise`. The revised draft is validated exactly as hard as
+ * the first one: a claim id has to exist among the ones already cited, a
+ * sizing block still needs its declared inputs, the voice check still runs.
+ * Notes cannot talk the model past a rule the first draft had to satisfy.
+ *
+ * A NEW RUN DIRECTORY, not an overwrite. Every version stays on disk under
+ * its own timestamp, so nothing is lost if a revision goes the wrong way and
+ * the magic link for an already-sent draft keeps resolving to what was sent.
+ */
+async function revise(argv: string[]): Promise<void> {
+  const args = parseReviseArgs(argv);
+  if (!args.domain || !args.notes.trim()) {
+    console.error('Usage: npm run revise -- <domain> --notes "..." [--run <runId>]');
+    process.exit(1);
+  }
+
+  const domain = normalizeDomain(args.domain);
+  loadDotEnv(ROOT);
+
+  const runsDir = join(ROOT, 'runs', domain.replace(/[^a-z0-9.-]/gi, '_'));
+  const sourceRunId = args.run || (await newestRunId(runsDir));
+  if (!sourceRunId) {
+    console.error(`No runs found for ${domain}. Generate one first with 'npm run report'.`);
+    process.exit(3);
+  }
+  const sourceDir = join(runsDir, sourceRunId);
+
+  const readJson = async (name: string) => JSON.parse(await readFile(join(sourceDir, `${name}.json`), 'utf8'));
+  const readOptionalJson = async (name: string) => readJson(name).catch(() => null);
+
+  let meta: { companyName?: string; trigger?: string };
+  let subject: Awaited<ReturnType<typeof runSubjectStage>>;
+  let peers: PeersArtifact | null;
+  let claims: ReturnType<typeof buildClaims>;
+  let coverage: ReturnType<typeof scoreCoverage>;
+  let previous: SynthesisArtifact;
+  try {
+    meta = await readJson('00-meta');
+    subject = await readJson('01-subject');
+    peers = await readOptionalJson('02-peers');
+    claims = await readJson('claims');
+    coverage = await readJson('coverage');
+    previous = await readJson('06-synthesis');
+  } catch (error) {
+    console.error(`Could not read ${sourceDir}: ${(error as Error).message}`);
+    console.error("A run with '--no-synthesis' has no draft to revise.");
+    process.exit(4);
+  }
+  if (!previous.synthesis) {
+    console.error(`${sourceRunId} has no synthesis to revise.`);
+    process.exit(4);
+  }
+
+  const now = new Date().toISOString();
+  const runId = now.replace(/[:.]/g, '-');
+  const ledger = new Ledger(args.budget);
+  const cache: CacheOptions = { dir: join(ROOT, 'cache'), refresh: false };
+  const { renderable, rejected } = partitionClaims(claims);
+  const company = meta.companyName?.trim() || domain;
+
+  console.error(`Revising ${domain} — from run ${sourceRunId}`);
+  console.error(formatCredentialReport());
+  console.error(`\nNotes: "${args.notes.trim()}"\n`);
+
+  const dir = await initRun(ROOT, {
+    runId,
+    domain,
+    startedAt: now,
+    companyName: meta.companyName,
+    trigger: meta.trigger,
+  });
+  // Carried forward unchanged, so this run directory is self-contained —
+  // an operator reading it later should not need to go find the original.
+  await writeArtifact(dir, '01-subject', subject);
+  if (peers) await writeArtifact(dir, '02-peers', peers);
+  await writeArtifact(dir, 'claims', claims);
+  await writeArtifact(dir, 'coverage', coverage);
+  await writeArtifact(dir, 'rejected-claims', rejected);
+
+  console.error('[revise] writing stage — the only paid step');
+  let synthesis: SynthesisArtifact;
+  try {
+    synthesis = await runSynthesisStage(
+      cache,
+      ledger,
+      {
+        company,
+        claims: renderable,
+        subject,
+        peers,
+        evidence: null,
+        trigger: meta.trigger,
+        revision: { previous: previous.synthesis, notes: args.notes.trim() },
+      },
+      now,
+      { research: args.research }
+    );
+  } catch (error) {
+    console.error(`Revision failed: ${(error as Error).message.slice(0, 300)}`);
+    process.exit(5);
+  }
+  await writeArtifact(dir, '06-synthesis', synthesis);
+  const s = synthesis.synthesis;
+  console.error(
+    `        ${s.questions.length} question(s), ${s.opportunities.length} opportunity(ies), ` +
+      `${s.blindSpots.length} blind spot(s) — ${synthesis.model}`
+  );
+  for (const note of synthesis.notes) console.error(`        - ${note}`);
+  for (const p of synthesis.problems) console.error(`        REJECTED ${p.field}: ${p.detail}`);
+
+  const { markdown } = assembleReport({ meta: { runId, domain, startedAt: now, trigger: meta.trigger }, claims, coverage });
+  const html = renderReportHtml({
+    meta: { runId, domain, startedAt: now, trigger: meta.trigger },
+    claims,
+    coverage,
+    subject,
+    peers,
+    companyName: company,
+    bookingUrl: process.env.PUBLIC_SITE_ORIGIN
+      ? `${process.env.PUBLIC_SITE_ORIGIN.replace(/\/+$/, '')}/book-call`
+      : process.env.PUBLIC_CAL_LINK || undefined,
+    synthesis: synthesis.synthesis,
+    synthesisModel: synthesis.model,
+  });
+  await writeFile(join(dir, 'report.md'), markdown);
+  await writeFile(join(dir, 'report.html'), html);
+  if (!args.quiet) console.log(markdown);
+
+  console.error(`\n${summarizeCoverage(coverage)}`);
+  console.error(`\n${ledger.format()}`);
+  console.error(`\nrevised from ${sourceRunId} -> ${runId}`);
+  console.error(`wrote ${join(dir, 'report.html')}  (and report.md)`);
 }
 
 /* -- the pipeline ------------------------------------------------------- */
@@ -448,7 +631,10 @@ switch (command) {
   case 'report':
     await report(rest);
     break;
+  case 'revise':
+    await revise(rest);
+    break;
   default:
-    console.error('Usage: cli.ts <prototype|report> [args]');
+    console.error('Usage: cli.ts <prototype|report|revise> [args]');
     process.exit(1);
 }

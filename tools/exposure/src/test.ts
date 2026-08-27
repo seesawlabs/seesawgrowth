@@ -1372,7 +1372,7 @@ test('mapWithConcurrency handles a limit above the item count', async () => {
    Stage 06 sizing — assumptions are allowed, and structurally policed.
    ======================================================================== */
 
-import { validateSynthesis, pruneSynthesis } from './stages/06-synthesis.ts';
+import { validateSynthesis, pruneSynthesis, buildRevisionPrompt } from './stages/06-synthesis.ts';
 
 const FACTS = {
   pagesCrawled: 10,
@@ -1730,4 +1730,29 @@ test('a saved ledger round-trips, and an unknown peer reads as empty', async () 
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('a revision prompt carries the previous draft and the notes, not a fresh brief', () => {
+  const previous = {
+    standing: 'They are strong at X.',
+    questions: [],
+    opportunities: [{ heading: 'Idea one', body: 'Do the thing.', basis: 'Because.', claimIds: [], sizing: null }],
+    competitorSignal: { point: '', claimIds: [] },
+    blindSpots: [],
+  };
+  const prompt = buildRevisionPrompt(previous, 'Make idea one about onboarding instead.', 'BASE PROMPT HERE');
+  assert.ok(prompt.includes('BASE PROMPT HERE'), 'the original rules must still be present');
+  assert.ok(prompt.includes('Idea one'), 'the previous draft must be included, not just referenced');
+  assert.ok(prompt.includes('Make idea one about onboarding instead.'), 'the notes must appear verbatim');
+  assert.ok(/revise|edit/i.test(prompt), 'must instruct editing rather than a fresh write');
+  // The notes are attacker-adjacent free text from a Slack form; must not be
+  // treated as instructions that could suppress the surrounding rules.
+  assert.ok(prompt.indexOf('BASE PROMPT HERE') < prompt.indexOf(previous.standing), 'rules must precede the notes');
+});
+
+test('a revision prompt is stable regardless of notes formatting', () => {
+  const previous = { standing: 'x', questions: [], opportunities: [], competitorSignal: { point: '', claimIds: [] }, blindSpots: [] };
+  const withWhitespace = buildRevisionPrompt(previous, '   trim me   ', 'BASE');
+  assert.ok(!withWhitespace.includes('"   trim me   "'), 'notes should be trimmed before quoting');
+  assert.ok(withWhitespace.includes('"trim me"'));
 });

@@ -8,7 +8,10 @@ sold as one thing.
 
 The pipeline is untouched. A lead qualifies, a human decides whether to run the
 brief, the brief runs, an operator iterates and releases it over a magic link.
-None of that moves.
+None of that moves. "Iterates" used to mean editing a run by hand or paying to
+regenerate it; it is now a `revise` command and a Slack link — see
+`sites/reality-check/DEPLOY.md` §3a — that rewrites the draft against typed
+notes for a few cents, reusing the research rather than redoing it.
 
 What changes is the offer. It used to be two rungs — a free brief, and an hour
 on a call if they wanted it. It is now one package:

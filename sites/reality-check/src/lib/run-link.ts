@@ -35,7 +35,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 /** Default lifetime. Long enough for a weekend, short enough to expire. */
 export const DEFAULT_ACTION_TTL_DAYS = 14;
 
-export type RunAction = 'run' | 'send';
+export type RunAction = 'run' | 'send' | 'revise';
 
 export interface RunPayload {
   /** What clicking does. Part of the signature, so a run link cannot send. */
@@ -100,7 +100,9 @@ export function verifyActionToken(token: string, secret: string): ActionVerdict 
     return { ok: false, reason: 'malformed' };
   }
 
-  if (payload.a !== 'run' && payload.a !== 'send') return { ok: false, reason: 'malformed' };
+  if (payload.a !== 'run' && payload.a !== 'send' && payload.a !== 'revise') {
+    return { ok: false, reason: 'malformed' };
+  }
   if (!payload.domain || !payload.email) return { ok: false, reason: 'malformed' };
   if (typeof payload.x !== 'number' || payload.x * 1000 < Date.now()) {
     return { ok: false, reason: 'expired' };

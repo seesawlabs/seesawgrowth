@@ -1,20 +1,33 @@
 #!/usr/bin/env node
 /* ---------------------------------------------------------------------------
-   The release half of .github/workflows/analysis.yml.
+   The release half of .github/workflows/analysis.yml. Runs after `report` or
+   `revise` in tools/exposure — this script never generates anything, only
+   stores and announces what those already wrote.
 
-   Two modes, mirroring the two links in the Slack alert:
+   Two branches, not three: `send` mints and emails; anything else (`run` or
+   `revise`, both of which just produced a fresh run directory) uploads,
+   mints a read link, and posts to Slack with read/revise/send links so the
+   loop can continue.
 
-     --mode run    upload the brief, mint a link to READ it, post it to Slack
-                   with the coverage figure and a "send it" link. Emails nobody.
-     --mode send   mint the same link and email it to the recipient.
+     --mode run     upload the brief, post read/revise/send links. No email.
+     --mode revise  identical release path to run — see above.
+     --mode send    mint the read link again and email it to the recipient.
 
-   THE REVIEW GATE SURVIVES BEING AUTOMATED. A `run` never emails. What it
-   posts is a link for a human to read and a second link to act on. Turning the
-   two commands into two clicks must not quietly turn them into one.
+   THE REVIEW GATE SURVIVES BEING AUTOMATED. Neither `run` nor `revise` ever
+   emails. What they post is a link for a human to read and two links to act
+   on. Turning the commands into clicks must not quietly turn several steps
+   into one.
 
    WHY `send` NEEDS NO RUN DIRECTORY. The magic link is a signature over the
    report id, and the site fetches the document from the store. So sending is
-   minting plus an email; the brief was uploaded during the run.
+   minting plus an email; the brief was uploaded when it was made.
+
+   WHY THE OTHER BRANCH ALSO UPLOADS A JSON BUNDLE, NOT JUST THE HTML. Each
+   workflow_dispatch is a fresh checkout on a fresh machine — the run that
+   generates a brief and a later run that revises it never share a
+   filesystem. `revise` needs stages 01-05 back on disk to avoid re-paying for
+   research, so this script bundles what it has and restore-run.mjs is the
+   other half, run as a step before `revise` fires.
 --------------------------------------------------------------------------- */
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -125,7 +138,29 @@ try {
 }
 
 const pct = Math.round(coverage.score * 100);
-const storedName = `${storageNameFor(reportIdFor(domain, runId), secret)}.html`;
+const reportId = reportIdFor(domain, runId);
+const storedName = `${storageNameFor(reportId, secret)}.html`;
+
+/* The bundle a later `revise` needs, gathered while everything is still on
+   this runner's disk. It matters because a workflow_dispatch is a fresh
+   checkout on a fresh machine every time: the run that generated this brief
+   and the run that will one day revise it never share a filesystem. Nothing
+   here is more exposed than the html already is — same unguessable filename,
+   same blob store — so this is not a new risk, just a second object next to
+   the first. Missing files (e.g. --no-peer-crawl skipped stage 02) come back
+   null and restore-run.mjs writes only what is present. */
+const readOptional = async (name) =>
+  readFile(join(runPath, `${name}.json`), 'utf8')
+    .then(JSON.parse)
+    .catch(() => null);
+const bundle = {
+  '00-meta': await readOptional('00-meta'),
+  '01-subject': await readOptional('01-subject'),
+  '02-peers': await readOptional('02-peers'),
+  claims: await readOptional('claims'),
+  coverage,
+  '06-synthesis': await readOptional('06-synthesis'),
+};
 
 /* Upload before minting anything. A link that resolves to nothing is worse
    than no link, and this is the step most likely to fail on a fresh setup. */
@@ -161,6 +196,26 @@ try {
 }
 console.log(`Uploaded ${pathname}`);
 
+/* The bundle. Failure here does not fail the release — the html is already
+   up and the read/send links already work — but it does mean a future
+   `revise` for this run will have nothing to restore, so it is surfaced in
+   Slack rather than swallowed silently. */
+try {
+  const bundlePathname = `${prefix ? `${prefix}/` : ''}${storageNameFor(reportId, secret)}.bundle.json`;
+  await put(bundlePathname, JSON.stringify(bundle), {
+    access: 'public',
+    contentType: 'application/json; charset=utf-8',
+    token: blobToken,
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+  console.log(`Uploaded ${bundlePathname}`);
+} catch (error) {
+  await slack(
+    `:warning: *${company}* stored, but its revise bundle failed to upload — ${String(error.message).slice(0, 200)}. Revise will not work for this run until it is re-released.`
+  );
+}
+
 /* What the reader clicks. The same link the client would get, so a reviewer
    sees exactly what was sent rather than a preview of it. */
 const readLink = linkFor(
@@ -177,6 +232,18 @@ const sendLink = actionLink(
   )
 );
 
+/* The loop: notes typed on the confirmation page, not carried in the token —
+   see api/run.ts. Pointing at this run means the workflow rereads stages
+   01-05 off disk rather than the newest run, in case something else for this
+   domain runs in between a click and this one landing. */
+const reviseLink = actionLink(
+  origin,
+  mintActionToken(
+    { a: 'revise', domain, email, name, company, category: '', peers: [], run: runId },
+    secret
+  )
+);
+
 const short = coverage.sufficient
   ? `:white_check_mark: *${pct}% coverage* — enough to send.`
   : `:warning: *${pct}% coverage — below threshold.* Short: ${(coverage.shortfalls ?? []).join('; ')}. Read it before deciding.`;
@@ -188,6 +255,7 @@ await slack(
     `For ${name} <${email}>`,
     '',
     `:eyes: *Read it first:* ${readLink}`,
+    `:pencil2: *Want changes? Revise it:* ${reviseLink}`,
     `:outbox_tray: *Then send it:* ${sendLink}`,
     runUrl ? `\n_${runUrl}_` : '',
   ]

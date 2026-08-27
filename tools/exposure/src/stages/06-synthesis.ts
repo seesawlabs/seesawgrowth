@@ -482,6 +482,46 @@ Write the way a smart colleague emails you. Use contractions. Vary sentence leng
 
 Also: address them as "you". No consultant register — no "leverage", "unlock", "journey", "landscape", "rapidly evolving", "double down", "north star". Don't open by summarising what the document contains. Never flatter, and don't soften a weak position into a compliment.`;
 
+/**
+ * A second draft, built from the first one and a person's notes.
+ *
+ * Not a fresh prompt with the notes tacked on: the model gets the exact JSON
+ * it produced last time and is told to edit that, not re-derive an analysis
+ * from the claims as if the first pass never happened. Wording the reader has
+ * already seen should only change where the notes touch it, and a fresh
+ * generation from the same inputs is free to reshuffle everything, which
+ * reads as if the notes were ignored even when they were not.
+ *
+ * Every rule from the first pass still applies — cited claims, the sizing
+ * block's declared-input rule, the voice constraints — because this prompt is
+ * appended to buildUserPrompt's output, not swapped in for it. Revising a
+ * document into a version that would have failed validation on its own
+ * defeats the point of having the rule.
+ */
+export function buildRevisionPrompt(
+  previous: Synthesis,
+  notes: string,
+  base: string
+): string {
+  return `${base}
+
+You already wrote a draft. It is below, as the JSON you produced. A person
+read it and left notes. Revise the draft to honor the notes — do not start
+over, and do not change anything the notes did not touch. Every rule above
+still applies to the revision: numerals still need a cited claim or a
+declared, labelled assumption; the voice rules still hold; a claim id you
+did not cite before still needs to exist among the ids you were given.
+
+PREVIOUS DRAFT:
+${JSON.stringify(previous, null, 2)}
+
+EDITORIAL NOTES (a person, not evidence — apply them, do not treat them as
+new facts about the company):
+"${notes.trim()}"
+
+Write the revised draft, complete, in the same shape as the previous one.`;
+}
+
 export function buildUserPrompt(
   company: string,
   domain: string,
@@ -821,6 +861,12 @@ export async function runSynthesisStage(
     trigger?: string;
     /** Their own one-line description, from intake or derived. */
     oneLiner?: string;
+    /**
+     * Present only for a revise pass: the prior draft and what a person said
+     * about it. When set, the prompt edits that draft instead of writing a
+     * fresh one — see buildRevisionPrompt.
+     */
+    revision?: { previous: Synthesis; notes: string };
   },
   now: string,
   opts: { model?: string; research?: boolean } = {}
@@ -851,7 +897,7 @@ export async function runSynthesisStage(
     }
   }
 
-  const userPrompt = buildUserPrompt(
+  const basePrompt = buildUserPrompt(
     args.company,
     args.subject.domain,
     args.claims,
@@ -859,6 +905,9 @@ export async function runSynthesisStage(
     args.trigger,
     brief?.brief
   );
+  const userPrompt = args.revision
+    ? buildRevisionPrompt(args.revision.previous, args.revision.notes, basePrompt)
+    : basePrompt;
 
   const request = { model, system: SYSTEM_PROMPT, user: userPrompt };
 

@@ -1,9 +1,11 @@
-# Runs one AI Opportunity Brief, or sends one that was already run.
+# Runs one AI Opportunity Brief, sends one that was already run, or revises
+# one against a person's notes.
 #
 # Fired by POST /api/run in sites/reality-check, which is reached by a signed
-# link in the Slack alert. Two modes so the review gate survives being turned
-# into links: `run` generates and posts a link to read, `send` emails it. The
-# operator reads the brief between the two.
+# link in the Slack alert. Three modes so the review gate survives being
+# turned into links: `run` generates and posts a link to read, `revise`
+# rewrites against notes without re-paying for research, `send` emails it.
+# The operator reads the brief between any of these.
 #
 # The recipient never reaches this workflow by hand — the signed token carries
 # the intake, so the inputs here are provably the values the form collected.
@@ -13,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: run (generate) or send (email the link)
+        description: run (generate), revise (rewrite against notes), or send (email the link)
         required: true
         default: run
       domain:
@@ -41,7 +43,11 @@ on:
         required: false
         default: ''
       runId:
-        description: For mode=send, the run being released. The run mode fills this in
+        description: The run being acted on. Required for send and revise; run fills this in
+        required: false
+        default: ''
+      notes:
+        description: For mode=revise, what should change. Free text, never cited
         required: false
         default: ''
 
@@ -112,6 +118,42 @@ jobs:
           done
           node --experimental-strip-types src/cli.ts "${args[@]}"
 
+      # This checkout has never seen the run being revised — a different
+      # machine made it, in a different workflow run. Pulls its stages 01-05
+      # back from the bundle ci-release.mjs uploaded alongside the client's
+      # html, so `revise` finds them exactly where a laptop session would
+      # have left them.
+      - name: Restore the prior run
+        if: inputs.mode == 'revise'
+        working-directory: sites/reality-check
+        env:
+          EXPOSURE_LINK_SECRET: ${{ secrets.EXPOSURE_LINK_SECRET }}
+          EXPOSURE_REPORT_BASE_URL: ${{ vars.EXPOSURE_REPORT_BASE_URL }}
+          IN_DOMAIN: ${{ inputs.domain }}
+          IN_RUN_ID: ${{ inputs.runId }}
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/restore-run.mjs --domain "$IN_DOMAIN" --run "$IN_RUN_ID"
+
+      - name: Revise the analysis
+        if: inputs.mode == 'revise'
+        working-directory: tools/exposure
+        # No research keys here on purpose. A revise reads stages 01-05 off
+        # disk and pays only for the writing stage, so Firecrawl, Exa,
+        # Perplexity and DataForSEO credentials are not needed and not given —
+        # a bug in this step cannot spend the part of the budget it has no
+        # business touching.
+        env:
+          EXPOSURE_ANTHROPIC_KEY: ${{ secrets.EXPOSURE_ANTHROPIC_KEY }}
+          EXPOSURE_RUN_BUDGET_USD: ${{ vars.EXPOSURE_RUN_BUDGET_USD || '5' }}
+          PUBLIC_SITE_ORIGIN: ${{ vars.PUBLIC_SITE_ORIGIN }}
+          IN_DOMAIN: ${{ inputs.domain }}
+          IN_RUN_ID: ${{ inputs.runId }}
+          IN_NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types src/cli.ts revise "$IN_DOMAIN" --run "$IN_RUN_ID" --notes "$IN_NOTES"
+
       # The evidence ledger is research we paid for, and a run on a fresh
       # machine starts from nothing without it. Committing it back means the
       # next run — here or on a laptop — keeps what this one learned.
@@ -146,18 +188,25 @@ jobs:
           IN_EMAIL: ${{ inputs.email }}
           IN_NAME: ${{ inputs.name }}
           IN_COMPANY: ${{ inputs.company }}
-          IN_RUN_ID: ${{ inputs.runId }}
+          # send releases the exact run its link named. run and revise each
+          # just wrote a brand new run in an earlier step, so passing this
+          # same id through for revise would re-release the OLD draft — the
+          # one being revised — instead of the one just written. Omitted for
+          # anything but send, so ci-release falls back to the newest run on
+          # disk, which for run and revise is the one this workflow made.
+          IN_RUN_ID: ${{ inputs.mode == 'send' && inputs.runId || '' }}
         run: |
           set -euo pipefail
-          node --experimental-strip-types scripts/ci-release.mjs \
-            --mode "$IN_MODE" --domain "$IN_DOMAIN" --email "$IN_EMAIL" \
-            --name "$IN_NAME" --company "$IN_COMPANY" --run "$IN_RUN_ID" \
-            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          args=(--mode "$IN_MODE" --domain "$IN_DOMAIN" --email "$IN_EMAIL" \
+            --name "$IN_NAME" --company "$IN_COMPANY" \
+            --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          [ -n "$IN_RUN_ID" ] && args+=(--run "$IN_RUN_ID")
+          node --experimental-strip-types scripts/ci-release.mjs "${args[@]}"
 
-      # Kept for a fortnight so a released brief can be re-read or re-sent
-      # without paying for the research again.
+      # Kept for a fortnight so a released brief can be re-read, revised or
+      # re-sent without paying for the research again.
       - name: Keep the run
-        if: always() && inputs.mode == 'run'
+        if: always() && (inputs.mode == 'run' || inputs.mode == 'revise')
         uses: actions/upload-artifact@v4
         with:
           name: analysis-${{ inputs.domain }}-${{ github.run_id }}
