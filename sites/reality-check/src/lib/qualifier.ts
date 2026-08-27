@@ -96,6 +96,12 @@ export const INDUSTRY_GROUPS: { group: string; options: { value: string; label: 
   {
     group: 'Other industries',
     options: [
+      { value: 'ecommerce', label: 'Ecommerce / retail' },
+      { value: 'media', label: 'Media, entertainment & social' },
+      { value: 'edtech', label: 'Ed tech / education' },
+      { value: 'proptech', label: 'Real estate / proptech' },
+      { value: 'travel', label: 'Travel & hospitality' },
+      { value: 'adtech', label: 'Marketing / adtech' },
       { value: 'fintech', label: 'Financial services / fintech' },
       { value: 'insurance', label: 'Insurance (non-health)' },
       { value: 'logistics', label: 'Logistics & supply chain' },
