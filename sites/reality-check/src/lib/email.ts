@@ -71,6 +71,11 @@ const p = (text: string) => `<p style="margin:0 0 16px">${text}</p>`;
  * `bookingUrl` present means they were offered a calendar on the page. Absent
  * means they were routed to review, and a time comes by hand — so the email
  * must not imply a calendar they were not given.
+ *
+ * Says a link is coming; never says how it gets made. The pipeline, the review
+ * gate and who reads what are ours to worry about, and narrating them invites
+ * a question we do not want to answer on the record. Same rule on the
+ * confirmation screen — see the booked pane in IntakeForm.astro.
  */
 export function ackEmail(args: {
   name: string;
@@ -80,7 +85,7 @@ export function ackEmail(args: {
   const first = args.name.trim().split(/\s+/)[0] || 'there';
   const lines = [
     `Thanks for asking, ${first}.`,
-    `Two things are yours now. The first is the analysis: we're reading ${args.company}'s public material, what comparable companies have shipped and when, and what your category is searching for. One of us goes through the draft before it goes anywhere, which is the part that takes the time.`,
+    `Two things are yours now. The first is the analysis of ${args.company}. It'll be ready soon, and we'll email you a private link to read it.`,
     `The second is 45 minutes with the people who wrote it. We'll open with what we found rather than asking you to explain the business, put the questions to you that would change our recommendation, and tell you what we've seen work and what we've watched fail.`,
   ];
   const closing = args.bookingUrl
