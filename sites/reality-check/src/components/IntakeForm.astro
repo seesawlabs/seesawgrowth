@@ -202,12 +202,37 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
   <!-- ---------------- outcomes ---------------- -->
 
   <div class="q__out" data-out="booked" hidden>
-    <h3>We&rsquo;re on it. Now pick your 45 minutes.</h3>
+    <h3>Your analysis is being built.</h3>
     <p>
-      The analysis is being built and lands in your inbox as a private link. The
-      session is the other half, and it&rsquo;s worth booking now &mdash; before
-      the document arrives is fine, we&rsquo;ll have read it either way.
+      We&rsquo;re researching <strong data-fill="company">your company</strong> now
+      &mdash; their public material, what comparable companies have shipped and
+      when, and what the category is searching for. One of us reads the draft
+      before it goes anywhere, which is the part that takes the time.
     </p>
+    <p>
+      It arrives as a private link, by email, at <strong
+        data-fill="email">the address you gave us</strong>. That&rsquo;s the only
+      thing we&rsquo;ll send you besides this &mdash; no list, no sequence.
+    </p>
+
+    <div class="q__next">
+      <p class="q__lab-sm" style="margin-top:0">Book the other half now</p>
+      <p>
+        The 45 minutes doesn&rsquo;t wait on the document. Booking now is the
+        better order &mdash; we&rsquo;ll have read it by the time we talk, and the
+        good times go first.
+      </p>
+      <div class="q__sched" id="q-sched">
+        <p class="q__sched-note">
+          Scheduler embed &mdash; Cal.com, collective on Jeff + Calvin.
+          <br />Set <code>PUBLIC_CAL_LINK</code> to go live.
+        </p>
+      </div>
+      <p class="q__sched-alt" id="q-sched-alt" hidden>
+        Calendar not loading? <a href="/book-call" id="q-sched-alt-link" target="_blank" rel="noopener">Open it in a new tab</a>.
+      </p>
+    </div>
+
     <p class="q__lab-sm">What the 45 minutes is</p>
     <ul class="q__list">
       <li>
@@ -231,12 +256,6 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       You&rsquo;ll be talking to the two people who would actually do the work.
       If there&rsquo;s no fit we&rsquo;ll say so inside the 45 minutes.
     </p>
-    <div class="q__sched" id="q-sched">
-      <p class="q__sched-note">
-        Scheduler embed &mdash; Cal.com, collective on Jeff + Calvin.
-        <br />Set <code>PUBLIC_CAL_LINK</code> to go live.
-      </p>
-    </div>
   </div>
 
   <div class="q__out" data-out="error" hidden>
@@ -437,6 +456,23 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     margin: 0;
   }
   .q__sched iframe { width: 100%; min-height: 640px; border: 0; }
+
+  /* The booking is the one action on this screen, so it gets a frame around it
+     rather than sitting in the flow of the reassurance copy. */
+  .q__next {
+    margin: var(--sp-8) 0;
+    padding: var(--sp-6) var(--sp-5);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: var(--bg-sunk);
+  }
+  .q__next .q__sched { background: var(--bg); }
+  .q__sched-alt {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin: var(--sp-4) 0 0;
+    text-align: center;
+  }
 </style>
 
 <script>
@@ -548,19 +584,44 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         .filter(Boolean),
     });
 
-    const reveal = (pane: 'booked' | 'error', bookingUrl?: string) => {
+    const reveal = (
+      pane: 'booked' | 'error',
+      opts: { bookingUrl?: string; company?: string; email?: string } = {}
+    ) => {
       form.hidden = true;
       $<HTMLDivElement>('.q__head').hidden = true;
       const out = document.querySelector<HTMLElement>(`[data-out="${pane}"]`);
       if (out) out.hidden = false;
-      if (pane === 'booked' && bookingUrl) {
-        const slot = $<HTMLDivElement>('#q-sched');
-        slot.innerHTML = '';
-        const f = document.createElement('iframe');
-        f.src = bookingUrl;
-        f.title = 'Pick a time for your session';
-        f.loading = 'lazy';
-        slot.appendChild(f);
+      if (pane === 'booked') {
+        /* Their own words back to them: the company we are about to research
+           and the address the link goes to. A typo in either is worth catching
+           here rather than when the email does not arrive. textContent, not
+           innerHTML — this is visitor-supplied text. */
+        if (out && opts.company) {
+          out.querySelectorAll<HTMLElement>('[data-fill="company"]').forEach((el) => {
+            el.textContent = opts.company as string;
+          });
+        }
+        if (out && opts.email) {
+          out.querySelectorAll<HTMLElement>('[data-fill="email"]').forEach((el) => {
+            el.textContent = opts.email as string;
+          });
+        }
+        if (opts.bookingUrl) {
+          const slot = $<HTMLDivElement>('#q-sched');
+          slot.innerHTML = '';
+          const f = document.createElement('iframe');
+          f.src = opts.bookingUrl;
+          f.title = 'Pick a time for your session';
+          f.loading = 'lazy';
+          slot.appendChild(f);
+          /* Privacy extensions and strict corporate proxies block third-party
+             scheduler frames, and a blank box reads as "no times available".
+             The escape hatch goes through our own /book-call so the calendar
+             can be repointed in one variable later. */
+          const alt = document.getElementById('q-sched-alt');
+          if (alt) alt.hidden = false;
+        }
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -600,7 +661,11 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
-        reveal('booked', data.bookingUrl);
+        reveal('booked', {
+          bookingUrl: data.bookingUrl,
+          company: a.company,
+          email: a.email,
+        });
       } catch {
         /* The endpoint is down, or the network is. This used to fall back to
            scoring in the browser and showing the matching confirmation, which
