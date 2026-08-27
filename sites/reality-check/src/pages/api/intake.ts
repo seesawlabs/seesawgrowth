@@ -37,7 +37,6 @@ import {
   normalise,
   scoreIntake,
   operatorAction,
-  fulfilCommands,
   type Intake,
   type NormalisedIntake,
 } from '../../lib/intake';
@@ -124,11 +123,9 @@ function bookingUrl(): string | undefined {
 
 /**
  * The human gate. This message IS the queue until there is a real one, so it
- * carries the score, the routing, and the exact command to fulfil the request.
- * The commands are built by `fulfilCommands` from the same spec the form
- * collects, so a field we ask for and a field the pipeline receives cannot
- * diverge — and the recipient rides along in the first one, so releasing needs
- * no retyped email address.
+ * carries the score, the routing, and the one-click link to run the analysis.
+ * See `fulfilCommands` in lib/intake.ts for the command-line equivalent, kept
+ * for when the runner is misconfigured and the link cannot be built.
  */
 async function alertOperator(
   intake: NormalisedIntake,
@@ -136,7 +133,6 @@ async function alertOperator(
 ): Promise<void> {
   const hook = serverEnv('SLACK_WEBHOOK');
   const route = verdict.route ?? 'unrouted';
-  const cmds = fulfilCommands(intake);
 
   /* The one-click path. Signed, so the URL is the authorisation: a Slack
      message gets forwarded and screenshotted, and a run spends real money. */
@@ -165,7 +161,7 @@ async function alertOperator(
     route === 'auto_book' ? ':large_green_circle:' : route === 'manual_review' ? ':large_yellow_circle:' : ':white_circle:';
 
   const lines = [
-    `${emoji} *Package requested* — ${intake.company} (${intake.domain})`,
+    `${emoji} *New opportunity* — ${intake.company} (${intake.domain})`,
     `${intake.name}${intake.roleTitle ? `, ${intake.roleTitle}` : ''} · ${intake.email}`,
     `Score *${verdict.total}/9* · route *${route}*${verdict.icpOverride ? ' · ICP override' : ''}`,
     verdict.gate ? `Gate: ${verdict.gate}` : null,
@@ -186,15 +182,7 @@ async function alertOperator(
     '',
     runLink
       ? `:arrow_forward: *<${runLink}|Run the analysis>* — nine minutes, then it posts back here with a link to read. Nothing is sent until you click again.`
-      : ':warning: No one-click runner: EXPOSURE_LINK_SECRET or PUBLIC_SITE_ORIGIN is unset. Use the commands below.',
-    '',
-    /* The commands stay. The link is the convenient path; these are the path
-       that works when the runner is misconfigured, which is exactly when you
-       need one. */
-    '_Or from a laptop:_',
-    '```',
-    `cd sites/reality-check && ${cmds.generate}`,
-    '```',
+      : ':warning: No one-click runner: EXPOSURE_LINK_SECRET or PUBLIC_SITE_ORIGIN is unset. Run it from `sites/reality-check` with `npm run fulfil` instead — see DEPLOY.md §3a.',
   ].filter(Boolean);
 
   if (!hook) {
