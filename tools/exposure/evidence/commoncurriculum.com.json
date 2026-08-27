@@ -1,0 +1,38 @@
+{
+  "domain": "commoncurriculum.com",
+  "updatedAt": "2026-08-27T20:32:21.924Z",
+  "items": [
+    {
+      "statement": "By June 23, 2026, Common Planner had a dedicated AI button tutorial showing AI functions to edit lessons, align to standards, attach files, import lesson content, differentiate instruction, translate content, and generate exit tickets, and it said the AI uses lesson and unit context to improve suggestions.",
+      "observedAt": "2026-06-23",
+      "citations": [
+        {
+          "marker": 7,
+          "url": "https://www.youtube.com/watch?v=nj1LRbMLw7E",
+          "title": "Common Planner AI Button Tutorial: Plan, Edit & Differentiate Lessons with AI",
+          "publisher": "web",
+          "date": "2026-06-23"
+        }
+      ],
+      "firstSeenRun": "2026-08-27T20-32-21-924Z",
+      "lastSeenRun": "2026-08-27T20-32-21-924Z",
+      "timesSeen": 1
+    },
+    {
+      "statement": "Common Planner has publicly announced and deployed at least these specific AI initiatives: it added a built-in AI lesson planning assistant inside the planner by October 8, 2025, allowing teachers to chat with AI to create, edit, simplify, differentiate, and align lessons to standards.",
+      "observedAt": "2025-10-08",
+      "citations": [
+        {
+          "marker": 2,
+          "url": "https://www.commonplanner.com/help/en/articles/12543069-meet-your-new-ai-lesson-planning-assistant-it-s-built-into-common-planner",
+          "title": "Meet Your New AI Lesson Planning Assistant ✨. It's built into ...",
+          "publisher": "web",
+          "date": "2025-10-08"
+        }
+      ],
+      "firstSeenRun": "2026-08-27T20-32-21-924Z",
+      "lastSeenRun": "2026-08-27T20-32-21-924Z",
+      "timesSeen": 1
+    }
+  ]
+}

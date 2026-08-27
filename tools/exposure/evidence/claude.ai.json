@@ -1,0 +1,22 @@
+{
+  "domain": "claude.ai",
+  "updatedAt": "2026-08-27T20:32:21.924Z",
+  "items": [
+    {
+      "statement": "On March 14, 2023, Anthropic introduced Claude as a public AI assistant after a closed alpha with partners like Notion, Quora, and DuckDuckGo.",
+      "observedAt": "2023-11-03",
+      "citations": [
+        {
+          "marker": 6,
+          "url": "https://www.anthropic.com/news/introducing-claude",
+          "title": "Introducing Claude",
+          "publisher": "web",
+          "date": "2023-11-03"
+        }
+      ],
+      "firstSeenRun": "2026-08-27T20-32-21-924Z",
+      "lastSeenRun": "2026-08-27T20-32-21-924Z",
+      "timesSeen": 1
+    }
+  ]
+}

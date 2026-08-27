@@ -1,0 +1,22 @@
+{
+  "domain": "magicschool.ai",
+  "updatedAt": "2026-08-27T20:32:21.924Z",
+  "items": [
+    {
+      "statement": "MagicSchool.ai has announced or deployed several specific AI-related initiatives in dated published sources: it launched a new MagicSchool for Students platform in connection with its April 27, 2026 Series A announcement, letting educators build and customize AI tools for students.",
+      "observedAt": "2026-04-27",
+      "citations": [
+        {
+          "marker": 1,
+          "url": "https://www.magicschool.ai/blog-posts/announcing-magicschools-15m-series-a-raise",
+          "title": "Announcing MagicSchool's $15m Series A Raise",
+          "publisher": "web",
+          "date": "2026-04-27"
+        }
+      ],
+      "firstSeenRun": "2026-08-27T20-32-21-924Z",
+      "lastSeenRun": "2026-08-27T20-32-21-924Z",
+      "timesSeen": 1
+    }
+  ]
+}
