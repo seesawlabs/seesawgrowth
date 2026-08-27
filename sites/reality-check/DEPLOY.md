@@ -83,15 +83,21 @@ fails. Check this before hunting anywhere else.
 
 ## 3. The calendar
 
-The session is **45 minutes**, not the hour the old Reality Check ran. Create a
-collective event on Jeff and Calvin at that length — the old
-`https://cal.com/seesawlabs/reality-check` link in `.env.example` predates the
-package and will need repointing or renaming. Two things to do:
+The session is **45 minutes**, not the hour the old Reality Check ran. It is a
+**single-host** event with the rest of the team added to the invite when more
+than one of us should be on the call — a collective event only offers times
+every host is free, which would close most of the window. Currently
+`https://cal.com/calvin-locklear-vhu26c/welcome-to-seesaw-labs`.
 
-1. Create it (or confirm it exists) and open the URL in a private window. If it
-   does not load for a stranger, it will not load for a lead.
+1. Open the URL in a private window. If it does not load for a stranger, it
+   will not load for a lead.
 2. Put it in `PUBLIC_CAL_LINK`. Both flows read that one value — the
    confirmation screen and `/book-call`, which is what briefs link to.
+3. Set **availability to 10:00–15:00 `America/Chicago`, weekdays**, and a
+   **minimum notice of one business day**. The notice is not optional: the
+   confirmation screen and the acknowledgement email both say the analysis
+   will be read before the call, and without a notice period someone can book
+   a slot forty minutes out and make both of them false.
 
 Briefs point at `/book-call` on our own origin rather than at the calendar
 directly, so changing tools later is one variable and every brief already in

@@ -114,29 +114,28 @@ gracefully rather than failing.
 
 ## Scheduler setup — read this part carefully
 
-One event type: **AI Reality Check, 60 minutes.**
+One event type: **the 45-minute session** that is the other half of the package.
 
 | Setting | Value | Why |
 |---|---|---|
-| Scheduling type | **Collective** — Jeff **and** Calvin, both required | Round-robin would book one person alone and silently kill the live workflow sketch, which is the differentiator |
-| Availability | **Only the daily priority windows** | Not "working hours". The window is the offer's capacity |
-| Buffer after | 15 min | The five-minute debrief plus notes |
-| Minimum notice | **2 business days** | The research brief needs 24h. Without this someone books 9am tomorrow and you walk in cold |
-| Max per week | **3** | Enforces the 8/month cap in the calendar rather than by willpower |
-| Booking questions | **None** | The qualifier already has everything. Adding questions here is the most common way to lose a booking |
-| Description | The bring-one-person ask **and** the recording consent line | Consent appears here, in the confirmation email, and verbally on the call |
+| Scheduling type | **Single host**, who adds the rest of the team to the invite as needed | A collective event only offers times every host is free, which closes most of the window. One host keeps it open; anyone else joins the invite |
+| Duration | **45 minutes** | 45 rather than an hour is itself a claim — we know what we are doing with the time. See `docs/10-package-plan.md` |
+| Availability | **10:00–15:00 `America/Chicago`, weekdays** | The window is the offer's capacity. Leads take precedence over other meetings inside it |
+| Minimum notice | **1 business day** | Load-bearing. The confirmation screen and the ack email both promise the analysis is read before the call. Without notice, someone books forty minutes out and both promises are false |
+| Buffer after | 15 min | The debrief plus notes |
+| Booking questions | **None** | The intake form already has everything. Adding questions here is the most common way to lose a booking |
 
 ### The priority-window gotcha
 
-The windows are meant to take precedence over other meetings, which means
-holding them on both calendars. **Those holds must be marked `Free`, not
-`Busy`.** Cal.com reads a Busy event as a conflict and will offer no slots at
-all — the window looks protected and is actually dead. Set the holds to Free and
-restrict Cal.com's availability to exactly those windows.
+The window is meant to take precedence over other meetings, which means holding
+it on the calendar. **Those holds must be marked `Free`, not `Busy`.** Cal.com
+reads a Busy event as a conflict and will offer no slots at all — the window
+looks protected and is actually dead. Set the holds to Free and restrict
+Cal.com's availability to exactly the window.
 
 Verify after setup: open the public booking link in a private window and confirm
-slots appear, that they only appear inside the windows, and that nothing is
-offered inside the next two business days.
+slots appear, that they only appear inside the window, and that nothing is
+offered inside the minimum notice period.
 
 ## The sample report
 
@@ -154,7 +153,7 @@ and it doubles as the internal AI-ops case study the audit asked for.
 - [ ] `npm run check:prose` clean against the final build
 - [ ] Deployed, and the `[reality-check] submission` log line confirms the
       endpoint is being hit rather than the client-side fallback
-- [ ] `PUBLIC_CAL_LINK` set; collective scheduling verified per above
+- [ ] `PUBLIC_CAL_LINK` set; window and minimum notice verified per above
 - [ ] Logo SVG replacing the header placeholder
 - [ ] OG image (this page gets forwarded into Slacks)
 - [ ] Privacy policy read by someone qualified
