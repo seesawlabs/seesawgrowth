@@ -79,7 +79,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
         </legend>
         <p class="q__hint">
           You know your market better than our search does. Naming even one
-          sharpens the comparison a lot.
+          sharpens the comparison.
         </p>
         <div class="q__comps">
           <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 1" />
@@ -243,12 +243,18 @@ import { ONE_LINER_MIN } from '../lib/intake';
     margin-bottom: var(--sp-2);
     line-height: var(--lh-snug);
   }
+  /* Always its own line under the question, never trailing the last word.
+     Inline it wrapped alone on long legends and read as an orphan. */
   .q__optional {
+    display: block;
     font-weight: 400;
-    font-size: var(--text-md);
+    font-size: var(--text-sm);
+    letter-spacing: var(--ls-wide);
+    text-transform: uppercase;
     color: var(--muted);
-    margin-left: var(--sp-2);
+    margin-top: var(--sp-1);
   }
+  .q__hint, .q__set legend, .q__lab { text-wrap: pretty; }
   .q__hint {
     font-size: var(--text-md);
     color: var(--muted);
