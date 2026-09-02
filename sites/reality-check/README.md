@@ -39,12 +39,12 @@ can't break a deploy on a false positive.
 
 | Route | |
 |---|---|
-| `/` | The pitch and the form — the call, the report, the people, the four questions, how discovery runs, then intake with book-first or questions-first |
+| `/` | The pitch and the form — the call, the report, the people, the four questions, how discovery runs, then the questions, then the calendar |
 | `/book-call` | Straight to the calendar (`PUBLIC_CAL_LINK`), for someone arriving from a released report |
 | `/sample-brief` | The brief we ran on ourselves. **Old multi-section format; unlinked until regenerated** |
 | `/privacy` | Required. **Not lawyer-reviewed yet** |
 | `/api/intake` | Accepts the form, alerts Slack, sends the ack, and (with `EXPOSURE_AUTORUN`) starts the research |
-| `/api/booking` | Returns the calendar URL so the form can mount it before the questions |
+| `/api/booking` | Returns the calendar URL so the form can mount it on the confirmation screen |
 | `/api/run` | The signed run / revise / send links from the Slack alert |
 
 `/reality-check`, `/book`, `/brief` and `/sample` are redirects. There is no

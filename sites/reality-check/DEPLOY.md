@@ -46,7 +46,7 @@ otherwise a preview deploy silently behaves differently from production.
 | `GITHUB_DISPATCH_TOKEN` | No auto-run and no one-click runs; the alert prints commands instead | See §3a |
 | `EXPOSURE_AUTORUN` | Research waits for a click on the *Run* link in the alert | Set to `true` to start the research the moment a lead lands. Needs `GITHUB_DISPATCH_TOKEN`. See §3a |
 | `PUBLIC_SITE_ORIGIN` | The alert cannot build absolute links | `https://seesawgrowth.vercel.app` |
-| `PUBLIC_CAL_LINK` | The calendar is hidden everywhere it would appear (book-first, confirmation, `/api/booking`), and `/book-call` falls back to `/book` | See §3 |
+| `PUBLIC_CAL_LINK` | The calendar is hidden on the confirmation screen and `/api/booking` returns null; `/book-call` falls back to `/book` | See §3 |
 | `RESEND_TOKEN` | Neither email sends. Both no-op loudly in the log | Sender domain must be verified in Resend first |
 | `PUBLIC_PLAUSIBLE_DOMAIN` | No analytics | Optional |
 | `EXPOSURE_DELIVERY` | Stays `reviewed`, which is what we want | Only set to `instant` when the review gate retires |
@@ -104,9 +104,8 @@ Briefs point at `/book-call` on our own origin rather than at the calendar
 directly, so changing tools later is one variable and every brief already in
 someone's inbox follows it. Nothing needs reissuing.
 
-The form mounts that calendar (Cal.com embed, not a bare iframe) in two places:
-before the questions, for a visitor who taps **Book the call** first, and on the
-confirmation for everyone else. Every lead sees it. Scoring is retired from this
+The form mounts that calendar (Cal.com embed, not a bare iframe) on the
+confirmation screen, after the questions. Every lead sees it. Scoring is retired from this
 flow (`docs/00-status.md`, 2026-08-31): nothing gates the calendar and the alert
 gives no instruction beyond the facts, so the team decides from the alert and the
 research. Someone arriving from a released report goes straight to the calendar
@@ -213,10 +212,9 @@ takes the recipient explicitly.
 - Check the ack email in a client that strips styling — both emails ship a
   plain-text half for exactly that.
 - `npm run check:prose && npm run check:email && npm run check:intake && npm run check:links`
-- Submit once from the **Book the call** path and once from the questions-first
-  path. The first alert should say the lead booked before answering; the second
-  should not. With `EXPOSURE_AUTORUN` on, each should be followed about ten
-  minutes later by the report PDF and the email draft in the same channel.
+- Submit the form once on production and book from the confirmation screen.
+  With `EXPOSURE_AUTORUN` on, the alert should be followed about ten minutes
+  later by the report PDF and the email draft in the same channel.
 
 ## Operator machine
 

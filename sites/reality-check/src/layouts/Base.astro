@@ -63,9 +63,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
 
     <header class="site-head">
       <div class="wrap site-head__in">
-        <a href="/" class="site-head__brand" aria-label="SeeSaw Labs">
-          <span class="site-head__mark" aria-hidden="true"></span>
-          <span class="site-head__name">SeeSaw&nbsp;Labs</span>
+        <a href="/" class="site-head__brand" aria-label="SeeSaw Labs home">
+          <img class="site-head__logo" src="/logo.svg" alt="SeeSaw Labs" width="198" height="100" />
         </a>
         <nav class="site-head__nav">
           <a href="/#how">How it works</a>
@@ -119,26 +118,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
         align-items: center;
         justify-content: space-between;
         gap: var(--sp-4);
-        min-height: 68px;
+        min-height: 84px;
       }
-      .site-head__brand {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--sp-2);
-        text-decoration: none;
-        color: var(--ink);
-        font-weight: 600;
-        font-size: var(--text-md);
-      }
-      .site-head__mark {
-        width: 22px;
-        height: 22px;
-        flex: none;
-        border-radius: var(--radius-sm);
-        background: var(--accent);
-        /* Placeholder for the primary logo mark — swap for the SVG from the
-           brand folder once it's in /public. */
-      }
+      .site-head__brand { display: inline-flex; align-items: center; text-decoration: none; }
+      /* The lockup from seesawlabs.com, rebuilt from the production sprite
+         (see public/logo.svg). Height sets the size; width follows. */
+      .site-head__logo { display: block; height: 58px; width: auto; }
       .site-head__sep { color: var(--neutral-300); }
       .site-head__offer {
         font-family: var(--font-accent);
@@ -156,7 +141,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
       .site-head__nav a:hover { color: var(--accent-deep); }
       .site-head__cta { padding: var(--sp-2) var(--sp-4); }
       @media (max-width: 620px) {
-        .site-head__name, .site-head__sep { display: none; }
+        .site-head__logo { height: 44px; }
         .site-head__nav a:not(.site-head__cta) { display: none; }
       }
 

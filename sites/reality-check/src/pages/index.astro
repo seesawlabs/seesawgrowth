@@ -14,9 +14,10 @@
    build, and the one thing we could not see from outside. Two findings is a
    menu; one is a position. The page promises exactly that shape.
 
-   TWO WAYS IN, SAME PLACE. A visitor can book the call first and answer the
-   few questions after, or answer first and book on the confirmation screen.
-   Both end in the same form and the same calendar; the order is theirs.
+   ONE WAY IN. "Book the call" lands on the questions; the calendar is on the
+   confirmation screen. A book-first path existed for a week and was cut on
+   2026-09-02: two entrances to one form was one more decision than the page
+   needed to ask.
 
    NO SCORING ON THIS PAGE, AND NONE BEHIND IT. Every lead sees the calendar
    and every lead is researched. The team reads the alert and decides.
@@ -53,8 +54,7 @@ const description =
         thing we&rsquo;d build first, why now, and how we&rsquo;d do it.
       </p>
       <div class="hero__cta">
-        <a href="#request" class="btn" data-mode="book">Book the call</a>
-        <a href="#request" class="btn btn--ghost">Answer a few questions first</a>
+        <a href="#request" class="btn">Book the call</a>
       </div>
     </div>
   </section>
@@ -136,11 +136,11 @@ const description =
 
       <ol class="steps">
         <li class="step">
-          <h3 class="step__h">Book, or answer a few questions</h3>
+          <h3 class="step__h">Answer a few questions, then book</h3>
           <p class="step__b">
-            Pick a time on the calendar, or tell us who you are and what
-            you&rsquo;ve already tried. Either order. The questions take under
-            three minutes and they aim the research.
+            Tell us who you are and what you&rsquo;ve already tried, then pick a
+            time on the calendar. The questions take under three minutes and
+            they aim the research.
           </p>
         </li>
         <li class="step">
@@ -248,8 +248,7 @@ const description =
         thing we&rsquo;d do first, and why.
       </p>
       <div class="close__ctas">
-        <a href="#request" class="btn btn--on-deep" data-mode="book">Book the call</a>
-        <a href="#request" class="close__more">Or answer a few questions first &rarr;</a>
+        <a href="#request" class="btn btn--on-deep">Book the call</a>
       </div>
     </div>
   </section>
@@ -369,7 +368,6 @@ const description =
 
     .close { display: grid; gap: var(--sp-5); justify-items: start; }
     .close__ctas { display: flex; flex-wrap: wrap; gap: var(--sp-5); align-items: center; }
-    .close__more { color: inherit; opacity: .82; font-size: var(--text-base); }
     .close__h {
       font-size: clamp(var(--text-3xl), 5vw, var(--text-5xl));
       font-weight: 600;

@@ -6,7 +6,7 @@
    have one before typing anything; the questions come after, aimed by the
    knowledge that a call already exists. A visitor who would rather explain
    first answers the form and books on the confirmation. Both paths submit the
-   same payload; `bookedFirst` tells the team which order it happened in.
+   same payload.
 
    WHAT IS NOT ASKED ANY MORE. Revenue band and "where are you with this" are
    gone: they existed to feed a score that decided who was offered the session,
@@ -31,37 +31,12 @@ import { ONE_LINER_MIN } from '../lib/intake';
     <p class="eyebrow">Free · 45 minutes · one written recommendation</p>
     <h2 id="q-title">Book your 45 minutes</h2>
     <p class="lede">
-      Pick a time now and answer a few questions after, or answer first and pick
-      a time on the next screen. Shortly after the call you get the report: the
-      one thing we&rsquo;d build first, and why.
-    </p>
-    <div class="q__mode" role="group" aria-label="How would you like to start?">
-      <button type="button" class="btn" id="q-book-first" data-mode="book">Book the call first</button>
-      <button type="button" class="btn btn--ghost" id="q-questions-first" hidden>Answer the questions first</button>
-    </div>
-  </div>
-
-  <!-- ---------------- book-first pane ---------------- -->
-  <div class="q__bookfirst" id="q-bookfirst" hidden>
-    <p class="q__lab-sm">Pick a time</p>
-    <div class="q__sched" id="q-sched-first">
-      <p class="q__sched-note">Loading the calendar&hellip;</p>
-    </div>
-    <p class="q__sched-alt">
-      Calendar not loading? <a href="/book-call" target="_blank" rel="noopener">Open it in a new tab</a>.
-    </p>
-    <p class="q__after">
-      Once you&rsquo;ve picked a time, a few questions follow. They&rsquo;re what
-      aim the research.
-      <button type="button" class="q__linkbtn" id="q-booked-continue">I&rsquo;ve booked - continue to the questions</button>
+      A few questions first, then pick a time on the next screen. Shortly after
+      the call you get the report: the one thing we&rsquo;d build first, and why.
     </p>
   </div>
 
   <form class="q__form" id="q-form" novalidate>
-    <p class="q__booked-note" id="q-booked-note" hidden>
-      You&rsquo;re booked. These few answers are what aim the research before
-      we talk.
-    </p>
 
     <!-- ---------------- step 1 ---------------- -->
     <div class="q__step is-on" data-step="1">
@@ -225,17 +200,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
     </div>
   </div>
 
-  <!-- Booked first: done. -->
-  <div class="q__out" data-out="done" hidden>
-    <h3>You&rsquo;re booked, and we&rsquo;re on it.</h3>
-    <p>
-      We&rsquo;ll research <strong data-fill="company">your company</strong> before
-      we talk. Shortly after the call, the report goes to <strong
-        data-fill="email">the address you gave us</strong>: the one thing
-      we&rsquo;d build first, and why. We&rsquo;re excited to dive in with you.
-    </p>
-  </div>
-
   <div class="q__out" data-out="error" hidden>
     <h3>That didn&rsquo;t go through.</h3>
     <p>
@@ -257,8 +221,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
     font-size: clamp(var(--text-3xl), 4.5vw, var(--text-5xl));
     margin: var(--sp-3) 0 var(--sp-4);
   }
-  .q__head .lede { margin: 0 0 var(--sp-6); }
-  .q__mode { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+  .q__head .lede { margin: 0; }
 
   .q__step { display: none; }
   .q__step.is-on { display: block; }
@@ -270,15 +233,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: var(--sp-6);
-  }
-
-  .q__booked-note {
-    background: var(--accent-soft);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-    padding: var(--sp-4) var(--sp-5);
-    margin: 0 0 var(--sp-8);
-    color: var(--ink-2);
   }
 
   .q__set { border: 0; margin: 0 0 var(--sp-8); padding: 0; }
@@ -451,34 +405,9 @@ import { ONE_LINER_MIN } from '../lib/intake';
     text-align: center;
   }
 
-  .q__bookfirst {
-    margin: 0 0 var(--sp-10);
-    padding: var(--sp-6) var(--sp-5);
-    border: 1px solid var(--rule);
-    border-radius: var(--radius-lg);
-    background: var(--bg-sunk);
-  }
-  .q__bookfirst .q__lab-sm { margin-top: 0; }
-  .q__bookfirst .q__sched { background: var(--bg); }
-  .q__after {
-    margin: var(--sp-5) 0 0;
-    color: var(--ink-2);
-    font-size: var(--text-md);
-  }
-  .q__linkbtn {
-    display: block;
-    margin-top: var(--sp-3);
-    padding: 0;
-    background: none;
-    border: 0;
-    color: var(--accent-deep);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .q__linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Three stacked inputs need air between them; without it the borders touch
+     and the group reads as one tall broken field. */
+  .q__comps { display: grid; gap: var(--sp-3); }
 </style>
 
 <script>
@@ -538,7 +467,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
     };
 
     let calInitialised = false;
-    const mountScheduler = (slot: HTMLElement, bookingUrl: string, onBooked?: () => void) => {
+    const mountScheduler = (slot: HTMLElement, bookingUrl: string) => {
       /* PUBLIC_CAL_LINK is a full URL, because /book-call redirects to it and
          the emails link it. Cal's embed wants just the path. */
       let calLink: string;
@@ -559,12 +488,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
           calInitialised = true;
         }
         Cal('inline', { elementOrSelector: slot, calLink, config: { layout: 'month_view' } });
-        if (onBooked) {
-          /* Cal fires this from inside the embed when a booking completes. The
-             "I've booked" link below the calendar covers the case where it
-             does not arrive. */
-          Cal('on', { action: 'bookingSuccessful', callback: onBooked });
-        }
       } catch {
         slot.classList.remove('is-live');
       }
@@ -583,59 +506,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
       return bookingUrlPromise;
     };
 
-    /* ------------------------------ mode ------------------------------ */
-    let bookedFirst = false;
     const head = $<HTMLDivElement>('.q__head');
-    const bookPane = $<HTMLDivElement>('#q-bookfirst');
-    const bookBtn = $<HTMLButtonElement>('#q-book-first');
-    const questionsBtn = $<HTMLButtonElement>('#q-questions-first');
-    const bookedNote = $<HTMLParagraphElement>('#q-booked-note');
-
-    const showQuestionsAfterBooking = () => {
-      bookedFirst = true;
-      bookPane.hidden = true;
-      form.hidden = false;
-      bookedNote.hidden = false;
-      bookBtn.hidden = true;
-      questionsBtn.hidden = true;
-      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    };
-
-    const openBookFirst = async () => {
-      form.hidden = true;
-      bookPane.hidden = false;
-      bookBtn.hidden = true;
-      questionsBtn.hidden = false;
-      bookPane.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      const url = await getBookingUrl();
-      const slot = $<HTMLDivElement>('#q-sched-first');
-      if (url) {
-        mountScheduler(slot, url, showQuestionsAfterBooking);
-      } else {
-        slot.innerHTML =
-          '<p class="q__sched-note">The calendar is not available right now. Use the link below, or answer the questions and we will send times.</p>';
-      }
-    };
-
-    const openQuestionsFirst = () => {
-      bookPane.hidden = true;
-      form.hidden = false;
-      bookBtn.hidden = false;
-      questionsBtn.hidden = true;
-      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    };
-
-    bookBtn.addEventListener('click', openBookFirst);
-    questionsBtn.addEventListener('click', openQuestionsFirst);
-    $<HTMLButtonElement>('#q-booked-continue').addEventListener('click', showQuestionsAfterBooking);
-
-    /* "Book the call" buttons elsewhere on the page land here in book mode. */
-    document.querySelectorAll<HTMLAnchorElement>('a[data-mode="book"]').forEach((a) => {
-      a.addEventListener('click', () => {
-        /* Let the anchor scroll first, then swap the pane. */
-        setTimeout(openBookFirst, 0);
-      });
-    });
 
     /* ----------------------------- fields ----------------------------- */
     let websiteSource: 'blank' | 'prefilled' | 'user_corrected' = 'blank';
@@ -714,17 +585,15 @@ import { ONE_LINER_MIN } from '../lib/intake';
       competitors: [...form.querySelectorAll<HTMLInputElement>('input[name="competitor"]')]
         .map((i) => i.value.trim())
         .filter(Boolean),
-      bookedFirst,
     });
 
     /* ----------------------------- reveal ----------------------------- */
     const reveal = (
-      pane: 'booked' | 'done' | 'error',
+      pane: 'booked' | 'error',
       opts: { bookingUrl?: string; company?: string; email?: string } = {}
     ) => {
       form.hidden = true;
       head.hidden = true;
-      bookPane.hidden = true;
       const out = document.querySelector<HTMLElement>(`[data-out="${pane}"]`);
       if (out) out.hidden = false;
       if (out && pane !== 'error') {
@@ -784,7 +653,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
         });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
-        reveal(bookedFirst ? 'done' : 'booked', {
+        reveal('booked', {
           bookingUrl: data.bookingUrl,
           company: a.company,
           email: a.email,
