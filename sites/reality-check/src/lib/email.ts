@@ -89,7 +89,7 @@ export function ackEmail(args: {
   const lines = [
     opening,
     `Before we talk, we research ${args.company} from the outside: your website and job postings, what comparable companies have shipped and when, and where your category is moving. We open the call with what we found and you tell us where it's wrong.`,
-    `Shortly after the call you get the report: the one thing we'd build first, why now, and what we'd refuse to build, with the evidence behind it. Yours to keep.`,
+    `Shortly after the call you get the report: the one thing we'd build first, why now, and how we'd do it, with the evidence behind it. Yours to keep.`,
   ];
   const closing = args.bookedFirst
     ? `If anything changes with the time, just reply here.`
@@ -99,7 +99,7 @@ export function ackEmail(args: {
   const showButton = Boolean(args.bookingUrl) && !args.bookedFirst;
 
   return {
-    subject: `Your 45 minutes with SeeSaw Labs — ${args.company}`,
+    subject: `Your 45 minutes with SeeSaw Labs - ${args.company}`,
     text: [...lines, closing, showButton ? args.bookingUrl : '', 'Calvin, SeeSaw Labs']
       .filter(Boolean)
       .join('\n\n'),
@@ -133,7 +133,7 @@ export function readyEmail(args: {
   ];
 
   return {
-    subject: `Your AI analysis — ${args.company}`,
+    subject: `Your AI analysis - ${args.company}`,
     text: [
       ...lines,
       args.link,

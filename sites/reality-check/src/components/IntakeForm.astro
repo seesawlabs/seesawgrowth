@@ -53,7 +53,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
     <p class="q__after">
       Once you&rsquo;ve picked a time, a few questions follow. They&rsquo;re what
       aim the research.
-      <button type="button" class="q__linkbtn" id="q-booked-continue">I&rsquo;ve booked &mdash; continue to the questions</button>
+      <button type="button" class="q__linkbtn" id="q-booked-continue">I&rsquo;ve booked - continue to the questions</button>
     </p>
   </div>
 
@@ -185,14 +185,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
       </p>
 
       <div class="q__ack">
-        <p>
-          The call and the report are both free and both yours to keep. If we
-          end up building together, engagements start at $50k.
-        </p>
-        <label class="q__check">
-          <input type="checkbox" id="q-ack" name="budgetAck" />
-          <span>Makes sense</span>
-        </label>
+        <p>The call and the report are both free and both yours to keep.</p>
       </div>
 
       <div class="q__btns">
@@ -222,7 +215,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
       <p class="q__lab-sm" style="margin-top:0">Book the call</p>
       <div class="q__sched" id="q-sched">
         <p class="q__sched-note">
-          Scheduler embed &mdash; Cal.com, hosted by the team.
+          Scheduler embed - Cal.com, hosted by the team.
           <br />Set <code>PUBLIC_CAL_LINK</code> to go live.
         </p>
       </div>
@@ -237,10 +230,9 @@ import { ONE_LINER_MIN } from '../lib/intake';
     <h3>You&rsquo;re booked, and we&rsquo;re on it.</h3>
     <p>
       We&rsquo;ll research <strong data-fill="company">your company</strong> before
-      we talk. Shortly after the call, the report &mdash; the one thing
-      we&rsquo;d build first, and why &mdash; goes to <strong
-        data-fill="email">the address you gave us</strong>. We&rsquo;re excited
-      to dive in with you.
+      we talk. Shortly after the call, the report goes to <strong
+        data-fill="email">the address you gave us</strong>: the one thing
+      we&rsquo;d build first, and why. We&rsquo;re excited to dive in with you.
     </p>
   </div>
 
@@ -390,22 +382,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
   .q__ack p {
     font-size: var(--text-md);
     color: var(--ink-2);
-    margin-bottom: var(--sp-4);
-  }
-  .q__check {
-    display: flex;
-    gap: var(--sp-3);
-    align-items: center;
-    font-size: var(--text-md);
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .q__check input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent);
-    flex: none;
-    cursor: pointer;
+    margin: 0;
   }
 
   .q__btns {
@@ -733,7 +710,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
       websiteSource,
       industry: industry.value === 'ind_other' ? val('q-ind-other') : industry.value,
       referredBy: val('q-ref') || undefined,
-      budgetAck: $<HTMLInputElement>('#q-ack').checked,
       oneLiner: val('q-oneliner'),
       competitors: [...form.querySelectorAll<HTMLInputElement>('input[name="competitor"]')]
         .map((i) => i.value.trim())
