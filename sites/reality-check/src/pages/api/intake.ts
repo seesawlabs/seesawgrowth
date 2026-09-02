@@ -1,47 +1,36 @@
 /* ---------------------------------------------------------------------------
-   POST /api/intake — someone asks for the package.
+   POST /api/intake — someone asks for the session.
 
-   ONE ENDPOINT FOR ONE OFFER. It replaces /api/exposure-request and
-   /api/reality-check, which existed when the analysis and the call were sold
-   separately. Neither had a real submission other than a deploy smoke test, so
-   they are gone rather than aliased.
-
-   ORDER MATTERS HERE. Log the raw submission first, before scoring, routing or
-   any integration, so a bug anywhere below cannot lose a lead. Then score,
-   then answer the visitor. The integrations fan out without the visitor
-   waiting on them: a Slack outage must not turn into a spinner.
+   ORDER MATTERS HERE. Log the raw submission first, before any integration,
+   so a bug anywhere below cannot lose a lead. Then answer the visitor. The
+   integrations fan out without the visitor waiting on them: a Slack outage
+   must not turn into a spinner.
 
    NOT AWAITED IS NOT THE SAME AS NOT GUARANTEED. A first version fired the
    integrations with a bare `void Promise.allSettled(...)` and returned
-   immediately after. That is a real bug on a serverless platform, not a style
-   choice: Vercel is free to freeze the function the instant the response is
-   sent, and whatever hadn't resolved yet — often the Slack POST — simply never
-   finishes. It is not a crash and there is no error to see; the request that
-   should have alerted the team just goes quiet, and it will not happen on
-   every request, only whichever ones lose the race. `waitUntil`, from
-   `@vercel/functions`, is Vercel's own answer to this: it keeps the function
-   alive until the promise passed to it settles, which is the guarantee this
-   endpoint actually needs.
+   immediately after. On Vercel the function may be frozen the instant the
+   response is sent, and whatever had not resolved — often the Slack POST —
+   simply never finishes. `waitUntil`, from `@vercel/functions`, keeps the
+   function alive until the promise settles.
 
-   THE SCORE DECIDES NOTHING THE VISITOR SEES. Everyone is offered the calendar
-   and everyone gets the ack email; the score tells the operator what to do,
-   including cancelling a meeting a poor-fit lead has booked. A cancelled
-   meeting costs one email. A qualified lead told to wait for one costs the
-   lead. See `operatorAction` in lib/intake.ts.
+   NOTHING IS SCORED. Every lead sees the calendar, every lead gets the ack
+   email, and — when EXPOSURE_AUTORUN is on — every lead is researched the
+   moment it lands, so the two documents the team decides from (the report and
+   the email draft) arrive in Slack without anyone clicking anything. The
+   alert says who they are and what they said. The team decides.
+
+   WHY AUTORUN IS A SWITCH. A run costs a couple of dollars of third-party
+   spend, and a public form gets junk. The switch exists so the team can fall
+   back to the signed "run it" link if the junk ever costs more than the
+   convenience saves. Both paths dispatch the same workflow.
 --------------------------------------------------------------------------- */
 import type { APIRoute } from 'astro';
 
-import {
-  coerceIntake,
-  validate,
-  normalise,
-  scoreIntake,
-  operatorAction,
-  type Intake,
-  type NormalisedIntake,
-} from '../../lib/intake';
+import { coerceIntake, validate, normalise, type Intake, type NormalisedIntake } from '../../lib/intake';
 import { ackEmail, sendEmail } from '../../lib/email';
 import { serverEnv } from '../../lib/server-env';
+import { bookingUrl } from '../../lib/booking';
+import { dispatchAnalysis, DEFAULT_REF } from '../../lib/dispatch';
 import { waitUntil } from '@vercel/functions';
 import { mintActionToken, actionLink } from '../../lib/run-link';
 
@@ -80,21 +69,15 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const intake = normalise(raw as Intake);
-  const verdict = scoreIntake(intake);
 
-  /* Before any judgement, so a bug in the routing below never loses a lead. */
-  console.log(
-    '[intake] submission',
-    JSON.stringify({ intake, score: verdict.total, route: verdict.route, gate: verdict.gate })
-  );
+  /* Before anything else, so a bug below never loses a lead. */
+  console.log('[intake] submission', JSON.stringify({ intake }));
 
   const duplicate = isDuplicate(`${intake.email}|${intake.domain}`);
 
   if (!duplicate) {
-    /* waitUntil, not a bare void promise: see the header comment. Vercel keeps
-       the function alive until this resolves, response already sent. */
     waitUntil(
-      Promise.allSettled([alertOperator(intake, verdict), acknowledge(intake)]).then((rs) =>
+      Promise.allSettled([alertAndRun(intake), acknowledge(intake)]).then((rs) =>
         rs.forEach((r, i) => {
           if (r.status === 'rejected') console.error(`[intake] fanout ${i} failed`, r.reason);
         })
@@ -102,96 +85,97 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  return json({
-    ok: true,
-    duplicate,
-    /* The score and the gate stay server-side. A visitor has no use for a mark
-       out of nine, and it is not a number we would want forwarded. */
-    bookingUrl: bookingUrl(),
-  });
+  return json({ ok: true, duplicate, bookingUrl: bookingUrl() });
 };
 
 /* -- integrations: env-guarded, no-op loudly ---------------------------- */
 
-function bookingUrl(): string | undefined {
-  const link = serverEnv('PUBLIC_CAL_LINK');
-  if (!link) return undefined;
-  const url = new URL(link);
-  url.searchParams.set('hide_event_type_details', '1');
-  return url.toString();
-}
+/** Long pastes are welcome in the form and unwelcome in a Slack message. */
+const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n).trimEnd()} …` : s);
 
 /**
- * The human gate. This message IS the queue until there is a real one, so it
- * carries the score, the routing, and the one-click link to run the analysis.
- * See `fulfilCommands` in lib/intake.ts for the command-line equivalent, kept
- * for when the runner is misconfigured and the link cannot be built.
+ * Tell the team, then start the research.
+ *
+ * The alert goes first and on its own, so a dispatch failure is reported in
+ * the same channel as the lead rather than swallowing it. When autorun is on,
+ * the workflow posts the report and the email draft back into Slack itself
+ * when it finishes; this message just says that is coming.
  */
-async function alertOperator(
-  intake: NormalisedIntake,
-  verdict: ReturnType<typeof scoreIntake>
-): Promise<void> {
+async function alertAndRun(intake: NormalisedIntake): Promise<void> {
   const hook = serverEnv('SLACK_WEBHOOK');
-  const route = verdict.route ?? 'unrouted';
-
-  /* The one-click path. Signed, so the URL is the authorisation: a Slack
-     message gets forwarded and screenshotted, and a run spends real money. */
   const secret = serverEnv('EXPOSURE_LINK_SECRET');
   const origin = serverEnv('PUBLIC_SITE_ORIGIN');
-  const runLink =
-    secret && origin
-      ? actionLink(
-          origin,
-          mintActionToken(
-            {
-              a: 'run',
-              domain: intake.domain,
-              email: intake.email,
-              name: intake.name,
-              company: intake.company,
-              category: intake.oneLiner,
-              peers: intake.competitorDomains,
-              trigger: intake.tried?.slice(0, 200),
-            },
-            secret
-          )
-        )
-      : null;
-  const emoji =
-    route === 'auto_book' ? ':large_green_circle:' : route === 'manual_review' ? ':large_yellow_circle:' : ':white_circle:';
+  const ghToken = serverEnv('GITHUB_DISPATCH_TOKEN');
+  const autorun = (serverEnv('EXPOSURE_AUTORUN') ?? '').toLowerCase() === 'true' || serverEnv('EXPOSURE_AUTORUN') === '1';
+
+  /* Either the research starts now, or the alert carries the link that starts
+     it. Decide before composing so the message can say which. */
+  let runLine: string;
+  if (autorun && ghToken) {
+    const result = await dispatchAnalysis(
+      {
+        mode: 'run',
+        domain: intake.domain,
+        email: intake.email,
+        name: intake.name,
+        company: intake.company,
+        category: intake.oneLiner,
+        peers: intake.competitorDomains,
+        trigger: intake.tried,
+      },
+      { token: ghToken, ref: serverEnv('GITHUB_DISPATCH_REF') ?? DEFAULT_REF }
+    );
+    runLine = result.ok
+      ? ':hourglass_flowing_sand: *Research is running.* The report (PDF) and an email draft post here when it finishes, about ten minutes.'
+      : `:x: *Auto-run failed* (GitHub ${result.status}: ${clip(result.body, 160)}). Run it by hand from \`sites/reality-check\` with \`npm run fulfil\`.`;
+    console.log(`[intake] autorun ${result.ok ? 'dispatched' : `FAILED ${result.status}`} for ${intake.domain}`);
+  } else if (secret && origin) {
+    const link = actionLink(
+      origin,
+      mintActionToken(
+        {
+          a: 'run',
+          domain: intake.domain,
+          email: intake.email,
+          name: intake.name,
+          company: intake.company,
+          category: intake.oneLiner,
+          peers: intake.competitorDomains,
+          trigger: intake.tried?.slice(0, 600),
+        },
+        secret
+      )
+    );
+    runLine = `:arrow_forward: *<${link}|Run the research>* — about ten minutes, then the report and an email draft post back here.`;
+  } else {
+    runLine =
+      ':warning: No runner configured: set EXPOSURE_AUTORUN with GITHUB_DISPATCH_TOKEN, or EXPOSURE_LINK_SECRET and PUBLIC_SITE_ORIGIN for a run link. See DEPLOY.md §3a.';
+  }
 
   const lines = [
-    `${emoji} *New opportunity* — ${intake.company} (${intake.domain})`,
-    `${intake.name}${intake.roleTitle ? `, ${intake.roleTitle}` : ''} · ${intake.email}`,
-    `Score *${verdict.total}/9* · route *${route}*${verdict.icpOverride ? ' · ICP override' : ''}`,
-    verdict.gate ? `Gate: ${verdict.gate}` : null,
+    `:large_blue_circle: *New opportunity* — ${intake.company} (${intake.domain})`,
+    `${intake.name}${intake.roleTitle ? `, ${intake.roleTitle}` : ''} · ${intake.email}${intake.role ? ` · ${intake.role}` : ''}`,
+    intake.bookedFirst
+      ? ':calendar: *Booked the call first*, then answered.'
+      : ':calendar: Offered the calendar on the confirmation screen.',
     '',
     `> ${intake.oneLiner}`,
     intake.industry ? `Industry: ${intake.industry}` : null,
-    intake.stage ? `Stage: ${intake.stage} · revenue ${intake.revenue} · role ${intake.role}` : null,
-    intake.tried ? `Tried already: ${intake.tried.slice(0, 400)}` : null,
+    intake.tried ? `Tried so far / why now: ${clip(intake.tried, 1_500)}` : null,
     intake.competitors.length ? `Named competitors: ${intake.competitors.join(', ')}` : null,
     intake.referredBy ? `Referred by: ${intake.referredBy}` : null,
     intake.domainMismatch
-      ? ':warning: work address on a different domain than the site — confirm the company before crawling'
+      ? ':warning: work address on a different domain than the site — confirm the company before trusting the research'
       : null,
     intake.freeMail ? ':warning: consumer email address' : null,
     '',
-    /* Everyone can book, so the alert has to say what to do about it. */
-    operatorAction(route === 'unrouted' ? null : verdict.route),
-    '',
-    runLink
-      ? `:arrow_forward: *<${runLink}|Run the analysis>* — nine minutes, then it posts back here with a link to read. Nothing is sent until you click again.`
-      : ':warning: No one-click runner: EXPOSURE_LINK_SECRET or PUBLIC_SITE_ORIGIN is unset. Run it from `sites/reality-check` with `npm run fulfil` instead — see DEPLOY.md §3a.',
+    runLine,
   ].filter(Boolean);
 
   if (!hook) {
     console.log('[intake] Slack skipped — SLACK_WEBHOOK unset\n' + lines.join('\n'));
     return;
   }
-  /* Slack answers 200 "ok" or 4xx with a reason like "invalid_payload" or
-     "channel_not_found". Not checking meant a webhook that was configured but
-     rejecting could look identical to one that worked. */
   const res = await fetch(hook, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -206,15 +190,15 @@ async function alertOperator(
 }
 
 /**
- * The "we got it" email, sent immediately to everyone. A lead the team decides
- * against gets a separate note from a person, which is a better rejection than
- * silence from a form and better than an autoresponder trying to soften it.
+ * The "we got it" email, sent immediately to everyone. It says what happens
+ * next in the order that applies to them: booked already, or book now.
  */
 async function acknowledge(intake: NormalisedIntake): Promise<void> {
   const message = ackEmail({
     name: intake.name,
     company: intake.company,
     bookingUrl: bookingUrl(),
+    bookedFirst: Boolean(intake.bookedFirst),
   });
   const result = await sendEmail(intake.email, message, {
     RESEND_TOKEN: serverEnv('RESEND_TOKEN'),

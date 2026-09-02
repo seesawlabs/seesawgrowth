@@ -1,37 +1,33 @@
 /* ---------------------------------------------------------------------------
-   One intake for the package: the brief and the 45-minute session.
+   One intake for the offer: the 45-minute session, and the report after it.
 
-   THERE USED TO BE TWO FORMS. The qualifier scored a lead and booked a call;
-   the brief intake collected the research fields and scored nothing. Selling
-   both halves as one package means one form, and merging them carefully,
-   because the qualifier never asked the two questions the brief depends on
-   most: the one-line description and the competitor names. Five of seven test
-   targets derived a poor category query from their own meta description, and
-   naming competitors took one target from a single evidenced peer to three.
-   A merge that dropped those fields would have degraded every brief quietly.
+   WHAT IS ASKED, AND WHY. Who they are and where the research starts (name,
+   work email, company, website); the two fields that aim the research (the
+   one-line description and the competitors they name); their role and
+   industry, for context; and one open question — what they have already
+   tried and what makes this worth their time now. That question replaced two
+   multiple-choice ones about revenue and stage. Those existed to feed a score,
+   and nothing is scored any more.
 
-   SCORING IS NOT REIMPLEMENTED HERE. `qualifier.ts` is the single source of
-   truth for gates, weights and routing, validated against 14 personas in
-   docs/06 §5. This module composes it with the research fields and the
-   contact details. Never fork that logic (see CLAUDE.md).
+   SCORING IS RETIRED FROM THIS FLOW. `qualifier.ts` still holds the model and
+   its spec (docs/06), but this module no longer calls it: every lead is
+   researched and every lead sees the calendar, and the team reads the alert
+   and decides. Reintroduce a gate deliberately, in one place, or not at all.
+
+   NO CHARACTER LIMITS THE VISITOR CAN HIT. The one-liner keeps a minimum,
+   because a three-word description makes the research about an industry
+   rather than a company. Nothing has a maximum a person would reach; the only
+   ceiling is an abuse cap that exists so a pasted novel cannot break a Slack
+   message or a prompt.
 
    WHAT WE DELIBERATELY STILL DO NOT ASK. Volumes, cycle times, headcount,
-   spend. Those are the blanks the brief leaves open on purpose, and they are
-   the agenda for the session. Asking upfront would trade the reason for the
-   call for arithmetic the reader does better than we do.
-
-   Field order is deliberate. The one-liner sits immediately after the website,
-   while the visitor is still fresh, because a rushed answer there costs more
-   than a rushed answer anywhere else.
+   spend. Those are the questions the call is for.
 --------------------------------------------------------------------------- */
 
 import {
-  evaluate,
   emailDomain,
   isFreeEmail,
   type Answers,
-  type Route,
-  type Verdict,
   /* Extension included on purpose: Vite resolves either, but the check
      scripts run under plain node, which does not. */
 } from './qualifier.ts';
@@ -49,16 +45,16 @@ export interface Intake {
   /** Up to three competitor domains or names. */
   competitors: string[];
 
-  /* what qualifies them; the shapes come from qualifier.ts */
+  /* context, read by a person */
   industry?: string;
   role?: Answers['role'];
   roleTitle?: string;
-  revenue?: Answers['revenue'];
-  stage?: Answers['stage'];
-  /** Free text: what they have already tried. Scored, and read by a human. */
+  /** Free text: what they have tried, and what is driving this now. */
   tried?: string;
   referredBy?: string;
   budgetAck?: boolean;
+  /** True when they picked a time on the calendar before answering. */
+  bookedFirst?: boolean;
 
   attribution?: Record<string, string>;
 }
@@ -68,9 +64,12 @@ export type FieldError = { field: keyof Intake; message: string };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export const ONE_LINER_MIN = 20;
-export const ONE_LINER_MAX = 300;
 export const MAX_COMPETITORS = 3;
-export const TRIED_MAX = 600;
+/**
+ * Not a limit anyone types up to. It stops a pasted document from breaking
+ * the Slack alert or ballooning a prompt, and that is all it is for.
+ */
+export const TEXT_ABUSE_CAP = 20_000;
 
 /**
  * Bare registrable host, or null. Accepts what people paste — a full URL, a
@@ -106,6 +105,7 @@ export function coerceIntake(raw: unknown): Partial<Intake> {
     const s = str(v);
     return (allowed as readonly string[]).includes(s) ? (s as T) : undefined;
   };
+  const bool = (v: unknown) => v === true || v === 'true' || v === 'on' || v === 1 || v === '1';
 
   const list = (v: unknown): string[] => {
     if (Array.isArray(v)) return v.map(str).filter(Boolean);
@@ -128,11 +128,10 @@ export function coerceIntake(raw: unknown): Partial<Intake> {
     industry: str(input.industry) || undefined,
     role: pick(input.role, ['cto', 'ceo', 'caio', 'product', 'other'] as const),
     roleTitle: str(input.roleTitle) || undefined,
-    revenue: pick(input.revenue, ['lt10', '10-50', '50-250', '250-1b', 'gt1b'] as const),
-    stage: pick(input.stage, ['stalled', 'live_flat', 'scoping', 'planning', 'exploring'] as const),
     tried: str(input.tried) || undefined,
     referredBy: str(input.referredBy) || undefined,
-    budgetAck: input.budgetAck === true || input.budgetAck === 'on',
+    budgetAck: bool(input.budgetAck),
+    bookedFirst: bool(input.bookedFirst),
     attribution:
       input.attribution && typeof input.attribution === 'object'
         ? (input.attribution as Record<string, string>)
@@ -144,9 +143,9 @@ export function validate(input: Partial<Intake>): FieldError[] {
   const errors: FieldError[] = [];
   const push = (field: keyof Intake, message: string) => errors.push({ field, message });
 
-  if (!input.name?.trim()) push('name', 'We need a name to address the analysis to.');
+  if (!input.name?.trim()) push('name', 'We need a name to address the report to.');
   const email = (input.email ?? '').trim().toLowerCase();
-  if (!email) push('email', 'We need an email to send the link to.');
+  if (!email) push('email', 'We need an email to send the report to.');
   else if (!EMAIL.test(email)) push('email', 'That does not look like an email address.');
 
   if (!input.company?.trim()) push('company', 'We need the company name.');
@@ -157,23 +156,19 @@ export function validate(input: Partial<Intake>): FieldError[] {
   const one = (input.oneLiner ?? '').trim();
   if (!one) push('oneLiner', 'One line about what you do. This is what we search on.');
   else if (one.length < ONE_LINER_MIN)
-    push('oneLiner', `A few more words, please — at least ${ONE_LINER_MIN} characters.`);
-  else if (one.length > ONE_LINER_MAX)
-    push('oneLiner', `Keep it under ${ONE_LINER_MAX} characters.`);
+    push('oneLiner', `A few more words, please. At least ${ONE_LINER_MIN} characters.`);
+  else if (one.length > TEXT_ABUSE_CAP) push('oneLiner', 'That is longer than a description.');
 
   if ((input.competitors ?? []).filter((c) => c.trim()).length > MAX_COMPETITORS) {
     push('competitors', `Up to ${MAX_COMPETITORS}, please.`);
   }
 
-  /* The qualifying answers. Required, because they decide whether we offer the
-     session at all, and a form that lets someone skip them puts the operator
-     back to guessing from a domain name. */
+  /* Role is the one qualifying answer that stays required: it is context the
+     team reads, and one tap. Nothing else about them is gated. */
   if (!input.role) push('role', 'Pick the closest role.');
-  if (!input.revenue) push('revenue', 'Pick a revenue band.');
-  if (!input.stage) push('stage', 'Pick where the initiative stands.');
 
-  if ((input.tried ?? '').length > TRIED_MAX) {
-    push('tried', `Keep it under ${TRIED_MAX} characters.`);
+  if ((input.tried ?? '').length > TEXT_ABUSE_CAP) {
+    push('tried', 'That is longer than we can take through this form. Email it to us instead.');
   }
 
   return errors;
@@ -207,10 +202,11 @@ export function normalise(input: Intake): NormalisedIntake {
     website: `https://${domain}`,
     domain,
     oneLiner: input.oneLiner.trim(),
+    tried: input.tried?.trim() || undefined,
     competitors,
     /* A competitor may be typed as a name rather than a domain. Only the ones
        that parse as hosts can seed peer discovery; the rest still reach the
-       operator, who can look them up. */
+       team, who can look them up. */
     competitorDomains: competitors
       .map((c) => normaliseSite(c))
       .filter((d): d is string => Boolean(d)),
@@ -220,53 +216,15 @@ export function normalise(input: Intake): NormalisedIntake {
   };
 }
 
-/** The qualifier's verdict for this intake. Thin wrapper, one import site. */
-export function scoreIntake(intake: NormalisedIntake): Verdict {
-  return evaluate({
-    role: intake.role ?? null,
-    roleTitle: intake.roleTitle,
-    revenue: intake.revenue ?? null,
-    stage: intake.stage ?? null,
-    tried: intake.tried,
-    name: intake.name,
-    email: intake.email,
-    company: intake.company,
-    website: intake.website,
-    industry: intake.industry,
-    referredBy: intake.referredBy,
-    budgetAck: intake.budgetAck,
-  });
-}
-
 /**
- * Every lead sees the calendar.
- *
- * The scoring used to decide this: only `auto_book` was shown a scheduler, so
- * the page never put a calendar in front of someone we would then have to turn
- * down. That was reversed deliberately — see docs/10 — because a booked meeting
- * we cancel costs one email, and a qualified lead who was told to wait for one
- * costs the lead. The team reads the score in the alert and handles the few
- * that are not a fit by hand.
- *
- * The verdict is still computed and still recorded. It drives what the operator
- * is told to do, not what the visitor is allowed to do.
- */
-export function operatorAction(route: Route | null): string {
-  if (route === 'auto_book') return 'Good fit. Run the analysis before the call if you can.';
-  if (route === 'manual_review')
-    return 'Secondary ICP. Worth the call; decide on the analysis when you read this.';
-  return 'Not a fit on the numbers. They can still book, so cancel the meeting and send the no.';
-}
-
-/**
- * The two commands that fulfil a request, for pasting out of Slack.
+ * The two commands that fulfil a request by hand, for when the runner is
+ * misconfigured or someone wants to drive it from a laptop.
  *
  * Built from the same spec the form collects, so a field we ask for and a field
- * the pipeline receives cannot diverge. Crucially the first line carries the
- * recipient as well as the research arguments: the second pass reads them back
- * from the run directory, so nobody ever retypes an email address to release a
- * client's analysis. An alert that needs you to go and look something up is an
- * alert that gets ignored; one that needs you to retype an address is worse.
+ * the pipeline receives cannot diverge. The first line carries the recipient as
+ * well as the research arguments: the second pass reads them back from the run
+ * directory, so nobody ever retypes an email address to release a client's
+ * document.
  */
 export function fulfilCommands(i: NormalisedIntake): { generate: string; release: string } {
   const q = (v: string) => JSON.stringify(v);
@@ -279,7 +237,7 @@ export function fulfilCommands(i: NormalisedIntake): { generate: string; release
     `--category ${q(i.oneLiner)}`,
   ];
   for (const d of i.competitorDomains) parts.push(`--peer ${d}`);
-  if (i.tried) parts.push(`--trigger ${q(i.tried.slice(0, 200))}`);
+  if (i.tried) parts.push(`--trigger ${q(i.tried.slice(0, 2_000))}`);
 
   return {
     generate: parts.join(' '),

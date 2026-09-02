@@ -22,6 +22,15 @@ const samples = [
     ackEmail({ name: 'Dana Whitfield', company: 'Cultivate Advisors' }),
   ],
   [
+    'ack (booked first)',
+    ackEmail({
+      name: 'Dana Whitfield',
+      company: 'Cultivate Advisors',
+      bookingUrl: 'https://example.com/book',
+      bookedFirst: true,
+    }),
+  ],
+  [
     'ready',
     readyEmail({
       name: 'Dana Whitfield',

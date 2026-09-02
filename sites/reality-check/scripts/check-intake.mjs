@@ -1,27 +1,25 @@
 #!/usr/bin/env node
 /**
- * Asserts the intake boundary cannot 500.
+ * Asserts the intake boundary cannot 500, and that it asks for what it says.
  *
- * The form is not the only thing that posts to /api/intake. A string
- * where the spec says list crashed `validate` on `.filter is not a function`,
- * which is a 500 on a public lead form — the one failure mode that loses a
- * lead without leaving a trace. These are the shapes that actually arrive:
- * hand-written JSON, a scanner, a stale client, an empty body.
+ * The form is not the only thing that posts to /api/intake. A string where the
+ * spec says list crashed `validate` on `.filter is not a function`, which is a
+ * 500 on a public lead form — the one failure mode that loses a lead without
+ * leaving a trace. These are the shapes that actually arrive: hand-written
+ * JSON, a scanner, a stale client, an empty body.
+ *
+ * Scoring is retired from this flow (docs/00-status.md, 2026-08-31), so there
+ * are no routing assertions here any more. What is asserted instead: that a
+ * lead without a revenue band or a stage answer is accepted, that long free
+ * text is accepted, and that `bookedFirst` survives the boundary — because the
+ * alert tells the team which order the lead did things in.
  *
  *   npm run check:intake
  */
-import {
-  coerceIntake,
-  validate,
-  normalise,
-  scoreIntake,
-  operatorAction,
-  fulfilCommands,
-} from '../src/lib/intake.ts';
+import { coerceIntake, validate, normalise, fulfilCommands } from '../src/lib/intake.ts';
 
-/* A submission that should pass cleanly. The qualifying answers are required
-   now: they decide whether the session is offered at all, and a form that lets
-   someone skip them puts the operator back to guessing from a domain name. */
+/* A submission that should pass cleanly. No revenue, no stage: neither is
+   asked any more. Role stays, because it is one tap and the team reads it. */
 const good = {
   name: 'Dana Whitfield',
   email: 'dana@cultivateadvisors.com',
@@ -29,18 +27,20 @@ const good = {
   website: 'cultivateadvisors.com',
   oneLiner: 'Monthly one-to-one business advising for owner-operated companies.',
   role: 'ceo',
-  revenue: '50-250',
-  stage: 'stalled',
 };
 
 const cases = [
-  ['the form\'s own shape', { ...good, competitors: ['eosworldwide.com', 'vistage.com'] }, 0],
+  ["the form's own shape", { ...good, competitors: ['eosworldwide.com', 'vistage.com'] }, 0],
+  ['no revenue, no stage — accepted', { ...good }, 0],
   ['competitors as a comma string', { ...good, competitors: 'eosworldwide.com, vistage.com' }, 0],
   ['competitors as newlines', { ...good, competitors: 'a.com\nb.com\n' }, 0],
   ['competitors as an object', { ...good, competitors: { a: 1 } }, 0],
   ['competitors as mixed junk', { ...good, competitors: [1, null, 'ok.com'] }, 0],
   ['four competitors', { ...good, competitors: ['a.com', 'b.com', 'c.com', 'd.com'] }, 1],
   ['numbers where strings go', { ...good, name: 42, company: 7 }, 0],
+  ['a long answer is not a problem', { ...good, tried: 'We tried things. '.repeat(400) }, 0],
+  ['a one-liner well over the old 300 cap', { ...good, oneLiner: 'x'.repeat(1_200) }, 0],
+  ['a pasted novel is refused', { ...good, tried: 'x'.repeat(25_000) }, 1],
   ['empty object', {}, 5],
   ['a bare string', 'nope', 5],
   ['null', null, 5],
@@ -65,47 +65,27 @@ for (const [label, body, expectedErrors] of cases) {
   const n = errors.length;
   /* Exact counts on the well-formed cases; a floor on the empty ones, since the
      point there is "rejected with field errors", not which fields. */
-  const ok = expectedErrors === 0 ? n === 0 : n >= expectedErrors;
+  const ok = expectedErrors === 0 ? n === 0 : expectedErrors === 1 ? n === 1 : n >= expectedErrors;
   console.log(`  ${ok ? 'ok     ' : 'FAIL   '} ${label} (${n} error${n === 1 ? '' : 's'})`);
   if (!ok) failed += 1;
 }
 
-/* -- routing: what the operator is told ------------------------------------
-   Every lead is shown the calendar now, so the score no longer gates anything
-   the visitor sees. It still has to be right, because it decides what the team
-   is told to do — including that a poor-fit lead has a meeting to cancel. */
+/* -- what reaches the team ------------------------------------------------ */
 
-const routed = [
-  ['a stalled mid-market CTO', { ...good, role: 'cto', revenue: '250-1b', stage: 'stalled', budgetAck: true }, 'auto_book'],
-  ['ICP override: stalled beats a low score', { ...good, role: 'other', revenue: '50-250', stage: 'stalled', budgetAck: false }, 'auto_book'],
-  ['secondary ICP is capped at review', { ...good, role: 'ceo', revenue: '10-50', stage: 'stalled', budgetAck: true }, 'manual_review'],
-  ['under $10M is not a fit', { ...good, role: 'ceo', revenue: 'lt10', stage: 'stalled', budgetAck: true }, 'not_yet'],
-  ['just exploring, no budget nod', { ...good, role: 'other', revenue: '50-250', stage: 'exploring', budgetAck: false }, 'not_yet'],
-];
-
-for (const [label, body, expected] of routed) {
-  const coerced = coerceIntake(body);
-  const errors = validate(coerced);
-  if (errors.length) {
-    check(label, false, `fixture does not validate: ${errors.map((e) => e.field).join(', ')}`);
-    continue;
-  }
-  const verdict = scoreIntake(normalise(coerced));
-  check(`${label} → ${expected}`, verdict.route === expected, `got ${verdict.route}`);
+{
+  const yes = normalise(coerceIntake({ ...good, bookedFirst: true }));
+  const str = normalise(coerceIntake({ ...good, bookedFirst: 'true' }));
+  const no = normalise(coerceIntake({ ...good }));
+  check('bookedFirst true survives the boundary', yes.bookedFirst === true);
+  check('bookedFirst as the string "true" is true', str.bookedFirst === true);
+  check('bookedFirst absent is false', no.bookedFirst === false);
 }
 
-/* The one instruction that has to be there: a poor-fit lead can book, so
-   somebody has to be told to cancel it. */
-check(
-  'a not_yet lead is flagged for cancellation',
-  /cancel the meeting/i.test(operatorAction('not_yet')),
-  operatorAction('not_yet')
-);
-check(
-  'a good-fit lead is not',
-  !/cancel/i.test(operatorAction('auto_book')),
-  operatorAction('auto_book')
-);
+{
+  const long = 'A pilot stalled at integration. '.repeat(200);
+  const intake = normalise(coerceIntake({ ...good, tried: long }));
+  check('long free text reaches the team intact', intake.tried === long.trim(), `${intake.tried?.length} chars`);
+}
 
 /* The competitor domains are what seed peer discovery, so a name that is not a
    host must not silently become one. */
@@ -118,9 +98,9 @@ check(
   );
 }
 
-/* The alert's two commands are the whole operator interface. If the recipient
-   stops riding along in the first one, releasing goes back to retyping an email
-   address by hand, which is how a client's analysis reaches a stranger. */
+/* The hand-run commands are the fallback operator interface. If the recipient
+   stops riding along in the first one, releasing goes back to retyping an
+   email address by hand, which is how a client's document reaches a stranger. */
 {
   const intake = normalise(
     coerceIntake({ ...good, email: 'dana@cultivateadvisors.com', competitors: ['eosworldwide.com'] })
@@ -130,15 +110,11 @@ check(
   check('the run command carries the one-liner', generate.includes('--category'), generate);
   check('a named competitor is seeded', generate.includes('--peer eosworldwide.com'), generate);
   check('the release command needs only the domain', /--domain \S+ --release/.test(release), release);
-  check(
-    'the release command carries no address to mistype',
-    !release.includes('@'),
-    release
-  );
+  check('the release command carries no address to mistype', !release.includes('@'), release);
 }
 
 if (failed > 0) {
-  console.log(`\n${failed} case(s) failed.\n`);
+  console.log(`\n${failed} check(s) failed.\n`);
   process.exit(1);
 }
-console.log('\nIntake boundary and routing hold.\n');
+console.log('\nIntake boundary holds.\n');

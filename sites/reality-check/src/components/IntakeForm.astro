@@ -1,28 +1,74 @@
 ---
-import { ROLES, REVENUE_BANDS, STAGES, INDUSTRY_GROUPS } from '../lib/qualifier';
-import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
+/* ---------------------------------------------------------------------------
+   The intake: two ways in, one form, one calendar.
+
+   BOOK FIRST OR ANSWER FIRST. A visitor who wants a time on the calendar can
+   have one before typing anything; the questions come after, aimed by the
+   knowledge that a call already exists. A visitor who would rather explain
+   first answers the form and books on the confirmation. Both paths submit the
+   same payload; `bookedFirst` tells the team which order it happened in.
+
+   WHAT IS NOT ASKED ANY MORE. Revenue band and "where are you with this" are
+   gone: they existed to feed a score that decided who was offered the session,
+   and nobody is gated now. Every lead is researched and the team decides. The
+   one open question that stays is what they have already tried, because it
+   aims the research better than any dropdown did.
+
+   NO CHARACTER LIMITS ON THE OPEN TEXT. Someone who wants to write four
+   paragraphs about what they tried is the best lead on the page. The only
+   ceiling is a server-side abuse cap no human will reach.
+
+   THE DEFAULT PATH NEEDS NO JAVASCRIPT TO BE VISIBLE. The form shows by
+   default; the book-first pane is what the script reveals. A visitor whose
+   script fails still sees a working form.
+--------------------------------------------------------------------------- */
+import { ROLES, INDUSTRY_GROUPS } from '../lib/qualifier';
+import { ONE_LINER_MIN } from '../lib/intake';
 ---
 
 <section class="q" id="qualifier" aria-labelledby="q-title">
   <div class="q__head">
-    <h2 id="q-title">Get your analysis and your session</h2>
+    <p class="eyebrow">Free · 45 minutes · one written recommendation</p>
+    <h2 id="q-title">Book your 45 minutes</h2>
     <p class="lede">
-      A researched analysis of where AI pays off in your business, and 45
-      minutes with the people who wrote it. Both free, both yours to keep.
+      Pick a time now and answer a few questions after, or answer first and pick
+      a time on the next screen. Shortly after the call you get the report: the
+      one thing we&rsquo;d build first, and why.
     </p>
-    <p class="q__micro">
-      Eleven questions, most of them multiple choice. Two minutes, and the
-      answers are what aim the research.
+    <div class="q__mode" role="group" aria-label="How would you like to start?">
+      <button type="button" class="btn" id="q-book-first" data-mode="book">Book the call first</button>
+      <button type="button" class="btn btn--ghost" id="q-questions-first" hidden>Answer the questions first</button>
+    </div>
+  </div>
+
+  <!-- ---------------- book-first pane ---------------- -->
+  <div class="q__bookfirst" id="q-bookfirst" hidden>
+    <p class="q__lab-sm">Pick a time</p>
+    <div class="q__sched" id="q-sched-first">
+      <p class="q__sched-note">Loading the calendar&hellip;</p>
+    </div>
+    <p class="q__sched-alt">
+      Calendar not loading? <a href="/book-call" target="_blank" rel="noopener">Open it in a new tab</a>.
+    </p>
+    <p class="q__after">
+      Once you&rsquo;ve picked a time, a few questions follow. They&rsquo;re what
+      aim the research.
+      <button type="button" class="q__linkbtn" id="q-booked-continue">I&rsquo;ve booked &mdash; continue to the questions</button>
     </p>
   </div>
 
   <form class="q__form" id="q-form" novalidate>
+    <p class="q__booked-note" id="q-booked-note" hidden>
+      You&rsquo;re booked. These few answers are what aim the research before
+      we talk.
+    </p>
+
     <!-- ---------------- step 1 ---------------- -->
     <div class="q__step is-on" data-step="1">
-      <p class="q__stepline">Step 1 of 3</p>
+      <p class="q__stepline">Step 1 of 2</p>
 
       <fieldset class="q__set">
-        <legend>What's your role?</legend>
+        <legend>What&rsquo;s your role?</legend>
         <div class="q__opts" id="q-roles">
           {ROLES.map((r) => (
             <label class="q__opt">
@@ -32,60 +78,23 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
           ))}
         </div>
         <div class="q__row" id="q-title-row" hidden>
-          <label class="q__lab" for="q-role-title">What's your title?</label>
+          <label class="q__lab" for="q-role-title">What&rsquo;s your title?</label>
           <input type="text" id="q-role-title" name="roleTitle" placeholder="e.g. Chief Medical Officer" />
         </div>
         <p class="q__err" id="q-err-role" role="alert">Pick the closest one.</p>
       </fieldset>
 
       <fieldset class="q__set">
-        <legend>Roughly, what's your annual revenue?</legend>
-        <div class="q__opts">
-          {REVENUE_BANDS.map((b) => (
-            <label class="q__opt">
-              <input type="radio" name="revenue" value={b.value} />
-              <span>{b.label}</span>
-            </label>
-          ))}
-        </div>
-        <p class="q__err" id="q-err-revenue" role="alert">
-          We need a rough band to prepare properly.
-        </p>
-      </fieldset>
-
-      <fieldset class="q__set">
-        <legend>Where are you with this?</legend>
-        <div class="q__opts">
-          {STAGES.map((s) => (
-            <label class="q__opt">
-              <input type="radio" name="stage" value={s.value} />
-              <span>{s.label}</span>
-            </label>
-          ))}
-        </div>
-        <p class="q__err" id="q-err-stage" role="alert">Pick whichever is closest.</p>
-      </fieldset>
-
-      <div class="q__btns">
-        <button type="button" class="btn" data-go="2">Continue</button>
-      </div>
-    </div>
-
-    <!-- ---------------- step 2 ---------------- -->
-    <div class="q__step" data-step="2">
-      <p class="q__stepline">Step 2 of 3</p>
-
-      <fieldset class="q__set">
         <legend>
-          What have you tried so far?
+          What have you tried so far, and what&rsquo;s making this worth your time now?
           <span class="q__optional">Optional</span>
         </legend>
         <p class="q__hint">
-          A sentence is plenty. Skip it if you'd rather just talk — we'll cover
-          it on the call.
+          In your words. A pilot that stalled, a board asking for a number, a
+          manual process that broke. As long or as short as you like.
         </p>
-        <textarea id="q-tried" name="tried" rows="5"
-          placeholder="Pilot stalled at integration."></textarea>
+        <textarea id="q-tried" name="tried" rows="6"
+          placeholder="We built a prototype that works for our own team, and now we need to know whether it's a product."></textarea>
       </fieldset>
 
       <fieldset class="q__set">
@@ -94,8 +103,8 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
           <span class="q__optional">Optional, up to 3</span>
         </legend>
         <p class="q__hint">
-          You know your market better than our search does. We look up everyone
-          you name here, and naming even one sharpens the comparison a lot.
+          You know your market better than our search does. Naming even one
+          sharpens the comparison a lot.
         </p>
         <div class="q__comps">
           <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 1" />
@@ -105,14 +114,13 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       </fieldset>
 
       <div class="q__btns">
-        <button type="button" class="btn" data-go="3">Continue</button>
-        <button type="button" class="btn btn--ghost" data-go="1">Back</button>
+        <button type="button" class="btn" data-go="2">Continue</button>
       </div>
     </div>
 
-    <!-- ---------------- step 3 ---------------- -->
-    <div class="q__step" data-step="3">
-      <p class="q__stepline">Step 3 of 3</p>
+    <!-- ---------------- step 2 ---------------- -->
+    <div class="q__step" data-step="2">
+      <p class="q__stepline">Step 2 of 2</p>
 
       <div class="q__row">
         <label class="q__lab" for="q-name">Full name</label>
@@ -138,11 +146,11 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
 
       <div class="q__row">
         <label class="q__lab" for="q-oneliner">In one line, what does the company do?</label>
-        <textarea id="q-oneliner" name="oneLiner" rows="2" maxlength={ONE_LINER_MAX}
+        <textarea id="q-oneliner" name="oneLiner" rows="2"
           placeholder="Specialty pharmacy handling prior authorization and patient onboarding for prescribers"></textarea>
         <p class="q__hint">
-          Your words, not your homepage's. This is what we search on, and it
-          decides whether the analysis is about your market or your industry.
+          Your words, not your homepage&rsquo;s. This is what we search on, and
+          it decides whether the research is about your market or your industry.
         </p>
         <p class="q__err" id="q-err-oneliner" role="alert">
           A sentence, please. At least {ONE_LINER_MIN} characters.
@@ -152,7 +160,7 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       <div class="q__row">
         <label class="q__lab" for="q-industry">Industry</label>
         <select id="q-industry" name="industry">
-          <option value="">Select one…</option>
+          <option value="">Select one&hellip;</option>
           {INDUSTRY_GROUPS.map((g) => (
             <optgroup label={g.group}>
               {g.options.map((o) => <option value={o.value}>{o.label}</option>)}
@@ -178,8 +186,8 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
 
       <div class="q__ack">
         <p>
-          The analysis and the session are both free and both yours to keep.
-          If we end up building together, engagements start at $50k.
+          The call and the report are both free and both yours to keep. If we
+          end up building together, engagements start at $50k.
         </p>
         <label class="q__check">
           <input type="checkbox" id="q-ack" name="budgetAck" />
@@ -188,12 +196,12 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       </div>
 
       <div class="q__btns">
-        <button type="submit" class="btn" id="q-submit">Get my analysis and session</button>
-        <button type="button" class="btn btn--ghost" data-go="2">Back</button>
+        <button type="submit" class="btn" id="q-submit">Send it</button>
+        <button type="button" class="btn btn--ghost" data-go="1">Back</button>
       </div>
 
       <p class="q__privacy">
-        We'll only use this to prepare your analysis and your session. <a
+        We&rsquo;ll only use this to prepare for the call and write your report. <a
           href="/privacy">Privacy</a>.
       </p>
     </div>
@@ -201,21 +209,17 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
 
   <!-- ---------------- outcomes ---------------- -->
 
+  <!-- Answered first: now book. -->
   <div class="q__out" data-out="booked" hidden>
-    <h3>Your analysis of <span data-fill="company">your company</span> is on its way.</h3>
+    <h3>Got it. Now pick your 45 minutes.</h3>
     <p>
-      It&rsquo;ll be ready soon. We&rsquo;ll email a private link to <strong
-        data-fill="email">the address you gave us</strong> &mdash; we&rsquo;re
-      excited to dive in with you.
+      We&rsquo;ll research <strong data-fill="company">your company</strong> before
+      we talk, and the report follows shortly after the call. Confirmation and
+      details go to <strong data-fill="email">the address you gave us</strong>.
     </p>
 
     <div class="q__next">
-      <p class="q__lab-sm" style="margin-top:0">Book the other half now</p>
-      <p>
-        The 45 minutes doesn&rsquo;t wait on the document. Booking now is the
-        better order &mdash; we&rsquo;ll have read it by the time we talk, and the
-        good times go first.
-      </p>
+      <p class="q__lab-sm" style="margin-top:0">Book the call</p>
       <div class="q__sched" id="q-sched">
         <p class="q__sched-note">
           Scheduler embed &mdash; Cal.com, hosted by the team.
@@ -226,37 +230,25 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         Calendar not loading? <a href="/book-call" id="q-sched-alt-link" target="_blank" rel="noopener">Open it in a new tab</a>.
       </p>
     </div>
+  </div>
 
-    <p class="q__lab-sm">What the 45 minutes is</p>
-    <ul class="q__list">
-      <li>
-        <strong>We open with what we found.</strong> No twenty minutes of
-        background. You tell us where our read is wrong.
-      </li>
-      <li>
-        <strong>We put the questions to you.</strong> The ones that would change
-        our recommendation, which the analysis names explicitly.
-      </li>
-      <li>
-        <strong>We say what we&rsquo;ve watched fail.</strong> Nobody publishes
-        the pilot that died in security review. We&rsquo;ve seen those.
-      </li>
-      <li>
-        <strong>You leave with a sequence.</strong> What to do first, what to
-        park, what has to be true before the next thing starts.
-      </li>
-    </ul>
+  <!-- Booked first: done. -->
+  <div class="q__out" data-out="done" hidden>
+    <h3>You&rsquo;re booked, and we&rsquo;re on it.</h3>
     <p>
-      You&rsquo;ll be talking to the team that would actually do the work.
-      If there&rsquo;s no fit we&rsquo;ll say so inside the 45 minutes.
+      We&rsquo;ll research <strong data-fill="company">your company</strong> before
+      we talk. Shortly after the call, the report &mdash; the one thing
+      we&rsquo;d build first, and why &mdash; goes to <strong
+        data-fill="email">the address you gave us</strong>. We&rsquo;re excited
+      to dive in with you.
     </p>
   </div>
 
   <div class="q__out" data-out="error" hidden>
-    <h3>That didn't go through.</h3>
+    <h3>That didn&rsquo;t go through.</h3>
     <p>
       Something on our end failed, not yours. Email <a
-        href="mailto:hello@seesawlabs.com">hello@seesawlabs.com</a> and we'll
+        href="mailto:hello@seesawlabs.com">hello@seesawlabs.com</a> and we&rsquo;ll
       sort it out, or try again in a minute.
     </p>
   </div>
@@ -268,12 +260,13 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     margin-inline: auto;
     padding-inline: var(--gutter);
   }
-  .q__head { margin-bottom: var(--sp-10); }
+  .q__head { margin-bottom: var(--sp-8); }
   .q__head h2 {
     font-size: clamp(var(--text-3xl), 4.5vw, var(--text-5xl));
-    margin-bottom: var(--sp-4);
+    margin: var(--sp-3) 0 var(--sp-4);
   }
-  .q__micro { color: var(--muted); font-size: var(--text-md); margin-top: var(--sp-3); }
+  .q__head .lede { margin: 0 0 var(--sp-6); }
+  .q__mode { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 
   .q__step { display: none; }
   .q__step.is-on { display: block; }
@@ -285,6 +278,15 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: var(--sp-6);
+  }
+
+  .q__booked-note {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    padding: var(--sp-4) var(--sp-5);
+    margin: 0 0 var(--sp-8);
+    color: var(--ink-2);
   }
 
   .q__set { border: 0; margin: 0 0 var(--sp-8); padding: 0; }
@@ -418,7 +420,7 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     margin-top: var(--sp-5);
   }
 
-  /* -- outcomes -- */
+  /* -- outcomes and the calendar -- */
   .q__out h3 {
     font-size: clamp(var(--text-2xl), 3.6vw, var(--text-4xl));
     margin-bottom: var(--sp-4);
@@ -432,9 +434,6 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     color: var(--muted);
     margin: var(--sp-6) 0 var(--sp-3);
   }
-  .q__list { margin: 0 0 var(--sp-6); padding-left: var(--sp-5); color: var(--ink-2); }
-  .q__list li { margin-bottom: var(--sp-3); }
-  .q__list li::marker { color: var(--accent); }
 
   .q__sched {
     border: 1px dashed var(--rule);
@@ -449,7 +448,6 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     color: var(--muted);
     margin: 0;
   }
-  .q__sched iframe { width: 100%; min-height: 640px; border: 0; }
   /* Once Cal's embed mounts it owns this box: drop the placeholder chrome and
      give it a height to lay out in, since the inline embed takes the size of
      its container rather than declaring its own. */
@@ -461,8 +459,6 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     overflow: hidden;
   }
 
-  /* The booking is the one action on this screen, so it gets a frame around it
-     rather than sitting in the flow of the reassurance copy. */
   .q__next {
     margin: var(--sp-8) 0;
     padding: var(--sp-6) var(--sp-5);
@@ -477,6 +473,35 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
     margin: var(--sp-4) 0 0;
     text-align: center;
   }
+
+  .q__bookfirst {
+    margin: 0 0 var(--sp-10);
+    padding: var(--sp-6) var(--sp-5);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-lg);
+    background: var(--bg-sunk);
+  }
+  .q__bookfirst .q__lab-sm { margin-top: 0; }
+  .q__bookfirst .q__sched { background: var(--bg); }
+  .q__after {
+    margin: var(--sp-5) 0 0;
+    color: var(--ink-2);
+    font-size: var(--text-md);
+  }
+  .q__linkbtn {
+    display: block;
+    margin-top: var(--sp-3);
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--accent-deep);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .q__linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 
 <script>
@@ -495,116 +520,18 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       return el ? el.value.trim() : '';
     };
 
-    /* Website is required but pre-filled from the email domain when we can.
-       websiteSource tells us later how often the guess was wrong. */
-    let websiteSource: 'blank' | 'prefilled' | 'user_corrected' = 'blank';
-    const website = $<HTMLInputElement>('#q-website');
-    const websiteHint = $<HTMLParagraphElement>('#q-website-hint');
-
-    const prefillWebsite = () => {
-      const d = emailDomain(val('q-email'));
-      const usable = d && d.includes('.') && !isFreeEmail(d);
-      if (usable && (website.value === '' || websiteSource === 'prefilled')) {
-        website.value = d;
-        website.classList.add('is-prefilled');
-        websiteSource = 'prefilled';
-        websiteHint.textContent = 'Pre-filled from your email. Correct it if that’s not right.';
-      } else if (!usable && websiteSource === 'prefilled') {
-        website.value = '';
-        website.classList.remove('is-prefilled');
-        websiteSource = 'blank';
-        websiteHint.textContent = 'Where the research starts.';
-      }
-    };
-
-    $<HTMLInputElement>('#q-email').addEventListener('blur', prefillWebsite);
-    $<HTMLInputElement>('#q-email').addEventListener('change', prefillWebsite);
-
-    website.addEventListener('input', () => {
-      if (websiteSource === 'prefilled') {
-        websiteSource = 'user_corrected';
-        website.classList.remove('is-prefilled');
-        websiteHint.textContent = 'Where the research starts.';
-      }
-    });
-
-    /* conditional reveals */
-    $<HTMLDivElement>('#q-roles').addEventListener('change', () => {
-      $<HTMLDivElement>('#q-title-row').hidden = pick('role') !== 'other';
-    });
-    const industry = $<HTMLSelectElement>('#q-industry');
-    industry.addEventListener('change', () => {
-      $<HTMLDivElement>('#q-ind-other-row').hidden = industry.value !== 'ind_other';
-    });
-
-    /* steps */
-    const clearErrs = () =>
-      form.querySelectorAll('.q__err').forEach((e) => e.classList.remove('is-on'));
-    const showErr = (id: string) => document.getElementById(id)?.classList.add('is-on');
-
-    const show = (n: number) => {
-      form.querySelectorAll<HTMLElement>('.q__step').forEach((s) => {
-        s.classList.toggle('is-on', s.dataset.step === String(n));
-      });
-      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    };
-
-    form.querySelectorAll<HTMLButtonElement>('[data-go]').forEach((b) => {
-      b.addEventListener('click', () => {
-        clearErrs();
-        const target = Number(b.dataset.go);
-        if (target === 2) {
-          let bad = false;
-          if (!pick('role')) { showErr('q-err-role'); bad = true; }
-          if (!pick('revenue')) { showErr('q-err-revenue'); bad = true; }
-          if (!pick('stage')) { showErr('q-err-stage'); bad = true; }
-          if (bad) return;
-        }
-        // Step 2 has no validation — the text box is optional by design.
-        show(target);
-      });
-    });
-
-    /* The qualifier's answers plus the two fields the analysis is aimed with.
-       Scoring happens server-side only: the visitor's outcome no longer depends
-       on it, so there is nothing for the browser to compute. */
-    const collect = () => ({
-      role: pick('role') as Answers['role'],
-      roleTitle: val('q-role-title') || undefined,
-      revenue: pick('revenue') as Answers['revenue'],
-      stage: pick('stage') as Answers['stage'],
-      tried: val('q-tried') || undefined,
-      name: val('q-name'),
-      email: val('q-email'),
-      company: val('q-company'),
-      website: val('q-website'),
-      websiteSource,
-      industry: industry.value === 'ind_other' ? val('q-ind-other') : industry.value,
-      referredBy: val('q-ref') || undefined,
-      budgetAck: $<HTMLInputElement>('#q-ack').checked,
-      oneLiner: val('q-oneliner'),
-      competitors: [...form.querySelectorAll<HTMLInputElement>('input[name="competitor"]')]
-        .map((i) => i.value.trim())
-        .filter(Boolean),
-    });
-
     /* ---------------------------------------------------------------------
        The scheduler.
 
-       Pointing an iframe at a Cal.com booking URL is not an embed, and the
-       failure is quiet: Cal renders its meta column — avatar, host, event
-       title — and no calendar at all, which reads as a broken or empty
-       calendar rather than a misuse of the page. Cal's embed API mounts the
-       real booker, sizes itself, and is the supported path.
-
-       Loaded on reveal rather than on page load: most visitors never reach
-       the confirmation, and this is a third-party script.
+       Pointing an iframe at a Cal.com booking URL is not an embed — Cal renders
+       its meta column and no calendar. Cal's embed API mounts the real booker.
+       Loaded on demand rather than on page load: most visitors never reach a
+       calendar, and this is a third-party script.
     --------------------------------------------------------------------- */
     const CAL_EMBED_SRC = 'https://app.cal.com/embed/embed.js';
 
     /* Cal's own loader stub, kept close to their published snippet. It queues
-       calls made before embed.js arrives, which is why we can call Cal()
-       immediately below without waiting on a load event. */
+       calls made before embed.js arrives. */
     const loadCal = () => {
       const w = window as any;
       if (w.Cal) return;
@@ -633,12 +560,10 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       };
     };
 
-    const mountScheduler = (bookingUrl: string) => {
-      const slot = document.getElementById('q-sched');
-      if (!slot) return;
-
+    let calInitialised = false;
+    const mountScheduler = (slot: HTMLElement, bookingUrl: string, onBooked?: () => void) => {
       /* PUBLIC_CAL_LINK is a full URL, because /book-call redirects to it and
-         the delivery email links it. Cal's embed wants just the path. */
+         the emails link it. Cal's embed wants just the path. */
       let calLink: string;
       try {
         calLink = new URL(bookingUrl).pathname.replace(/^\/+|\/+$/g, '');
@@ -652,57 +577,199 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
       try {
         loadCal();
         const Cal = (window as any).Cal;
-        Cal('init');
-        Cal('inline', {
-          elementOrSelector: slot,
-          calLink,
-          config: { layout: 'month_view' },
-        });
+        if (!calInitialised) {
+          Cal('init');
+          calInitialised = true;
+        }
+        Cal('inline', { elementOrSelector: slot, calLink, config: { layout: 'month_view' } });
+        if (onBooked) {
+          /* Cal fires this from inside the embed when a booking completes. The
+             "I've booked" link below the calendar covers the case where it
+             does not arrive. */
+          Cal('on', { action: 'bookingSuccessful', callback: onBooked });
+        }
       } catch {
-        /* Leave the block empty rather than half-mounted; the "open it in a
-           new tab" line below is already visible and still works. */
         slot.classList.remove('is-live');
       }
     };
 
+    /* Fetched at request time rather than inlined at build, so repointing the
+       calendar is a dashboard change and not a deploy. */
+    let bookingUrlPromise: Promise<string | null> | null = null;
+    const getBookingUrl = () => {
+      if (!bookingUrlPromise) {
+        bookingUrlPromise = fetch('/api/booking')
+          .then((r) => (r.ok ? r.json() : { bookingUrl: null }))
+          .then((d) => (d && typeof d.bookingUrl === 'string' ? d.bookingUrl : null))
+          .catch(() => null);
+      }
+      return bookingUrlPromise;
+    };
+
+    /* ------------------------------ mode ------------------------------ */
+    let bookedFirst = false;
+    const head = $<HTMLDivElement>('.q__head');
+    const bookPane = $<HTMLDivElement>('#q-bookfirst');
+    const bookBtn = $<HTMLButtonElement>('#q-book-first');
+    const questionsBtn = $<HTMLButtonElement>('#q-questions-first');
+    const bookedNote = $<HTMLParagraphElement>('#q-booked-note');
+
+    const showQuestionsAfterBooking = () => {
+      bookedFirst = true;
+      bookPane.hidden = true;
+      form.hidden = false;
+      bookedNote.hidden = false;
+      bookBtn.hidden = true;
+      questionsBtn.hidden = true;
+      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+
+    const openBookFirst = async () => {
+      form.hidden = true;
+      bookPane.hidden = false;
+      bookBtn.hidden = true;
+      questionsBtn.hidden = false;
+      bookPane.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const url = await getBookingUrl();
+      const slot = $<HTMLDivElement>('#q-sched-first');
+      if (url) {
+        mountScheduler(slot, url, showQuestionsAfterBooking);
+      } else {
+        slot.innerHTML =
+          '<p class="q__sched-note">The calendar is not available right now. Use the link below, or answer the questions and we will send times.</p>';
+      }
+    };
+
+    const openQuestionsFirst = () => {
+      bookPane.hidden = true;
+      form.hidden = false;
+      bookBtn.hidden = false;
+      questionsBtn.hidden = true;
+      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+
+    bookBtn.addEventListener('click', openBookFirst);
+    questionsBtn.addEventListener('click', openQuestionsFirst);
+    $<HTMLButtonElement>('#q-booked-continue').addEventListener('click', showQuestionsAfterBooking);
+
+    /* "Book the call" buttons elsewhere on the page land here in book mode. */
+    document.querySelectorAll<HTMLAnchorElement>('a[data-mode="book"]').forEach((a) => {
+      a.addEventListener('click', () => {
+        /* Let the anchor scroll first, then swap the pane. */
+        setTimeout(openBookFirst, 0);
+      });
+    });
+
+    /* ----------------------------- fields ----------------------------- */
+    let websiteSource: 'blank' | 'prefilled' | 'user_corrected' = 'blank';
+    const website = $<HTMLInputElement>('#q-website');
+    const websiteHint = $<HTMLParagraphElement>('#q-website-hint');
+
+    const prefillWebsite = () => {
+      const d = emailDomain(val('q-email'));
+      const usable = d && d.includes('.') && !isFreeEmail(d);
+      if (usable && (website.value === '' || websiteSource === 'prefilled')) {
+        website.value = d;
+        website.classList.add('is-prefilled');
+        websiteSource = 'prefilled';
+        websiteHint.textContent = 'Pre-filled from your email. Correct it if that’s not right.';
+      } else if (!usable && websiteSource === 'prefilled') {
+        website.value = '';
+        website.classList.remove('is-prefilled');
+        websiteSource = 'blank';
+        websiteHint.textContent = 'Where the research starts.';
+      }
+    };
+    $<HTMLInputElement>('#q-email').addEventListener('blur', prefillWebsite);
+    $<HTMLInputElement>('#q-email').addEventListener('change', prefillWebsite);
+    website.addEventListener('input', () => {
+      if (websiteSource === 'prefilled') {
+        websiteSource = 'user_corrected';
+        website.classList.remove('is-prefilled');
+        websiteHint.textContent = 'Where the research starts.';
+      }
+    });
+
+    $<HTMLDivElement>('#q-roles').addEventListener('change', () => {
+      $<HTMLDivElement>('#q-title-row').hidden = pick('role') !== 'other';
+    });
+    const industry = $<HTMLSelectElement>('#q-industry');
+    industry.addEventListener('change', () => {
+      $<HTMLDivElement>('#q-ind-other-row').hidden = industry.value !== 'ind_other';
+    });
+
+    /* ------------------------------ steps ----------------------------- */
+    const clearErrs = () =>
+      form.querySelectorAll('.q__err').forEach((e) => e.classList.remove('is-on'));
+    const showErr = (id: string) => document.getElementById(id)?.classList.add('is-on');
+
+    const show = (n: number) => {
+      form.querySelectorAll<HTMLElement>('.q__step').forEach((s) => {
+        s.classList.toggle('is-on', s.dataset.step === String(n));
+      });
+      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+
+    form.querySelectorAll<HTMLButtonElement>('[data-go]').forEach((b) => {
+      b.addEventListener('click', () => {
+        clearErrs();
+        const target = Number(b.dataset.go);
+        if (target === 2 && !pick('role')) {
+          showErr('q-err-role');
+          return;
+        }
+        show(target);
+      });
+    });
+
+    const collect = () => ({
+      role: pick('role') as Answers['role'],
+      roleTitle: val('q-role-title') || undefined,
+      tried: val('q-tried') || undefined,
+      name: val('q-name'),
+      email: val('q-email'),
+      company: val('q-company'),
+      website: val('q-website'),
+      websiteSource,
+      industry: industry.value === 'ind_other' ? val('q-ind-other') : industry.value,
+      referredBy: val('q-ref') || undefined,
+      budgetAck: $<HTMLInputElement>('#q-ack').checked,
+      oneLiner: val('q-oneliner'),
+      competitors: [...form.querySelectorAll<HTMLInputElement>('input[name="competitor"]')]
+        .map((i) => i.value.trim())
+        .filter(Boolean),
+      bookedFirst,
+    });
+
+    /* ----------------------------- reveal ----------------------------- */
     const reveal = (
-      pane: 'booked' | 'error',
+      pane: 'booked' | 'done' | 'error',
       opts: { bookingUrl?: string; company?: string; email?: string } = {}
     ) => {
       form.hidden = true;
-      $<HTMLDivElement>('.q__head').hidden = true;
+      head.hidden = true;
+      bookPane.hidden = true;
       const out = document.querySelector<HTMLElement>(`[data-out="${pane}"]`);
       if (out) out.hidden = false;
-      if (pane === 'booked') {
-        /* Their own words back to them: the company we are about to research
-           and the address the link goes to. A typo in either is worth catching
-           here rather than when the email does not arrive. textContent, not
-           innerHTML — this is visitor-supplied text. */
-        if (out && opts.company) {
+      if (out && pane !== 'error') {
+        /* Their own words back to them, via textContent: this is visitor text. */
+        if (opts.company) {
           out.querySelectorAll<HTMLElement>('[data-fill="company"]').forEach((el) => {
             el.textContent = opts.company as string;
           });
         }
-        if (out && opts.email) {
+        if (opts.email) {
           out.querySelectorAll<HTMLElement>('[data-fill="email"]').forEach((el) => {
             el.textContent = opts.email as string;
           });
         }
-        if (opts.bookingUrl) {
-          mountScheduler(opts.bookingUrl);
-          /* Privacy extensions and strict corporate proxies block third-party
-             scheduler frames, and a blank box reads as "no times available".
-             The escape hatch goes through our own /book-call so the calendar
-             can be repointed in one variable later. */
-          const alt = document.getElementById('q-sched-alt');
-          if (alt) alt.hidden = false;
-        }
       }
-      /* Scroll the outcome into view, not the top of the document. The form is
-         the seventh section of a long page, so scrollTo({top:0}) landed the
-         visitor back on the hero with the confirmation rendered far below the
-         fold — indistinguishable from the submit having done nothing at all.
-         Same treatment the step navigation already gets. */
+      if (pane === 'booked' && opts.bookingUrl) {
+        mountScheduler($<HTMLDivElement>('#q-sched'), opts.bookingUrl);
+        const alt = document.getElementById('q-sched-alt');
+        if (alt) alt.hidden = false;
+      }
+      /* Scroll the outcome into view, not the top of a long page. */
       (out ?? form).scrollIntoView({ block: 'start', behavior: 'smooth' });
     };
 
@@ -741,20 +808,18 @@ import { ONE_LINER_MIN, ONE_LINER_MAX } from '../lib/intake';
         });
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
-        reveal('booked', {
+        reveal(bookedFirst ? 'done' : 'booked', {
           bookingUrl: data.bookingUrl,
           company: a.company,
           email: a.email,
         });
       } catch {
-        /* The endpoint is down, or the network is. This used to fall back to
-           scoring in the browser and showing the matching confirmation, which
-           was a lie: the submission was lost and the page said we were on it.
-           Say what happened and name an address instead. */
+        /* Say what happened rather than pretend. A lost lead that the page
+           called "on its way" is the worst outcome here. */
         reveal('error');
       } finally {
         submit.disabled = false;
-        submit.textContent = 'Get my analysis and session';
+        submit.textContent = 'Send it';
       }
     });
   }

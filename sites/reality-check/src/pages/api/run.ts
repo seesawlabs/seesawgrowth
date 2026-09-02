@@ -13,11 +13,9 @@
 import type { APIRoute } from 'astro';
 import { verifyActionToken, type RunPayload } from '../../lib/run-link';
 import { serverEnv } from '../../lib/server-env';
+import { dispatchAnalysis, DEFAULT_REF, REPO, WORKFLOW } from '../../lib/dispatch';
 
 export const prerender = false;
-
-const REPO = 'seesawlabs/seesawgrowth';
-const WORKFLOW = 'analysis.yml';
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -144,47 +142,33 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const p = verdict.payload;
-  const ref = serverEnv('GITHUB_DISPATCH_REF') ?? 'claude/seesaw-labs-growth-u5ou0b';
+  const ref = serverEnv('GITHUB_DISPATCH_REF') ?? DEFAULT_REF;
 
-  const res = await fetch(
-    `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+  const res = await dispatchAnalysis(
     {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${ghToken}`,
-        accept: 'application/vnd.github+json',
-        'x-github-api-version': '2022-11-28',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        ref,
-        inputs: {
-          mode: p.a,
-          domain: p.domain,
-          email: p.email,
-          name: p.name,
-          company: p.company,
-          category: p.category,
-          peers: p.peers.join(','),
-          trigger: p.trigger ?? '',
-          runId: p.run ?? '',
-          notes,
-        },
-      }),
-      signal: AbortSignal.timeout(15_000),
-    }
+      mode: p.a,
+      domain: p.domain,
+      email: p.email,
+      name: p.name,
+      company: p.company,
+      category: p.category,
+      peers: p.peers,
+      trigger: p.trigger,
+      runId: p.run,
+      notes,
+    },
+    { token: ghToken, ref }
   );
 
-  if (res.status !== 204) {
-    const body = await res.text().catch(() => '');
-    console.error(`[run] dispatch failed ${res.status}: ${body.slice(0, 300)}`);
+  if (!res.ok) {
+    console.error(`[run] dispatch failed ${res.status}: ${res.body.slice(0, 300)}`);
     return page(
       'Could not start it',
       `<h1>GitHub refused that</h1>
        <p>Status ${res.status}. Common causes: the token lacks <code>Actions:
        write</code>, the workflow file is not on <code>${esc(ref)}</code> yet, or
        the branch name is wrong.</p>
-       <p class="muted">${esc(body.slice(0, 300))}</p>`,
+       <p class="muted">${esc(res.body.slice(0, 300))}</p>`,
       502
     );
   }

@@ -207,6 +207,13 @@ submitted_at · time_on_form
 
 ## 5. Scoring and routing
 
+> **Retired from the live flow, 2026-08-31.** The intake no longer asks for revenue or
+> stage and no longer scores or routes a lead. Every lead is researched and every lead
+> sees the calendar; the team decides from the Slack alert and the two documents the
+> pipeline posts. This section stays as the record of how routing was designed and as
+> the spec to reach for if a gate is ever reintroduced — deliberately, in one place
+> (`sites/reality-check/src/lib/qualifier.ts`). See `00-status.md`.
+
 **Hard gates first, then score.** Scoring alone misroutes: a $6M startup with a perfect stall
 story scores 7/8 on merit and would auto-book — precisely the anti-ICP.
 

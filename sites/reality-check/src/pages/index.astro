@@ -1,34 +1,29 @@
 ---
 /* ---------------------------------------------------------------------------
-   / — the package, and the site's only offer.
+   / — the offer: a free 45-minute session, and one written recommendation.
 
-   ONE OFFER, ONE PAGE. It used to be two rungs: a free analysis, and an hour
-   on a call if they wanted it. The call is now half of what is promised at the
-   top (docs/10-package-plan.md), which fixes the weakest joint in the funnel:
-   an analysis that lands in an inbox and hopes. /reality-check and
-   /book are redirects; there is no second offer to send anyone to.
+   THE CALL IS THE PRODUCT, THE REPORT IS WHAT YOU LEAVE WITH. Earlier versions
+   led with a researched analysis and made the call the follow-up. That sold a
+   document, and a document that lands in an inbox and hopes was the weakest
+   joint in the funnel. This page leads with the session — what it is, why a
+   leader should take it, what they get out of it — and the report arrives
+   shortly after, as the written form of the one thing we would do first.
 
-   The path this route took: /exposure read as fear-mongering, and a URL is the
-   first words a visitor sees. /report was accurate and dull, and it promised
-   research when the thing being given away is advice. /brief redirects here.
+   ONE BIG THING, NOT A MENU. The report is a single recommendation with the
+   evidence behind it: what we would build, why now, what we would refuse to
+   build, and the one thing we could not see from outside. Two findings is a
+   menu; one is a position. The page promises exactly that shape.
 
-   EVERY LEAD SEES THE CALENDAR. The scoring used to decide who was shown one.
-   It no longer does: a booked meeting we cancel costs one email, and a
-   qualified lead told to wait for one costs the lead. The score goes to the
-   team in the alert, and the few that are not a fit are handled by hand.
+   TWO WAYS IN, SAME PLACE. A visitor can book the call first and answer the
+   few questions after, or answer first and book on the confirmation screen.
+   Both end in the same form and the same calendar; the order is theirs.
 
-   THE COPY SELLS THE ANALYSIS, NOT THE CITATIONS. The first version of this
-   analysis led with sourced facts and a reader's verdict was "a dump of press
-   release headlines, ChatGPT could have spit this out". They were right, and
-   the fix was upstream. So this page promises what the brief now answers:
-   where you stand, where you're strong, where you're exposed, what companies
-   like you did and whether it worked, and what to weigh. Sourcing is the proof,
-   not the pitch.
+   NO SCORING ON THIS PAGE, AND NONE BEHIND IT. Every lead sees the calendar
+   and every lead is researched. The team reads the alert and decides.
 
-   The call is framed as course-correcting the brief rather than as a sales
-   call, because that is what it honestly is: the document is built entirely
-   from outside, the boundary section lists what we could not see, and the
-   fastest way to fix that is an hour with the people who know.
+   THE COPY NARRATES NOTHING ABOUT HOW THE REPORT IS MADE. What the pipeline
+   does, who reads what, and how long a review takes are ours to worry about.
+   The visitor is told what they get and when: shortly after the call.
 
    Positioning: written to the recommended position in docs/01 — design-led AI
    product studio with a care-operations wedge — and deliberately naming no
@@ -37,246 +32,207 @@
 import Base from '../layouts/Base.astro';
 import IntakeForm from '../components/IntakeForm.astro';
 
-const title = 'Free AI analysis and a 45-minute session — SeeSaw Labs';
+const title = 'A free 45-minute session, and the one thing to build first — SeeSaw Labs';
 const description =
-  'A researched analysis of where AI pays off in your business, plus 45 minutes with the people who wrote it. We open with what we found rather than asking you to explain your business. Free, and yours to keep.';
+  'Forty-five minutes with the people who would build it. We research your business before we meet, and shortly after the call you get one written recommendation: what to build first, why now, and what to refuse. Free.';
 ---
 
 <Base title={title} description={description}>
   <!-- ------------------------------ hero ------------------------------ -->
   <section class="hero">
     <div class="wrap hero__in">
-      <p class="eyebrow">Free · Analysis + 45 minutes · Yours to keep</p>
+      <p class="eyebrow">Free · 45 minutes with the team · One written recommendation</p>
       <h1 class="hero__h">
-        AI just rewrote the roadmap.<br />
-        <span class="hero__em">Let&rsquo;s build the one that ships.</span>
+        Forty-five minutes with the people who&rsquo;d build it.<br />
+        <span class="hero__em">Then the one thing to do.</span>
       </h1>
       <p class="lede hero__lede">
-        By the time we talk, we&rsquo;ll have already sized up where your
-        industry is heading and where your business could go from here. The 45
-        minutes is where that becomes a plan: what to build first, and what a
-        team doing it with you would actually look like. A serious second
-        opinion on the business, from people who&rsquo;d be the ones doing the
-        work.
+        A working session, not a sales call. We research your business before we
+        meet, open with what we found, and put the few questions to you that
+        change the answer. Shortly after, you get a short report: the one thing
+        we&rsquo;d build first, why now, and what we&rsquo;d refuse to build
+        &mdash; with the evidence behind it.
       </p>
       <div class="hero__cta">
-        <a href="#request" class="btn">Get mine</a>
-        <a href="#session" class="btn btn--ghost">What the 45 minutes is</a>
+        <a href="#request" class="btn" data-mode="book">Book the call</a>
+        <a href="#request" class="btn btn--ghost">Answer a few questions first</a>
       </div>
+      <p class="hero__fine">Either order works. Both take under three minutes.</p>
     </div>
   </section>
 
-  <!-- ---------------------------- the problem ------------------------- -->
-  <section class="section section--sunk">
-    <div class="wrap-narrow">
-      <p class="eyebrow">Why this exists</p>
-      <h2 class="h2">
-        Plenty of people will tell you AI matters. Far fewer will tell you what
-        to do about it in <em>your</em> business.
-      </h2>
-      <p class="body">
-        You&rsquo;ve read the generic version already. The specific version
-        takes real research. Before we write a word, we crawl your public
-        surface the way a buyer reads it, sweep the web for what comparable
-        companies have actually shipped and when, resolve each of those to a
-        dated source we can hand you, pull live search-demand data for your
-        category, and read the regulatory and funding movement around your
-        sector. Then we do the part that isn&rsquo;t research: decide what
-        we&rsquo;d build first, and why.
-      </p>
-      <p class="body">
-        That whole pipeline is something we built and run ourselves, which is
-        why we can point it at your company before you&rsquo;ve paid us
-        anything. It&rsquo;s also the most honest way to be judged &mdash; on
-        the quality of the thinking, with the sources attached, rather than on
-        a deck about our process.
-      </p>
-    </div>
-  </section>
-
-  <!-- --------------------------- what's inside ------------------------ -->
-  <section class="section" id="inside">
+  <!-- ---------------------------- what it is -------------------------- -->
+  <section class="section" id="what">
     <div class="wrap">
       <div class="head">
-        <p class="eyebrow">What's in it</p>
-        <h2 class="h2">What you actually get</h2>
-        <p class="lede">
-          Six sections. The ideas and their numbers up front, the research they
-          came from at the back, so any line of it can be checked.
-        </p>
+        <p class="eyebrow">What it is</p>
+        <h2 class="h2">Three things, and all of them are free</h2>
       </div>
 
       <ol class="cards">
         <li class="card">
-          <h3 class="card__h">Where we think you stand</h3>
+          <h3 class="card__h">The call</h3>
           <p class="card__b">
-            A short read on your position, built from the research: your own
-            surface, your category, and the companies you get compared to.
+            Forty-five minutes with the team that would do the work. We&rsquo;ve
+            done the homework, so the first five minutes are our read of your
+            business and the rest is you correcting it. No twenty minutes of
+            background, no deck.
           </p>
         </li>
         <li class="card">
-          <h3 class="card__h">Three or four ideas we&rsquo;d build</h3>
+          <h3 class="card__h">The report</h3>
           <p class="card__b">
-            Specific enough to disagree with, in the order we&rsquo;d do them.
-            Not &ldquo;add AI to your operation&rdquo;.
+            One recommendation, in writing, shortly after we talk. What
+            we&rsquo;d build first and what it would take, why the timing is
+            now, what we&rsquo;d refuse to build and why, and the one thing we
+            couldn&rsquo;t see from outside. Every claim traces to a source.
           </p>
         </li>
         <li class="card">
-          <h3 class="card__h">What each one might be worth</h3>
+          <h3 class="card__h">The people</h3>
           <p class="card__b">
-            Arithmetic you can follow, so you can tell a serious idea from an
-            expensive one before committing a quarter to it.
-          </p>
-        </li>
-        <li class="card">
-          <h3 class="card__h">The questions we&rsquo;d ask first</h3>
-          <p class="card__b">
-            The few answers that would change our recommendation. Useful even
-            if you never reply &mdash; they are the questions worth asking
-            internally.
-          </p>
-        </li>
-        <li class="card">
-          <h3 class="card__h">What your competitors already shipped</h3>
-          <p class="card__b">
-            Their real AI moves, dated and sourced, with what each one suggests
-            about where your category is heading. If nobody has moved yet,
-            that is the finding.
-          </p>
-        </li>
-        <li class="card">
-          <h3 class="card__h">Where your context sharpens it</h3>
-          <p class="card__b">
-            The specific facts that would take a recommendation from directional
-            to costed. Bring those and the second version is a plan.
+            You talk to the designers and engineers who would ship it, not a
+            salesperson. If there&rsquo;s no fit, we say so inside the 45
+            minutes rather than in a follow-up sequence.
           </p>
         </li>
       </ol>
     </div>
   </section>
 
-  <!-- ------------------------- the session ---------------------------- -->
-  <section class="section" id="session">
+  <!-- ---------------------------- why do it --------------------------- -->
+  <section class="section section--sunk" id="why">
+    <div class="wrap-narrow">
+      <p class="eyebrow">Why take it</p>
+      <h2 class="h2">
+        Everyone&rsquo;s telling you to do something with AI. Almost nobody will
+        tell you <em>which</em> thing.
+      </h2>
+      <p class="body">
+        If you run a business right now you have four questions, and they are
+        hard to get straight answers to: What is actually working in my category,
+        and what is theatre? If I build the thing, what does it really cost and
+        how long does it take? Where have companies my size wasted money on
+        this? And what should I do first &mdash; and refuse to do at all?
+      </p>
+      <p class="body">
+        Those are the questions the call is built to answer and the report is
+        built to write down. Not a list of possibilities. One position, taken by
+        people who have shipped this kind of work and have watched the expensive
+        versions fail, with the reasoning in the open so you can disagree with it.
+      </p>
+    </div>
+  </section>
+
+  <!-- ----------------------------- how it works ----------------------- -->
+  <section class="section" id="how">
     <div class="wrap">
       <div class="head">
-        <p class="eyebrow">The other half</p>
-        <h2 class="h2">45 minutes that start where a first call usually ends</h2>
+        <p class="eyebrow">How it works</p>
+        <h2 class="h2">The discovery process, start to finish</h2>
         <p class="lede">
-          A normal discovery call spends its first twenty minutes on background,
-          and its last five on next steps. We do the background beforehand, in
-          writing, so the time goes on the decisions.
+          This is the same first step we take on paid engagements. You get to
+          see it before deciding whether to work with us.
         </p>
       </div>
 
       <ol class="steps">
         <li class="step">
-          <h3 class="step__h">We open with what we found</h3>
+          <h3 class="step__h">Book, or answer a few questions</h3>
           <p class="step__b">
-            Our read of your business, out loud, in the first five minutes. You
-            tell us where it&rsquo;s wrong. Nothing sharpens a recommendation
-            faster than the person who knows the operation correcting it.
+            Pick a time on the calendar, or tell us who you are and what
+            you&rsquo;ve already tried. Either order. The questions take under
+            three minutes and they aim the research.
           </p>
         </li>
         <li class="step">
-          <h3 class="step__h">We put our questions to you</h3>
+          <h3 class="step__h">We research before we meet</h3>
           <p class="step__b">
-            The handful whose answers would change what we&rsquo;d recommend:
-            your volumes, your cycle times, which manual step is quietly costing
-            the most. The analysis names them, so you see the agenda before you
-            agree to the call.
+            Your public surface as a buyer reads it, what comparable companies
+            have actually shipped and when, what your category is searching
+            for, and the regulatory and funding movement around it. We arrive
+            having read the industry, not just your homepage.
           </p>
         </li>
         <li class="step">
-          <h3 class="step__h">We tell you what we&rsquo;ve watched fail</h3>
+          <h3 class="step__h">The 45 minutes</h3>
           <p class="step__b">
-            The part research can&rsquo;t give you. Nobody publishes the pilot
-            that died in security review, or the model that worked and shipped
-            to nobody. We build this in healthcare operations, including the
-            platform that cut medication approvals 5x at Hospice Pharmacy
-            Solutions, and we&rsquo;ve seen the expensive dead ends up close.
+            We open with our read. You tell us where it&rsquo;s wrong. Then we
+            put the handful of questions to you whose answers change the
+            recommendation &mdash; the ones only someone inside the business can
+            answer. You leave knowing what we&rsquo;d do first and what we&rsquo;d
+            park.
           </p>
         </li>
         <li class="step">
-          <h3 class="step__h">You leave with a sequence, not a list</h3>
+          <h3 class="step__h">Shortly after: the report</h3>
           <p class="step__b">
-            What to do first, what to park, and what has to be true before the
-            next thing starts. Ordered against your capacity rather than our
-            enthusiasm.
+            One thing to build, in writing, with the evidence. What it is, why
+            now, what it would take, what we&rsquo;d refuse to build, and where we
+            might still be wrong. Yours to keep and to forward.
+          </p>
+        </li>
+        <li class="step">
+          <h3 class="step__h">Then it&rsquo;s your call</h3>
+          <p class="step__b">
+            If the thing is worth building and we&rsquo;re the right people, we
+            say what it would take and engagements start at $50k. If it isn&rsquo;t,
+            or we aren&rsquo;t, we say that instead. Nothing here obliges you to
+            anything.
           </p>
         </li>
       </ol>
-
-      <p class="sessionnote">
-        You&rsquo;ll be talking to the team that would lead the work, not a
-        salesperson. And if there&rsquo;s no fit, we say so inside the 45
-        minutes rather than in a follow-up sequence.
-      </p>
     </div>
   </section>
 
-  <!-- ------------------------ the honesty promise --------------------- -->
-  <section class="section section--sunk">
+  <!-- ------------------------ working with us ------------------------- -->
+  <section class="section section--sunk" id="us">
     <div class="wrap">
       <div class="head">
-        <p class="eyebrow">How we work</p>
+        <p class="eyebrow">What it&rsquo;s like to work with us</p>
         <h2 class="h2">The same discipline we&rsquo;d bring to the build</h2>
       </div>
 
       <div class="two">
         <div>
           <p class="body">
-            Every number in your brief either links to the source we found it
+            Every number in your report either links to the source we found it
             in, or is an assumption we state with the reasoning attached. Where
             only you can know the figure, it stays a
             visible <span class="blankdemo">blank</span> rather than a
-            confident guess. That is enforced in the pipeline, not in a style
-            guide: a claim we cannot trace never reaches you.
+            confident guess. That is enforced, not just intended: a claim we
+            cannot trace never reaches you.
           </p>
           <p class="body">
-            It is how we work on paid engagements too. Reasoning in the open,
-            assumptions labelled, so the people who would have to live with a
-            decision can test it rather than take it on trust. A
-            recommendation you cannot inspect is one you cannot act on.
+            We tell you what not to build. Most of what makes AI work at a
+            company like yours is sequencing something unglamorous first &mdash;
+            a record nobody keeps, a data path that doesn&rsquo;t exist yet. When
+            that&rsquo;s the honest answer, it&rsquo;s the answer we give, even
+            though it&rsquo;s worse for us.
           </p>
         </div>
         <div>
           <p class="body">
-            The brief is deliberately the outside view. It sees your public
-            surface, your category, and what your competitors have shipped. It
-            does not see your volumes, your cycle times, or which manual step
-            is quietly costing you the most.
+            We are a design-led AI product studio. We build things people use,
+            with the people who will use them, in operations-heavy businesses
+            where the product is somebody&rsquo;s judgement. The platform that
+            cut medication approvals 5x at Hospice Pharmacy Solutions is ours,
+            and so are the lessons from the pilots we&rsquo;ve watched die in
+            security review.
           </p>
           <p class="body">
-            That is what the hour is for. You bring the operating detail, we
-            bring a version of this document that is costed and sequenced.
-            Most of our engagements begin at exactly that point: a shared view
-            of the work, arrived at together, before anyone signs anything.
+            Reasoning in the open, assumptions labelled, one position rather
+            than a menu. If that&rsquo;s how you&rsquo;d want a team to work
+            once money is involved, the 45 minutes is a free look at it.
           </p>
         </div>
       </div>
-
-      <p class="samplelink">
-        <!-- Points at the brief we ran on ourselves. /sample is the Reality
-             Check assessment, a different document, and linking there from here
-             showed a visitor the structure of a deliverable nobody asked for. -->
-        <a href="/sample-brief">Read the one we ran on ourselves &rarr;</a>
-      </p>
     </div>
   </section>
 
   <!-- ------------------------------ request ---------------------------- -->
   <section class="section" id="request">
     <div class="wrap">
-      <div class="head">
-        <p class="eyebrow">Four fields, no calendar</p>
-        <h2 class="h2">Point us at the right things</h2>
-        <p class="lede">
-          The research goes wherever you send it. Two answers steer all of it:
-          how you&rsquo;d describe the business in one line, and who you
-          actually count as a competitor. Get those right and the brief is
-          about your market rather than your industry.
-        </p>
-      </div>
       <IntakeForm />
     </div>
   </section>
@@ -287,15 +243,15 @@ const description =
       <p class="eyebrow">What it costs</p>
       <h2 class="close__h">Nothing, and we mean the whole thing.</h2>
       <p class="lede">
-        The analysis and the 45 minutes are both free, and both yours to keep.
-        We do it because it is the most honest way to be judged: on the quality
-        of the thinking, with the sources attached. If we go on to build
-        together, engagements start at $50k. If we don&rsquo;t, you still have
-        a researched view of where AI pays off in your business.
+        The 45 minutes and the report are both free, and both yours to keep. We
+        do it because it is the most honest way to be judged: on the quality of
+        the thinking, with the sources attached. If we go on to build together,
+        engagements start at $50k. If we don&rsquo;t, you still know the one
+        thing we&rsquo;d do first, and why.
       </p>
       <div class="close__ctas">
-        <a href="#request" class="btn btn--on-deep">Get mine</a>
-        <a href="/sample-brief" class="close__more">Read the one we ran on ourselves &rarr;</a>
+        <a href="#request" class="btn btn--on-deep" data-mode="book">Book the call</a>
+        <a href="#request" class="close__more">Or answer a few questions first &rarr;</a>
       </div>
     </div>
   </section>
@@ -313,7 +269,7 @@ const description =
       text-wrap: balance;
     }
     .hero__em { color: var(--accent); }
-    .hero__lede { max-width: 56ch; margin: 0; }
+    .hero__lede { max-width: 58ch; margin: 0; }
     .hero__cta { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); }
     .hero__fine { font-size: var(--text-sm); color: var(--muted); margin: 0; }
 
@@ -378,7 +334,7 @@ const description =
       .two { grid-template-columns: 1fr 1fr; gap: var(--sp-10); }
     }
 
-    /* Mirrors how a declared blank renders inside the brief itself. */
+    /* Mirrors how a declared blank renders inside the report itself. */
     .blankdemo {
       font-family: var(--font-mono);
       font-size: 0.9em;
@@ -390,10 +346,7 @@ const description =
       white-space: nowrap;
     }
 
-    .samplelink { margin: var(--sp-10) 0 0; font-size: var(--text-lg); }
-    .samplelink a { color: var(--accent-deep); font-weight: 500; }
-
-    /* The session steps: numbered, because the order is the point. */
+    /* The process steps: numbered, because the order is the point. */
     ol.steps {
       list-style: none;
       counter-reset: st;
@@ -416,13 +369,6 @@ const description =
     }
     .step__h { font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--ls-tight); margin: 0; }
     .step__b { margin: 0; color: var(--ink-2); line-height: var(--lh-body); max-width: 62ch; }
-    .sessionnote {
-      margin: var(--sp-10) 0 0;
-      padding-top: var(--sp-6);
-      border-top: 1px solid var(--rule);
-      color: var(--ink-2);
-      max-width: 62ch;
-    }
 
     .close { display: grid; gap: var(--sp-5); justify-items: start; }
     .close__ctas { display: flex; flex-wrap: wrap; gap: var(--sp-5); align-items: center; }

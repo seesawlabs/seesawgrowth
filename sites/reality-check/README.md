@@ -1,10 +1,14 @@
 # AI Reality Check — standalone site
 
-Astro site for the free AI Reality Check offer. Built standalone so it can ship
-without touching the main site, and lift onto `seesawlabs.com` later.
+Astro site for the free offer: a 45-minute session with the team, and shortly
+after it a report of the one big thing we would build, every claim sourced. Built
+standalone so it can ship without touching the main site, and lift onto
+`seesawlabs.com` later. Operations (env, Slack, the runner) are in `DEPLOY.md`.
 
 Specs live in this repo: `docs/05-reality-check-spec.md` (the offer),
-`docs/06-qualifier-spec.md` (the form), `docs/07-interview-guide.md` (the call).
+`docs/06-qualifier-spec.md` (the form; its scoring is retired, see §5 there),
+`docs/07-interview-guide.md` (the call). `docs/00-status.md` has the re-cut of
+2026-08-31 that this page now follows.
 
 ```bash
 npm install
@@ -35,15 +39,17 @@ can't break a deploy on a false positive.
 
 | Route | |
 |---|---|
-| `/` | The pitch — hero, problem, what you get, the hour, fit, FAQ, close |
-| `/sample` | Report walkthrough. **Structure, not a filled example** — see below |
-| `/book` | The qualifier and the three outcome states |
+| `/` | The pitch and the form — the call, the report, the people, the four questions, how discovery runs, then intake with book-first or questions-first |
+| `/book-call` | Straight to the calendar (`PUBLIC_CAL_LINK`), for someone arriving from a released report |
+| `/sample-brief` | The brief we ran on ourselves. **Old multi-section format; unlinked until regenerated** |
 | `/privacy` | Required. **Not lawyer-reviewed yet** |
+| `/api/intake` | Accepts the form, alerts Slack, sends the ack, and (with `EXPOSURE_AUTORUN`) starts the research |
+| `/api/booking` | Returns the calendar URL so the form can mount it before the questions |
+| `/api/run` | The signed run / revise / send links from the Slack alert |
 
-`/office-hours` is deliberately absent — deferred. Sub-threshold leads route to
-a "not yet" state inside `/book` that gives them the report walkthrough and
-captures interest in the future group session, rather than promising a session
-that doesn't exist.
+`/reality-check`, `/book`, `/brief` and `/sample` are redirects. There is no
+"not yet" state and no routing by fit any more: every lead sees the calendar,
+every lead is researched, and the team decides from the alert.
 
 ## Brand
 

@@ -43,9 +43,10 @@ otherwise a preview deploy silently behaves differently from production.
 | `SLACK_WEBHOOK` | **A submitted request reaches nobody.** It is logged to the Vercel function log and that is all | Effectively required. The alert carries the exact command to fulfil the request |
 | `EXPOSURE_LINK_SECRET` | **Every magic link fails to verify.** The route logs it loudly | `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`. The operator machine needs the *same* value |
 | `EXPOSURE_REPORT_BASE_URL` | A verified link 404s: the site has nowhere to read briefs from | Public prefix of the blob store, e.g. `https://….public.blob.vercel-storage.com/briefs` |
-| `GITHUB_DISPATCH_TOKEN` | No one-click runs; the alert prints commands instead | See §3a |
+| `GITHUB_DISPATCH_TOKEN` | No auto-run and no one-click runs; the alert prints commands instead | See §3a |
+| `EXPOSURE_AUTORUN` | Research waits for a click on the *Run* link in the alert | Set to `true` to start the research the moment a lead lands. Needs `GITHUB_DISPATCH_TOKEN`. See §3a |
 | `PUBLIC_SITE_ORIGIN` | The alert cannot build absolute links | `https://seesawgrowth.vercel.app` |
-| `PUBLIC_CAL_LINK` | The booking block is hidden on the confirmation, and `/book-call` falls back to `/book` | See §3 |
+| `PUBLIC_CAL_LINK` | The calendar is hidden everywhere it would appear (book-first, confirmation, `/api/booking`), and `/book-call` falls back to `/book` | See §3 |
 | `RESEND_TOKEN` | Neither email sends. Both no-op loudly in the log | Sender domain must be verified in Resend first |
 | `PUBLIC_PLAUSIBLE_DOMAIN` | No analytics | Optional |
 | `EXPOSURE_DELIVERY` | Stays `reviewed`, which is what we want | Only set to `instant` when the review gate retires |
@@ -103,19 +104,27 @@ Briefs point at `/book-call` on our own origin rather than at the calendar
 directly, so changing tools later is one variable and every brief already in
 someone's inbox follows it. Nothing needs reissuing.
 
-The form embeds that link as an iframe on its confirmation screen for **every**
-lead. Scoring does not gate it: a booked meeting we cancel costs one email, a
-qualified lead told to wait for one costs the lead. The score reaches the team
-in the Slack alert with an explicit instruction, including cancelling a meeting
-a poor-fit lead has booked — so read those alerts. Someone arriving from a
-released analysis goes straight to the calendar through `/book-call`.
+The form mounts that calendar (Cal.com embed, not a bare iframe) in two places:
+before the questions, for a visitor who taps **Book the call** first, and on the
+confirmation for everyone else. Every lead sees it. Scoring is retired from this
+flow (`docs/00-status.md`, 2026-08-31): nothing gates the calendar and the alert
+gives no instruction beyond the facts, so the team decides from the alert and the
+research. Someone arriving from a released report goes straight to the calendar
+through `/book-call`.
 
 ## 3a. One-click runs from Slack
 
-The alert carries a signed link that runs the analysis. The workflow posts
-back with two more: **revise it**, which rewrites the draft against typed
-notes without re-paying for research, and **send it**, which emails it. Each
-click, the review still between them, and no laptop with six API keys on it.
+With `EXPOSURE_AUTORUN=true`, the research starts the moment a lead lands: the
+intake route dispatches the workflow itself and the alert says so. About ten
+minutes later the workflow posts the two documents to the same channel: the
+**report PDF** (the research, every claim numbered and sourced) and the **email
+draft** (the one big thing, footnoted to the report). A person reads both,
+edits the draft, and sends it by hand. Nothing goes to the lead automatically.
+
+Without `EXPOSURE_AUTORUN`, the alert carries a signed **Run the research**
+link instead, and the same two documents post when someone clicks it. The
+older **revise it** and **send it** links still work for the legacy brief
+format. Either way, no laptop with six API keys on it.
 
 `.github/workflows/analysis.yml` is the runner. To turn it on:
 
@@ -204,9 +213,10 @@ takes the recipient explicitly.
 - Check the ack email in a client that strips styling — both emails ship a
   plain-text half for exactly that.
 - `npm run check:prose && npm run check:email && npm run check:intake && npm run check:links`
-- Submit once as a poor-fit lead (sub-$10M, exploring) and confirm the alert
-  says to cancel the meeting. That line is the only thing standing between a
-  booking and someone turning up to a call we did not mean to take.
+- Submit once from the **Book the call** path and once from the questions-first
+  path. The first alert should say the lead booked before answering; the second
+  should not. With `EXPOSURE_AUTORUN` on, each should be followed about ten
+  minutes later by the report PDF and the email draft in the same channel.
 
 ## Operator machine
 

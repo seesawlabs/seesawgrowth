@@ -81,26 +81,34 @@ export function ackEmail(args: {
   name: string;
   company: string;
   bookingUrl?: string;
+  /** They picked a time before answering, so do not ask them to book. */
+  bookedFirst?: boolean;
 }): Message {
   const first = args.name.trim().split(/\s+/)[0] || 'there';
+  const opening = args.bookedFirst ? `You're booked, ${first}.` : `Thanks, ${first}.`;
   const lines = [
-    `Thanks for asking, ${first}.`,
-    `Two things are yours now. The first is the analysis of ${args.company}. It'll be ready soon, and we'll email you a private link to read it.`,
-    `The second is 45 minutes with the people who wrote it. We'll open with what we found rather than asking you to explain the business, put the questions to you that would change our recommendation, and tell you what we've seen work and what we've watched fail.`,
+    opening,
+    `Before we talk, we research ${args.company} from the outside: your website and job postings, what comparable companies have shipped and when, and where your category is moving. We open the call with what we found and you tell us where it's wrong.`,
+    `Shortly after the call you get the report: the one thing we'd build first, why now, and what we'd refuse to build, with the evidence behind it. Yours to keep.`,
   ];
-  const closing = args.bookingUrl
-    ? `Grab a time whenever suits. Before the analysis lands is fine — we'll have read it by then either way.`
-    : `We'll come back to you with times for that session shortly, along with the link.`;
+  const closing = args.bookedFirst
+    ? `If anything changes with the time, just reply here.`
+    : args.bookingUrl
+      ? `Grab a time whenever suits. The research happens before we talk either way.`
+      : `We'll come back to you with times shortly.`;
+  const showButton = Boolean(args.bookingUrl) && !args.bookedFirst;
 
   return {
-    subject: `Your analysis and session — ${args.company}`,
-    text: [...lines, closing, args.bookingUrl ?? '', 'Calvin, SeeSaw Labs'].filter(Boolean).join('\n\n'),
+    subject: `Your 45 minutes with SeeSaw Labs — ${args.company}`,
+    text: [...lines, closing, showButton ? args.bookingUrl : '', 'Calvin, SeeSaw Labs']
+      .filter(Boolean)
+      .join('\n\n'),
     html: shell(
       lines.map(p).join('') +
         p(closing) +
-        (args.bookingUrl ? button(args.bookingUrl, 'Book the 45 minutes') : '') +
+        (showButton ? button(args.bookingUrl as string, 'Book the 45 minutes') : '') +
         `<p style="margin:28px 0 0;color:#6b6b6b">Calvin, SeeSaw Labs</p>`,
-      'You asked for this at seesawlabs.com. No list, no sequence — this and one more email.'
+      'You asked for this at seesawlabs.com. This, the report, and nothing else.'
     ),
   };
 }

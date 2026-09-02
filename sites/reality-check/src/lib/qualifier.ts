@@ -174,11 +174,19 @@ export function scoreTried(text?: string): TriedScore {
 }
 
 /* -- gates, then score ------------------------------------------------
+   RETIRED FROM THE LIVE FLOW, 2026-08-31. The intake no longer asks for
+   revenue or stage and no longer calls this; every lead is researched and
+   every lead sees the calendar, and the team decides from the alert. The
+   model and its persona validation (docs/06 §5) are kept here as the record
+   of how routing was designed, and so that reintroducing a gate is a
+   deliberate act in one place rather than a drift. See docs/00-status.md.
+
    Scoring alone misroutes: a $6M startup with a perfect stall story scores
    7/9 on merit and would auto-book — precisely the anti-ICP. So revenue runs
    as a hard gate ahead of the score.
 --------------------------------------------------------------------------- */
 
+/** @deprecated Not called by the intake since 2026-08-31. See the note above. */
 export function evaluate(a: Answers): Verdict {
   const triedPts = scoreTried(a.tried);
   const ackPts = a.budgetAck ? 1 : 0;

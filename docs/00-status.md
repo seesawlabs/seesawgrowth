@@ -1,20 +1,29 @@
 # Current status
 
-*Last updated 2026-08-18.*
+*Last updated 2026-08-31.*
 
-> **In progress:** the offer work. `04-offer-project-plan.md` covers the paid AI Production
-> Roadmap ($25k, 3 weeks); `05-reality-check-spec.md` covers the free AI Reality Check that
-> feeds it. Neither blocks on the positioning decision — only their copy specificity does.
-> Decisions pending: eight in `04` §10, seven in `05` §12.
+> **The free offer was re-cut on 2026-08-31, after the team landed on its intent.** The page
+> now leads with the 45-minute session; shortly after the call the lead gets a report of the
+> **one big thing** we would build — what, why now, what we would refuse, what we could not
+> see — with every claim traced to a source. The multi-section brief is retired. Two
+> specimens set the shape: BetterRX (delivery-time prediction in the order screen, on the
+> back of CMS HOPE's two-day symptom clock) and Cultivate Advisors (an advisor-facing memory
+> over 2,000 engagements, against a $29/month white-label AI-coach market). Both are in the
+> session that produced them; the pipeline is being repointed to generate that shape.
 >
-> The free tier was redesigned 2026-08-17: collapsed from "self-serve scorecard + call" into a
-> single one-hour call whose transcript plus deep research produces the report. §6 and §7 of
-> `04` are superseded accordingly; the scorecard is deferred to v2.
+> **Scoring is retired from the live flow.** Revenue and stage are no longer asked. Every lead
+> is researched, every lead sees the calendar, and the team decides from the alert. The model
+> stays in `qualifier.ts` and `06` §5 as the record, not as a gate.
 >
-> **The Reality Check site is deployed** (`sites/reality-check/`, on Vercel, SeeSaw-owned) and
-> in walkthrough. Not launchable yet — the scheduler is unwired, so a qualified visitor reaches
-> the auto-book screen and finds a placeholder. That plus the logo, the OG image, and a legal
-> read of the privacy policy are the gap. Full list in the site README's pre-launch checklist.
+> **Flow:** lead lands → Slack alert → (auto-run, when `EXPOSURE_AUTORUN` is on) research
+> runs → the report PDF and an email draft post to Slack → a person reviews both, edits the
+> draft, sends. A visitor can book the call before or after the questions.
+>
+> **The site is deployed** (`sites/reality-check/`, Vercel, SeeSaw-owned) with the calendar
+> wired (`PUBLIC_CAL_LINK`), Slack and Resend live, and one-click runs from Slack working.
+> Still open: the logo, the OG image, a legal read of the privacy policy, and regenerating
+> `/sample-brief` in the new one-big-thing format. `04-offer-project-plan.md` (the paid
+> Roadmap) is unchanged and still awaits alignment.
 
 | | |
 |---|---|
@@ -52,17 +61,17 @@ actively trying to do less of it.
 | Case-study rebuild (6, metric-led) | Calvin | Not started |
 | Website rebuild (7 items) | Calvin | Not started |
 | The offer as a product (Roadmap page + booking flow) | Calvin | **Plan drafted — awaiting team alignment** |
-| The free offer (analysis + 45-min session, sold as one package) | Calvin | **Built end to end. Deployed; awaiting env vars and the calendar** |
-| └ Qualifier form | Calvin | **Now the single intake for the package. Scoring unchanged, still validated against 14 personas** |
-| └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric** |
-| └ Website build (page, form, scheduler) | Calvin | **Built and deployed to Vercel (SeeSaw-owned). Stack landed: Astro. Scheduler not yet wired** |
-| └ AI Opportunity Brief pipeline | Calvin | **Runs end to end. Named for the client, generated, released, served over a magic link** |
-| └ ─ Brief generation (`tools/exposure`) | Calvin | **Working. ~$1.40 and 6–11 min a run. Stage 03 is non-deterministic — same peers, different evidence hours apart** |
-| └ ─ Landing page + intake (site root) | Calvin | **One offer, one page. `/reality-check`, `/book`, `/brief` and `/sample` are redirects — see `docs/10-package-plan.md`** |
-| └ ─ Public sample (`/sample-brief`) | Calvin | **We ran the brief on ourselves. 100% coverage, published unedited** |
-| └ ─ Delivery emails | Calvin | **Written and wired. Nothing sends until `RESEND_TOKEN` is set in Vercel** |
-| └ ─ Magic link + report store | Calvin | **Built and verified locally. Prod storage undecided — Vercel Blob is the proposal** |
-| └ ─ Booking | Calvin | **Embedded on the confirmation for qualified leads only. Needs a 45-minute `PUBLIC_CAL_LINK`** |
+| The free offer (45-min session + the one-big-thing report) | Calvin | **Re-cut 2026-08-31. Page, intake and alert shipped; pipeline output being repointed to the two-doc shape** |
+| └ Intake form | Calvin | **Revenue and stage removed; free text unlimited; book-first path added. Scoring retired — see `06` §5 note** |
+| └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric. Needs a pass against the one-big-thing agenda** |
+| └ Website build (page, form, scheduler) | Calvin | **Deployed on Vercel (SeeSaw-owned), Astro. Calendar wired via Cal.com embed, single host** |
+| └ Research pipeline (`tools/exposure`) | Calvin | **Runs end to end in GitHub Actions from a Slack click or auto-run. ~$1.40–1.90 and 7–11 min a run** |
+| └ ─ Two-doc output (report PDF + email draft) | Calvin | **In progress. Specimens exist for BetterRX and Cultivate; generator and Slack posting being built** |
+| └ ─ Landing page + intake (site root) | Calvin | **Leads with the session. `/reality-check`, `/book`, `/brief` and `/sample` are redirects** |
+| └ ─ Public sample (`/sample-brief`) | Calvin | **Old multi-section format. Regenerate in the one-big-thing shape before linking it again** |
+| └ ─ Emails | Calvin | **Ack rewritten for the new offer (booked-first variant). Resend live in Vercel** |
+| └ ─ Magic link + report store | Calvin | **Vercel Blob in production; HMAC-named objects; used by the revise loop** |
+| └ ─ Booking | Calvin | **Live. Cal.com single-host event; available before or after the questions** |
 | └ Program breakdown (11 projects) | Calvin | **Outlined. Awaiting owner + capacity assignment** |
 | Internal AI-ops case study | Calvin | Not started |
 | Anthropic Select application | Calvin | Not started |
