@@ -3,9 +3,10 @@
 Scripts that research a company from public evidence and produce the two
 documents the free offer promises (re-cut 2026-08-31, see `docs/00-status.md`):
 
-- **The research report** (`research-report.html`, printed to `.pdf`): the one
-  thing we would build, why now, what we would refuse, the fork we could not
-  see from outside, the ideas not chosen, what comparable companies did, and a
+- **The research report** (`research-report.html`, printed to `.pdf`): the
+  three or four builds we weighed, the one we recommend and why it won, what we
+  would refuse, the fork we could not see from outside, what comparable
+  companies did, and a
   **claim register** where every claim carries an id, a source URL, the date we
   read it and how we know it. Every citation in the prose is an id that points
   at a row.
@@ -91,7 +92,7 @@ those files rather than calling earlier stages. Any stage can be re-run alone.
 | 04 demand | DataForSEO Labs | category demand, terms peers rank for | stale by default — stamp *both* dates, ours and Google's |
 | 05 assemble | none | `report.md` | deterministic, no network, no model |
 | 06 analysis | Claude | `06-synthesis.json` | every figure checked against the claims it cites; the industry brief is judgement, not evidence |
-| 07 the one thing | Claude | `07-one-thing.json`, `research-report.html/.pdf`, `email-draft.md` | one build, one refusal, one fork. Unsourced figures are redacted to a visible marker, never rendered |
+| 07 the one thing | Claude | `07-one-thing.json`, `research-report.html/.pdf`, `email-draft.md` | three or four candidate builds, one picked and argued against the others; one refusal; one fork. Unsourced figures are redacted to a visible marker, never rendered |
 
 **Stage 01's highest-yield targets** are the ones that describe operations
 rather than marketing: the help center (a published description of their manual

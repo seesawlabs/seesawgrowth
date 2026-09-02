@@ -3,7 +3,8 @@
 
    WHAT THE OFFER BECAME. After the 45-minute call, the lead gets one written
    recommendation: the one thing we would build first, why now, what we would
-   refuse to build, and what we could not see from outside. Not a menu. The
+   refuse to build, and what we could not see from outside. Shown against the
+   two or three other builds we weighed, so the choice can be argued with. The
    multi-section brief that stage 06 feeds is still generated, and it is still
    the evidence, but the deliverable is this: a short email that says "build
    this", and a research report behind it that a reviewer can check line by
@@ -59,17 +60,12 @@ import {
 
 /* -- output shape -------------------------------------------------------- */
 
-const RefuseSchema = z.object({
-  what: z.string().describe('The tempting build we would turn down, named as a thing. One line.'),
-  why: z
-    .string()
-    .describe(
-      'Two or three sentences. Why it is tempting, and why it is wrong for them specifically. Cite claim ids where the reason rests on evidence.'
-    ),
-  claimIds: z.array(z.string()).describe('May be empty if the reason is structural rather than evidential.'),
-});
-
-export const OneThingSchema = z.object({
+/**
+ * One candidate build. Three or four of these are generated and one is
+ * picked, so the reader sees the field the choice was made from and can
+ * disagree with the choice rather than with the whole exercise.
+ */
+const IdeaSchema = z.object({
   headline: z
     .string()
     .describe(
@@ -83,44 +79,83 @@ export const OneThingSchema = z.object({
   whyNow: z
     .string()
     .describe(
-      'Three to five sentences. The evidence that makes this the one, and why this year rather than next. Cite claim ids inline in parentheses after the sentence they support.'
+      'Two to four sentences. The evidence that makes this worth doing, and why this year. Cite claim ids inline in parentheses after the sentence they support.'
     ),
+  feasibility: z
+    .string()
+    .describe(
+      'One or two sentences. What a small design-led product studio would actually ship inside one engagement, and which of their systems it has to touch. No figures unless a cited claim carries them.'
+    ),
+  risk: z
+    .string()
+    .describe('One or two sentences. What would make this the wrong build: the assumption it rests on, or who would abandon it.'),
+  claimIds: z.array(z.string()).describe('The evidence this idea rests on. At least one.'),
+});
+
+const RefuseSchema = z.object({
+  what: z.string().describe('The tempting build we would turn down, named as a thing. One line.'),
+  why: z
+    .string()
+    .describe(
+      'Two or three sentences. Why it is tempting, and why it is wrong for them specifically. Cite claim ids where the reason rests on evidence.'
+    ),
+  claimIds: z.array(z.string()).describe('May be empty if the reason is structural rather than evidential.'),
+});
+
+export const OneThingSchema = z.object({
+  ideas: z
+    .array(IdeaSchema)
+    .describe(
+      'Three or four candidate builds, genuinely different from one another: different user, different moment, or different mechanism. Not one idea in three sizes.'
+    ),
+  pick: z.object({
+    index: z.number().int().describe('Zero-based index into `ideas` of the one we recommend.'),
+    why: z
+      .string()
+      .describe(
+        'Three to five sentences. Why this one over the others, naming the others and saying what each loses on: weaker evidence, harder to ship in one engagement, buyable from a vendor, or risk to what they sell. Cite claim ids where the comparison rests on evidence.'
+      ),
+  }),
   whyUs: z
     .string()
     .describe(
-      'One or two sentences on why this is interface and workflow judgement rather than a model or a data contract: who has to use it, under what pressure, and what they will abandon.'
+      'One or two sentences on why the recommended build is interface and workflow judgement rather than a model or a data contract: who has to use it, under what pressure, and what they will abandon.'
     ),
   firstStep: z
     .string()
     .describe(
-      'What the first two weeks of the engagement would actually be. One to three sentences. Usually a boring prerequisite: a data path, an instrumented step, a plain baseline before anything called AI.'
+      'What the first two weeks of the engagement would actually be, for the recommended build. One to three sentences. Usually a boring prerequisite: a data path, an instrumented step, a plain baseline before anything called AI.'
     ),
   refuse: RefuseSchema,
   couldNotSee: z
     .string()
     .describe(
-      'The one thing we could not determine from outside that changes the sequencing, and how the plan differs under each answer. Two to four sentences. This is the fork; both branches must be stated.'
+      'The one thing we could not determine from outside that changes the sequencing of the recommended build, and how the plan differs under each answer. Two to four sentences. This is the fork; both branches must be stated.'
     ),
-  claimIds: z
-    .array(z.string())
-    .describe('Every claim the recommendation rests on, including the ones cited inline. At least two.'),
   email: z.object({
     subject: z.string().describe('Under sixty characters. Names the build or the company, never "AI".'),
     body: z
       .string()
       .describe(
-        'The email to the lead, 220 to 340 words, written by a principal who did the research. Opens with the recommendation, not with thanks. Paragraphs separated by blank lines. Cite claim ids inline in parentheses after the sentence they support; they become footnotes. Ends by naming the one question the call should settle. No sign-off line; it is added by the sender.'
+        'The email to the lead, 260 to 380 words, written by a principal who did the research. Opens with the recommendation, not with thanks. Then one paragraph naming the other ideas weighed and why this one won. Then what we would refuse. Paragraphs separated by blank lines. Cite claim ids inline in parentheses after the sentence they support; they become footnotes. Ends by naming the one question the call should settle. No sign-off line; it is added by the sender.'
       ),
   }),
 });
 
 export type OneThing = z.infer<typeof OneThingSchema>;
+export type Idea = z.infer<typeof IdeaSchema>;
+
+/** The recommended idea. Clamped, so a bad index can never throw in a renderer. */
+export function chosen(x: OneThing): Idea {
+  const i = Math.min(Math.max(0, x.pick.index | 0), x.ideas.length - 1);
+  return x.ideas[i];
+}
 
 /* -- validation ---------------------------------------------------------- */
 
 export interface OneThingProblem {
   field: string;
-  code: 'unsourced_numeral' | 'unknown_claim_id' | 'no_evidence' | 'too_long' | 'too_short';
+  code: 'unsourced_numeral' | 'unknown_claim_id' | 'no_evidence' | 'too_long' | 'too_short' | 'too_few_ideas' | 'bad_pick';
   detail: string;
 }
 
@@ -132,16 +167,36 @@ export function numeralsIn(text: string): string[] {
 /** Round numbers that carry no claim — ordinals, halves, the two weeks. */
 const HARMLESS = new Set(['1', '2', '3', '4', '5', '10', '12', '24', '45', '50', '100']);
 
-const PROSE_FIELDS = ['headline', 'build', 'whyNow', 'whyUs', 'firstStep', 'couldNotSee'] as const;
-
 export function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+/** Every reader-facing string, keyed by a path the redactor can write back to. */
+export function proseFields(x: OneThing): [string, string][] {
+  const out: [string, string][] = [];
+  x.ideas.forEach((idea, i) => {
+    out.push([`ideas[${i}].headline`, idea.headline]);
+    out.push([`ideas[${i}].build`, idea.build]);
+    out.push([`ideas[${i}].whyNow`, idea.whyNow]);
+    out.push([`ideas[${i}].feasibility`, idea.feasibility]);
+    out.push([`ideas[${i}].risk`, idea.risk]);
+  });
+  out.push(['pick.why', x.pick.why]);
+  out.push(['whyUs', x.whyUs]);
+  out.push(['firstStep', x.firstStep]);
+  out.push(['refuse.what', x.refuse.what]);
+  out.push(['refuse.why', x.refuse.why]);
+  out.push(['couldNotSee', x.couldNotSee]);
+  out.push(['email.subject', x.email.subject]);
+  out.push(['email.body', x.email.body]);
+  return out;
+}
+
 /**
- * Every numeral anywhere must be in a cited claim or a computed fact. The
- * whole recommendation's `claimIds` is the citation set for every field; the
- * refusal may add its own. An id that does not exist is a problem in itself.
+ * Every numeral anywhere must be in a claim cited somewhere in this document
+ * or in a computed fact. The citation set is the union over the ideas and the
+ * refusal, because the pick compares ideas and the email spans them. An id
+ * that does not exist is a problem in itself.
  */
 export function validateOneThing(x: OneThing, claims: Claim[], facts: ComputedFacts): OneThingProblem[] {
   const problems: OneThingProblem[] = [];
@@ -151,9 +206,16 @@ export function validateOneThing(x: OneThing, claims: Claim[], facts: ComputedFa
   const p = (field: string, code: OneThingProblem['code'], detail: string) =>
     problems.push({ field, code, detail });
 
-  if (x.claimIds.length < 2) p('claimIds', 'no_evidence', 'a recommendation must rest on at least two claims');
+  if (x.ideas.length < 3) p('ideas', 'too_few_ideas', `${x.ideas.length} idea(s); the reader needs at least three to judge the choice`);
+  if (!Number.isInteger(x.pick.index) || x.pick.index < 0 || x.pick.index >= x.ideas.length) {
+    p('pick.index', 'bad_pick', `index ${x.pick.index} names no idea`);
+  }
 
-  const cited = [...new Set([...x.claimIds, ...x.refuse.claimIds])];
+  const cited = new Set<string>(x.refuse.claimIds);
+  x.ideas.forEach((idea, i) => {
+    if (idea.claimIds.length === 0) p(`ideas[${i}].claimIds`, 'no_evidence', 'an idea must rest on at least one claim');
+    for (const id of idea.claimIds) cited.add(id);
+  });
   const evidence: string[] = [];
   for (const id of cited) {
     const claim = byId.get(id);
@@ -162,24 +224,20 @@ export function validateOneThing(x: OneThing, claims: Claim[], facts: ComputedFa
   }
   const haystack = evidence.join(' ');
 
-  const check = (field: string, text: string) => {
+  for (const [field, text] of proseFields(x)) {
     for (const n of numeralsIn(stripClaimIds(text, ids))) {
       const bare = n.replace('%', '');
       if (allowed.has(bare) || HARMLESS.has(bare)) continue;
       if (haystack.includes(bare)) continue;
       p(field, 'unsourced_numeral', `"${n}" is in no cited claim or computed fact`);
     }
-  };
+  }
 
-  for (const f of PROSE_FIELDS) check(f, x[f]);
-  check('refuse.what', x.refuse.what);
-  check('refuse.why', x.refuse.why);
-  check('email.subject', x.email.subject);
-  check('email.body', x.email.body);
-
-  if (wordCount(x.headline) > 14) p('headline', 'too_long', `${wordCount(x.headline)} words; twelve is the ceiling`);
+  x.ideas.forEach((idea, i) => {
+    if (wordCount(idea.headline) > 14) p(`ideas[${i}].headline`, 'too_long', `${wordCount(idea.headline)} words; twelve is the ceiling`);
+  });
   const words = wordCount(x.email.body);
-  if (words > 400) p('email.body', 'too_long', `${words} words; the email is meant to be read on a phone`);
+  if (words > 450) p('email.body', 'too_long', `${words} words; the email is meant to be read on a phone`);
   if (words < 150) p('email.body', 'too_short', `${words} words; that is a note, not a recommendation`);
 
   return problems;
@@ -224,9 +282,15 @@ export function redactUnsourced(x: OneThing, problems: OneThingProblem[]): { red
   };
   const redacted: OneThing = {
     ...x,
-    headline: scrub('headline', x.headline),
-    build: scrub('build', x.build),
-    whyNow: scrub('whyNow', x.whyNow),
+    ideas: x.ideas.map((idea, i) => ({
+      ...idea,
+      headline: scrub(`ideas[${i}].headline`, idea.headline),
+      build: scrub(`ideas[${i}].build`, idea.build),
+      whyNow: scrub(`ideas[${i}].whyNow`, idea.whyNow),
+      feasibility: scrub(`ideas[${i}].feasibility`, idea.feasibility),
+      risk: scrub(`ideas[${i}].risk`, idea.risk),
+    })),
+    pick: { ...x.pick, why: scrub('pick.why', x.pick.why) },
     whyUs: scrub('whyUs', x.whyUs),
     firstStep: scrub('firstStep', x.firstStep),
     couldNotSee: scrub('couldNotSee', x.couldNotSee),
@@ -238,39 +302,29 @@ export function redactUnsourced(x: OneThing, problems: OneThingProblem[]): { red
 
 /** Every string a reader will see, for the voice check. */
 export function oneThingProse(x: OneThing): string {
-  return [
-    x.headline,
-    x.build,
-    x.whyNow,
-    x.whyUs,
-    x.firstStep,
-    x.refuse.what,
-    x.refuse.why,
-    x.couldNotSee,
-    x.email.subject,
-    x.email.body,
-  ]
+  return proseFields(x)
+    .map(([, text]) => text)
     .filter(Boolean)
     .join('\n');
 }
 
 /* -- the prompt ---------------------------------------------------------- */
 
-export const ONE_THING_INSTRUCTIONS = `You have already written the analysis: a read on where they stand, several ideas, the questions, the peer signal. Now do the harder thing. Choose.
+export const ONE_THING_INSTRUCTIONS = `You have already written the analysis: a read on where they stand, several ideas, the questions, the peer signal. Now do the harder thing. Lay out the real options, then choose.
 
-WHAT YOU ARE WRITING. Two documents that say the same thing at two lengths. A short email to the owner that says: build this, here is why, here is what we would not build, here is the one question that decides the sequencing. And the fields behind it that a research report will carry. Both are read by a colleague first, who will check every sentence against the claim it cites before anything is sent.
+WHAT YOU ARE WRITING. Two documents that say the same thing at two lengths. A short email to the owner that says: build this, here is what else we weighed and why this won, here is what we would not build, here is the one question that decides the sequencing. And the fields behind it that a research report will carry. Both are read by a colleague first, who will check every sentence against the claim it cites before anything is sent.
 
-THE ONE THING. Pick the single build we would start first if this company hired us tomorrow. Name it as a thing: a screen, a step in a workflow, a record, a prediction shown at a specific moment to a specific person. Not a programme, not a strategy, not "explore". The test: could a small design-led product studio scope it on Monday and have a working surface in front of real users inside one engagement? If not, it is too big. If a vendor already sells it for a monthly fee, say so and pick something else.
+THE IDEAS. Three or four candidate builds, and they must be genuinely different: a different user, a different moment in the workflow, or a different mechanism. One idea in three sizes is not three ideas. Each is named as a thing: a screen, a step in a workflow, a record, a prediction shown at a specific moment to a specific person. Not a programme, not a strategy, not "explore". The test for every one: could a small design-led product studio scope it on Monday and have a working surface in front of real users inside one engagement? If not, it is too big. If a vendor already sells it for a monthly fee, say so in its risk line rather than pretending otherwise. Each idea carries its own evidence, its own feasibility line and its own risk line, so the reader can weigh them without you.
 
-Prefer the boring prerequisite over the clever model. Prefer an internal surface the company controls over a client-facing product that changes what they sell. Prefer the thing their own data makes possible and no competitor can buy. If the strongest evidence is a peer's move, the one thing is usually the response to it, not a copy of it.
+Prefer the boring prerequisite over the clever model. Prefer an internal surface the company controls over a client-facing product that changes what they sell. Prefer the thing their own data makes possible and no competitor can buy. If the strongest evidence is a peer's move, the response to it is usually a better idea than a copy of it.
 
-WHY NOW. Three to five sentences, each resting on a cited claim. What in the evidence makes this the one, and why this year. If the category is being commoditised, say by whom and at what published price, from the claims. If the incumbents have shipped nothing, say that as "we could not find", never as "they have nothing".
+THE PICK. Choose one, and argue it against the others by name. What each loses on: weaker evidence, harder to ship in one engagement, buyable from a vendor, or risk to what they sell. A reader who disagrees with the pick should be able to see exactly which judgement they disagree with. Do not pick the safest idea by default; pick the one the evidence supports best that they could not buy.
 
-WHAT WE WOULD REFUSE. The tempting build. Usually the obvious one everyone will pitch them this year. Say why it is wrong for them specifically: the asymmetry, the price war, the risk to what they sell. This is the paragraph most likely to be forwarded internally, so make it plain.
+WHAT WE WOULD REFUSE. The tempting build. Usually the obvious one everyone will pitch them this year, and usually not one of your ideas. Say why it is wrong for them specifically: the asymmetry, the price war, the risk to what they sell. This is the paragraph most likely to be forwarded internally, so make it plain.
 
-THE FORK. Name the one thing you could not determine from outside that changes the sequencing, and say what the plan is under each answer. Both branches must be stated, and they must differ. If the advice would be the same either way, that unknown is not the fork; find the one that is.
+THE FORK. For the recommended build, name the one thing you could not determine from outside that changes the sequencing, and say what the plan is under each answer. Both branches must be stated, and they must differ. If the advice would be the same either way, that unknown is not the fork; find the one that is.
 
-THE EMAIL. 220 to 340 words. Open with the recommendation in the first sentence. Written by the person who did the research, to the owner, the way a smart colleague writes. Cite claim ids in parentheses after the sentence they support; they will become numbered footnotes with the source underneath, so the reader can check every line. Close by naming the question the call should settle. Do not thank them for filling in a form. Do not describe our process. Do not mention hiring, job adverts or careers pages. Do not attach a price or a timeline unless a cited claim carries the figure.
+THE EMAIL. 260 to 380 words. Open with the recommendation in the first sentence. Then, in one paragraph, name the other ideas you weighed and say in a clause each why this one won. Then what you would refuse. Written by the person who did the research, to the owner, the way a smart colleague writes. Cite claim ids in parentheses after the sentence they support; they will become numbered footnotes with the source underneath. Close by naming the question the call should settle. Do not thank them for filling in a form. Do not describe our process. Do not mention hiring, job adverts or careers pages. Do not attach a price or a timeline unless a cited claim carries the figure.
 
 NUMERALS. Every digit anywhere in your output must appear in a claim you cite or in the computed facts. There is no assumptions block here. An unsupported digit is redacted before anyone sees it, so it is wasted work. Write "a fraction of the price" if you cannot cite the price.
 
@@ -308,7 +362,7 @@ ${args.oneLiner?.trim() ? `THEY DESCRIBE THEMSELVES AS: ${args.oneLiner.trim()}\
 COMPUTED FACTS — you may state these figures freely:
 ${JSON.stringify(args.facts, null, 2)}
 
-THE ANALYSIS YOU ALREADY WROTE (validated; choose from it, sharpen it, or depart from it if the evidence points elsewhere):
+THE ANALYSIS YOU ALREADY WROTE (validated; draw your ideas from it, sharpen them, or depart from it if the evidence points elsewhere):
 ${JSON.stringify(args.synthesis, null, 2)}
 
 VALIDATED CLAIMS — the only evidence. Every one is sourced. Cite by id.
@@ -465,7 +519,7 @@ ${JSON.stringify(final, null, 2)}`;
         voiceRepair = { attempted: true, applied: false, reason: 'rewrite introduced a validation problem; kept the original' };
       } else if (over(after) >= over(voiceFlags)) {
         voiceRepair = { attempted: true, applied: false, reason: `rewrite did not improve the prose (${over(voiceFlags)} -> ${over(after)})` };
-      } else if (repaired.headline.trim() === '' || wordCount(repaired.email.body) < 150) {
+      } else if (repaired.ideas.length < 3 || wordCount(repaired.email.body) < 150) {
         voiceRepair = { attempted: true, applied: false, reason: 'rewrite lost content; kept the original' };
       } else {
         final = redactUnsourced(repaired, repairedProblems).redacted;

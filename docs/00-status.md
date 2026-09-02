@@ -9,7 +9,7 @@
 > specimens set the shape: BetterRX (delivery-time prediction in the order screen, on the
 > back of CMS HOPE's two-day symptom clock) and Cultivate Advisors (an advisor-facing memory
 > over 2,000 engagements, against a $29/month white-label AI-coach market). The pipeline now
-> generates that shape: stage 07 picks the one thing, the research report prints to PDF with
+> generates that shape: stage 07 lays out three or four builds and picks one, the research report prints to PDF with
 > a claim register, and the email draft is footnoted to it.
 >
 > **Scoring is retired from the live flow.** Revenue and stage are no longer asked. Every lead

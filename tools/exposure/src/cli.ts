@@ -52,7 +52,7 @@ import { runSynthesisStage, type SynthesisArtifact } from './stages/06-synthesis
 import { renderReportHtml } from './render/report-html.ts';
 import { renderResearchReport } from './render/research-report.ts';
 import { renderEmailDraft, type EmailDraft } from './render/email-draft.ts';
-import { runOneThingStage, type OneThingArtifact } from './stages/07-one-thing.ts';
+import { runOneThingStage, chosen, type OneThingArtifact } from './stages/07-one-thing.ts';
 import { renderPdf } from './lib/pdf.ts';
 import { registrableDomain } from './lib/domain.ts';
 import { FIXTURE_CLAIMS, FIXTURE_META } from './fixtures/prototype.ts';
@@ -198,7 +198,7 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
     a.stageNotes.push('stage 07 skipped: no analysis to choose from');
     console.error('[07/07] the one thing — SKIPPED (no analysis)');
   } else {
-    console.error('[07/07] the one thing — one build, one refusal, one fork; every figure checked');
+    console.error('[07/07] the one thing — three or four builds, one pick, one refusal, one fork; every figure checked');
     try {
       oneThing = await runOneThingStage(
         a.cache,
@@ -216,7 +216,7 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
         a.now
       );
       await writeArtifact(a.dir, '07-one-thing', oneThing);
-      console.error(`        "${oneThing.oneThing.headline}" — ${oneThing.model}, ${oneThing.attempts} draft(s)`);
+      console.error(`        ${oneThing.oneThing.ideas.length} ideas; picked "${chosen(oneThing.oneThing).headline}" — ${oneThing.model}, ${oneThing.attempts} draft(s)`);
       for (const note of oneThing.notes) console.error(`        - ${note}`);
       if (oneThing.redacted > 0) console.error(`        REDACTED ${oneThing.redacted} unsourced figure(s)`);
     } catch (error) {

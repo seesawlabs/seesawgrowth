@@ -1762,6 +1762,7 @@ test('a revision prompt is stable regardless of notes formatting', () => {
 import {
   validateOneThing,
   redactUnsourced,
+  chosen,
   REDACTED,
   type OneThing,
 } from './stages/07-one-thing.ts';
@@ -1801,14 +1802,40 @@ const SEVEN_CLAIMS: Claim[] = [
 const SEVEN_FACTS = { pagesCrawled: 9, peersIdentified: 4, peersWithDatedAiEvidence: 1, observedClaims: 6, comparativeClaims: 3 };
 
 const goodOneThing = (): OneThing => ({
-  headline: 'Delivery-time prediction in the order screen',
-  build: 'A predicted delivery window shown to the person placing the order, at the moment they place it.',
-  whyNow: 'Rival Co shipped an assistant for order intake this spring (cmp-1). You already charge $450 a month for the Team plan (obs-price).',
+  ideas: [
+    {
+      headline: 'Delivery-time prediction in the order screen',
+      build: 'A predicted delivery window shown to the person placing the order, at the moment they place it.',
+      whyNow: 'Rival Co shipped an assistant for order intake this spring (cmp-1). You already charge $450 a month for the Team plan (obs-price).',
+      feasibility: 'One screen, reading the order history you already hold.',
+      risk: 'If delivery times are not recorded per order, there is nothing to predict from.',
+      claimIds: ['cmp-1', 'obs-price'],
+    },
+    {
+      headline: 'A dispatcher board that ranks the day by lateness risk',
+      build: 'An internal screen for the dispatcher, ordering the day by which orders are most likely to slip.',
+      whyNow: 'Rival Co moved on intake, not on dispatch (cmp-1).',
+      feasibility: 'Internal only, no customer exposure.',
+      risk: 'Dispatchers already have a board; a second one gets ignored.',
+      claimIds: ['cmp-1'],
+    },
+    {
+      headline: 'Plain-language order status for the customer',
+      build: 'A status page that says what is happening in words rather than codes.',
+      whyNow: 'People search for order tracking (dem-1).',
+      feasibility: 'A page and a feed.',
+      risk: 'Every carrier gives this away.',
+      claimIds: ['dem-1'],
+    },
+  ],
+  pick: {
+    index: 0,
+    why: 'The prediction is the only one of the three no vendor sells them and the only one that uses data only they hold. The dispatcher board is internal and safe but duplicates a screen they have. The status page is what every carrier already gives away.',
+  },
   whyUs: 'The person placing the order has seconds. The surface has to earn its place on that screen.',
   firstStep: 'Two weeks reading how delivery times are recorded today.',
   refuse: { what: 'A customer-facing chatbot', why: 'Rival Co already shipped one (cmp-1). Competing there is competing on their terms.', claimIds: ['cmp-1'] },
   couldNotSee: 'Whether delivery times are recorded per order. If they are, this is retrieval. If not, it starts with instrumenting the step.',
-  claimIds: ['cmp-1', 'obs-price'],
   email: {
     subject: 'The one thing: delivery-time prediction',
     body: Array(30).fill('Build a predicted delivery window into the order screen (cmp-1).').join(' '),
@@ -1821,37 +1848,49 @@ test('stage 07: a clean draft validates', () => {
 
 test('stage 07: a figure in no cited claim is caught, even when some other claim carries it', () => {
   const x = goodOneThing();
-  x.whyNow += ' That term draws 2,400 searches a month.'; // in dem-1, which is not cited
+  x.ideas.pop(); // drop the idea that cites dem-1, leaving a third idea that cites nothing new
+  x.ideas.push({ ...x.ideas[1], headline: 'A third, different idea', claimIds: ['obs-price'] });
+  x.pick.why += ' That term draws 2,400 searches a month.'; // in dem-1, which is no longer cited anywhere
   const problems = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS);
   assert.equal(problems.length, 1);
   assert.equal(problems[0].code, 'unsourced_numeral');
-  assert.equal(problems[0].field, 'whyNow');
+  assert.equal(problems[0].field, 'pick.why');
 });
 
 test('stage 07: computed facts and harmless round numbers pass', () => {
   const x = goodOneThing();
-  x.build += ' We read 9 pages and found 4 comparable companies; the first 2 weeks are reading.';
+  x.ideas[0].build += ' We read 9 pages and found 4 comparable companies; the first 2 weeks are reading.';
   assert.deepEqual(validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS), []);
 });
 
 test('stage 07: an unknown claim id is a problem in itself', () => {
   const x = goodOneThing();
-  x.claimIds.push('cmp-99');
+  x.ideas[0].claimIds.push('cmp-99');
   const codes = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS).map((p) => p.code);
   assert.ok(codes.includes('unknown_claim_id'));
 });
 
+test('stage 07: fewer than three ideas, or a pick that names none of them, is refused', () => {
+  const two = goodOneThing();
+  two.ideas.pop();
+  assert.ok(validateOneThing(two, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'too_few_ideas'));
+  const bad = goodOneThing();
+  bad.pick.index = 7;
+  assert.ok(validateOneThing(bad, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'bad_pick'));
+  assert.equal(chosen(bad).headline, goodOneThing().ideas[2].headline, 'a bad index clamps rather than throws');
+});
+
 test('stage 07: redaction removes the figure and its attached symbols, nothing else', () => {
   const x = goodOneThing();
-  x.whyNow += ' Their competitor charges $1,299 for the same thing, a 30% premium.';
+  x.ideas[0].whyNow += ' Their competitor charges $1,299 for the same thing, a 30% premium.';
   const problems = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS);
   assert.equal(problems.filter((p) => p.code === 'unsourced_numeral').length, 2);
   const { redacted, count } = redactUnsourced(x, problems);
   assert.equal(count, 2);
-  assert.ok(!redacted.whyNow.includes('1,299'));
-  assert.ok(!redacted.whyNow.includes('30%'));
-  assert.ok(redacted.whyNow.includes(`charges ${REDACTED} for the same thing, a ${REDACTED} premium`));
-  assert.ok(redacted.whyNow.includes('$450'), 'the sourced figure survives');
+  assert.ok(!redacted.ideas[0].whyNow.includes('1,299'));
+  assert.ok(!redacted.ideas[0].whyNow.includes('30%'));
+  assert.ok(redacted.ideas[0].whyNow.includes(`charges ${REDACTED} for the same thing, a ${REDACTED} premium`));
+  assert.ok(redacted.ideas[0].whyNow.includes('$450'), 'the sourced figure survives');
   assert.deepEqual(validateOneThing(redacted, SEVEN_CLAIMS, SEVEN_FACTS), [], 'a redacted draft validates');
 });
 
@@ -1891,7 +1930,7 @@ test('email draft: the text carries the subject, the salutation, the body and th
 
 test('research report: every claim has a register row, prose ids link to them, the redaction is announced', () => {
   const one = goodOneThing();
-  one.whyNow += ` Their rival charges ${REDACTED} for it.`;
+  one.ideas[0].whyNow += ` Their rival charges ${REDACTED} for it.`;
   const html = renderResearchReport({
     meta: { runId: 'r1', domain: 'example.test', startedAt: '2026-08-30T00:00:00Z' },
     company: 'Acme',
@@ -1907,6 +1946,9 @@ test('research report: every claim has a register row, prose ids link to them, t
   assert.ok(html.includes('For the reviewer.'), 'the banner is present');
   assert.ok(html.includes('1 figure(s) were redacted'));
   assert.ok(html.includes('The email, as drafted'));
+  assert.ok(html.includes('The ideas we weighed'));
+  assert.ok(html.includes('A dispatcher board that ranks the day'), 'the ideas not chosen are shown');
+  assert.equal((html.match(/>Recommended</g) ?? []).length, 1, 'exactly one idea is marked as the pick');
 });
 
 test('research report: with no recommendation, it says so instead of inventing one', () => {

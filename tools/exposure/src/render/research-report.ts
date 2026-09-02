@@ -29,7 +29,7 @@ import type { Claim, Coverage } from '../lib/claim.ts';
 import type { RunMeta } from '../lib/run.ts';
 import type { Synthesis } from '../stages/06-synthesis.ts';
 import type { OneThingArtifact } from '../stages/07-one-thing.ts';
-import { REDACTED } from '../stages/07-one-thing.ts';
+import { REDACTED, chosen } from '../stages/07-one-thing.ts';
 import { esc } from './report-html.ts';
 import type { EmailDraft } from './email-draft.ts';
 
@@ -175,14 +175,18 @@ export function renderResearchReport(input: ResearchReportInput): string {
     : '';
 
   /* -- the recommendation -- */
-  const recommendation = one
-    ? `<h2>The recommendation</h2>
+  const pick = one ? chosen(one) : null;
+  const recommendation =
+    one && pick
+      ? `<h2>The recommendation</h2>
   <div class="lead keep-together">
-    <h3>${prose(one.headline)}</h3>
-    ${paras(one.build, prose)}
+    <h3>${prose(pick.headline)}</h3>
+    ${paras(pick.build, prose)}
   </div>
-  <h2>Why this and not something else</h2>
-  ${paras(one.whyNow, prose)}
+  <h2>Why this one</h2>
+  ${paras(one.pick.why, prose)}
+  <h4>Why now</h4>
+  ${paras(pick.whyNow, prose)}
   <h4>Why a design studio rather than a model</h4>
   ${paras(one.whyUs, prose)}
   <h4>The first two weeks</h4>
@@ -197,18 +201,20 @@ export function renderResearchReport(input: ResearchReportInput): string {
     ${paras(one.couldNotSee, prose)}
     <p class="rule-note">Nothing public distinguishes the branches above. It is the first question the call should settle, and it changes the sequencing rather than the destination.</p>
   </div>`
-    : `<h2>The recommendation</h2><p class="rule-note">Not written. See the note for the reviewer above.</p>`;
+      : `<h2>The recommendation</h2><p class="rule-note">Not written. See the note for the reviewer above.</p>`;
 
   /* -- the field it was chosen from -- */
-  const considered = synthesis?.opportunities.length
-    ? `<h2>Considered, and not chosen</h2>
-  <p class="rule-note">The ideas the analysis produced before one was picked. Shown so what we set aside is visible, with the evidence each rested on.</p>
-  ${synthesis.opportunities
+  const considered = one
+    ? `<h2>The ideas we weighed</h2>
+  <p class="rule-note">Every candidate, with its own evidence, what one engagement would ship, and what would make it the wrong build. The recommended one is marked. A reader who would have picked differently can see which judgement they disagree with.</p>
+  ${one.ideas
     .map(
-      (o) => `<div class="keep-together considered">
-      <h4>${esc(o.heading)}</h4>
-      <p>${prose(o.body)}</p>
-      <p class="rule-note">${prose(o.basis)}</p>
+      (idea, i) => `<div class="keep-together idea${idea === pick ? ' idea--pick' : ''}">
+      <h4>${i + 1}. ${prose(idea.headline)}${idea === pick ? ' <span class="pill pill--verified">Recommended</span>' : ''}</h4>
+      ${paras(idea.build, prose)}
+      <p><strong>Why now.</strong> ${prose(idea.whyNow)}</p>
+      <p><strong>One engagement ships.</strong> ${prose(idea.feasibility)}</p>
+      <p class="rule-note"><strong>What would make it wrong.</strong> ${prose(idea.risk)}</p>
     </div>`
     )
     .join('')}`
@@ -302,7 +308,7 @@ export function renderResearchReport(input: ResearchReportInput): string {
   <ol>
     ${
       one
-        ? `<li>The claims the recommendation rests on: ${one.claimIds
+        ? `<li>The claims the recommendation rests on: ${(pick?.claimIds ?? [])
             .filter((id) => byId.has(id))
             .map((id) => `<a class="ref" href="#claim-${esc(id)}">${esc(id)}</a>`)
             .join(' ')}. Open the sources. The whole argument rests on them being real and current.</li>
@@ -375,7 +381,7 @@ const STYLES = `
   .page { max-width: 176mm; margin-inline: auto; padding: 0 0 14mm; }
   @media screen { body { padding: 12mm 6mm; } }
   @media print { .page--break { break-before: page; } }
-  table, .lead, .stop, .considered { break-inside: avoid; }
+  table, .lead, .stop, .idea { break-inside: avoid; }
   .reg { break-inside: auto; }
   .reg thead { display: table-header-group; }
   tr { break-inside: avoid; }
@@ -402,8 +408,9 @@ const STYLES = `
   .stop { border: 1px solid var(--stop); border-left-width: 3px; padding: 4mm 5mm; margin: 0 0 4mm; }
   .stop h4 { margin-top: 0; color: var(--stop); }
   .stop p:last-child { margin-bottom: 0; }
-  .considered { margin-bottom: 3mm; }
-  .considered h4 { margin-top: 3mm; }
+  .idea { margin-bottom: 4mm; padding-left: 4mm; border-left: 2px solid var(--rule-2); }
+  .idea h4 { margin-top: 2mm; }
+  .idea--pick { border-left-color: var(--hi-ru); background: var(--hi); padding: 2mm 4mm 1mm; }
   table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 0 0 4mm; }
   caption { caption-side: bottom; font-family: var(--sans); font-size: 7.5pt; color: var(--ink-3); text-align: left; padding-top: 2mm; line-height: 1.4; }
   th, td { text-align: left; padding: 1.6mm 2mm; border-bottom: 1px solid var(--rule-2); vertical-align: top; }
