@@ -24,6 +24,8 @@
      --peer <domain>      a competitor they named. Repeatable, and the single
                           highest-value thing an intake form can collect
      --no-synthesis       skip the analyst (debugging the evidence stages)
+     --no-one-thing       skip stage 07 (the recommendation and the email draft)
+     --name "..."         the recipient, for the email draft's salutation
      --trigger "..."      what the prospect said is driving this
      --category "..."     override the derived category query (stage 02's input)
      --budget <usd>       override EXPOSURE_RUN_BUDGET_USD
@@ -48,6 +50,10 @@ import { runDemandStage, type DemandArtifact } from './stages/04-demand.ts';
 import { buildClaims, coverageFrom } from './stages/claims.ts';
 import { runSynthesisStage, type SynthesisArtifact } from './stages/06-synthesis.ts';
 import { renderReportHtml } from './render/report-html.ts';
+import { renderResearchReport } from './render/research-report.ts';
+import { renderEmailDraft, type EmailDraft } from './render/email-draft.ts';
+import { runOneThingStage, type OneThingArtifact } from './stages/07-one-thing.ts';
+import { renderPdf } from './lib/pdf.ts';
 import { registrableDomain } from './lib/domain.ts';
 import { FIXTURE_CLAIMS, FIXTURE_META } from './fixtures/prototype.ts';
 
@@ -104,6 +110,10 @@ interface Args {
   noSynthesis: boolean;
   /** Skip the wider web research pass before the analysis. */
   noResearch: boolean;
+  /** Skip stage 07: the one thing, the research report and the email draft. */
+  noOneThing: boolean;
+  /** The recipient's name, for the email draft. */
+  name?: string;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -115,6 +125,7 @@ function parseArgs(argv: string[]): Args {
     namedPeers: [],
     noSynthesis: false,
     noResearch: false,
+    noOneThing: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -123,6 +134,8 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--quiet') args.quiet = true;
     else if (a === '--no-synthesis') args.noSynthesis = true;
     else if (a === '--no-research') args.noResearch = true;
+    else if (a === '--no-one-thing') args.noOneThing = true;
+    else if (a === '--name') args.name = argv[++i];
     else if (a === '--peer') {
       const v = argv[++i];
       if (v) args.namedPeers.push(v);
@@ -141,6 +154,174 @@ function parseArgs(argv: string[]): Args {
 function normalizeDomain(input: string): string {
   const trimmed = input.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   return registrableDomain(trimmed) || trimmed.toLowerCase();
+}
+
+/* -- the two documents ---------------------------------------------------
+
+   The offer's output is a research report (printed to PDF) and an email
+   draft. Both are rendered from the same validated claims and the same stage
+   06 and 07 artifacts, by `report`, `revise` and `onething` alike, so this is
+   the one place that decides what a run leaves on disk:
+
+     07-one-thing.json       the recommendation, validated, with its audit trail
+     research-report.html    the long document
+     research-report.pdf     the same, printed, when a Chrome is on the machine
+     email-draft.md          the short document, footnoted
+
+   Stage 07 failing is reported, not fatal: the report still renders with the
+   research and a banner saying the recommendation is missing. */
+
+interface TwoDocArgs {
+  dir: string;
+  meta: { runId: string; domain: string; startedAt: string; trigger?: string; companyName?: string };
+  company: string;
+  oneLiner?: string;
+  recipientName?: string;
+  claims: ReturnType<typeof buildClaims>;
+  coverage: ReturnType<typeof scoreCoverage>;
+  synthesis: SynthesisArtifact | null;
+  stageNotes: string[];
+  ledger: Ledger;
+  cache: CacheOptions;
+  now: string;
+  skip: boolean;
+}
+
+async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact | null; draft: EmailDraft | null }> {
+  const { renderable } = partitionClaims(a.claims);
+  let oneThing: OneThingArtifact | null = null;
+
+  if (a.skip) {
+    a.stageNotes.push('stage 07 skipped: --no-one-thing');
+    console.error('[07/07] the one thing — SKIPPED (--no-one-thing)');
+  } else if (!a.synthesis) {
+    a.stageNotes.push('stage 07 skipped: no analysis to choose from');
+    console.error('[07/07] the one thing — SKIPPED (no analysis)');
+  } else {
+    console.error('[07/07] the one thing — one build, one refusal, one fork; every figure checked');
+    try {
+      oneThing = await runOneThingStage(
+        a.cache,
+        a.ledger,
+        {
+          company: a.company,
+          domain: a.meta.domain,
+          oneLiner: a.oneLiner,
+          claims: renderable,
+          facts: a.synthesis.facts,
+          synthesis: a.synthesis.synthesis,
+          trigger: a.meta.trigger,
+          industryBrief: a.synthesis.industryBrief,
+        },
+        a.now
+      );
+      await writeArtifact(a.dir, '07-one-thing', oneThing);
+      console.error(`        "${oneThing.oneThing.headline}" — ${oneThing.model}, ${oneThing.attempts} draft(s)`);
+      for (const note of oneThing.notes) console.error(`        - ${note}`);
+      if (oneThing.redacted > 0) console.error(`        REDACTED ${oneThing.redacted} unsourced figure(s)`);
+    } catch (error) {
+      a.stageNotes.push(`stage 07 failed: ${(error as Error).message.slice(0, 200)}`);
+      console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
+    }
+  }
+
+  const draft = oneThing
+    ? renderEmailDraft({ company: a.company, oneThing: oneThing.oneThing, claims: renderable, recipientName: a.recipientName })
+    : null;
+  if (draft) await writeFile(join(a.dir, 'email-draft.md'), draft.markdown);
+
+  const html = renderResearchReport({
+    meta: a.meta,
+    company: a.company,
+    oneLiner: a.oneLiner,
+    recipientName: a.recipientName,
+    claims: renderable,
+    coverage: a.coverage,
+    synthesis: a.synthesis?.synthesis ?? null,
+    oneThing,
+    emailDraft: draft,
+    stageNotes: a.stageNotes,
+    models: { research: a.synthesis?.researchModel, synthesis: a.synthesis?.model, oneThing: oneThing?.model },
+    cost: { spent: a.ledger.spent, ceiling: a.ledger.ceiling },
+  });
+  const htmlPath = join(a.dir, 'research-report.html');
+  await writeFile(htmlPath, html);
+
+  const pdfPath = join(a.dir, 'research-report.pdf');
+  const pdf = renderPdf(htmlPath, pdfPath);
+  if (pdf.ok) console.error(`        printed ${pdfPath}`);
+  else {
+    a.stageNotes.push(`pdf not printed: ${pdf.reason}`);
+    console.error(`        PDF not printed: ${pdf.reason}`);
+  }
+
+  return { oneThing, draft };
+}
+
+/* -- onething: re-choose from an existing run, without re-researching ---- */
+
+async function oneThingOnly(argv: string[]): Promise<void> {
+  let domain = '';
+  let run: string | undefined;
+  let name: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--run') run = argv[++i];
+    else if (a === '--name') name = argv[++i];
+    else if (a === '--refresh') process.env.EXPOSURE_ONE_THING_REFRESH = '1';
+    else if (!a.startsWith('-') && !domain) domain = a;
+  }
+  if (!domain) {
+    console.error('Usage: npm run onething -- <domain> [--run <runId>] [--name "..."] [--refresh]');
+    process.exit(1);
+  }
+  domain = normalizeDomain(domain);
+  loadDotEnv(ROOT);
+
+  const runsDir = join(ROOT, 'runs', domain.replace(/[^a-z0-9.-]/gi, '_'));
+  const runId = run || (await newestRunId(runsDir));
+  if (!runId) {
+    console.error(`No runs found for ${domain}.`);
+    process.exit(3);
+  }
+  const dir = join(runsDir, runId);
+  const readJson = async (n: string) => JSON.parse(await readFile(join(dir, `${n}.json`), 'utf8'));
+  const readOptionalJson = async (n: string) => readJson(n).catch(() => null);
+
+  const meta = await readJson('00-meta');
+  const claims = await readJson('claims');
+  const coverage = await readJson('coverage');
+  const synthesis: SynthesisArtifact | null = await readOptionalJson('06-synthesis');
+  const subject = await readOptionalJson('01-subject');
+  if (!synthesis) {
+    console.error(`${runId} has no 06-synthesis.json; run 'report' first.`);
+    process.exit(4);
+  }
+
+  const now = new Date().toISOString();
+  const ledger = new Ledger();
+  const cache: CacheOptions = { dir: join(ROOT, 'cache'), refresh: process.env.EXPOSURE_ONE_THING_REFRESH === '1' };
+  const company = meta.companyName?.trim() || domain;
+  const stageNotes: string[] = ['stage 07 re-run on an existing run; stages 01-06 as recorded'];
+
+  console.error(`The one thing — ${domain}, from run ${runId}`);
+  await writeTwoDocs({
+    dir,
+    meta,
+    company,
+    oneLiner: subject?.categoryQuery?.seedText,
+    recipientName: name,
+    claims,
+    coverage,
+    synthesis,
+    stageNotes,
+    ledger,
+    cache,
+    now,
+    skip: false,
+  });
+  console.error(`\n${ledger.format()}`);
+  console.error(`\nwrote ${join(dir, 'research-report.html')}  (and email-draft.md)`);
 }
 
 /* -- revise: same draft, edited, without re-paying for research --------- */
@@ -320,10 +501,29 @@ async function revise(argv: string[]): Promise<void> {
   await writeFile(join(dir, 'report.html'), html);
   if (!args.quiet) console.log(markdown);
 
+  /* The two documents, re-chosen against the revised analysis. */
+  const stageNotes: string[] = [`revised from ${sourceRunId} against notes`];
+  const intake = await readOptionalJson('intake');
+  await writeTwoDocs({
+    dir,
+    meta: { runId, domain, startedAt: now, trigger: meta.trigger, companyName: meta.companyName },
+    company,
+    oneLiner: subject.categoryQuery?.seedText,
+    recipientName: intake?.name,
+    claims,
+    coverage,
+    synthesis,
+    stageNotes,
+    ledger,
+    cache,
+    now,
+    skip: false,
+  });
+
   console.error(`\n${summarizeCoverage(coverage)}`);
   console.error(`\n${ledger.format()}`);
   console.error(`\nrevised from ${sourceRunId} -> ${runId}`);
-  console.error(`wrote ${join(dir, 'report.html')}  (and report.md)`);
+  console.error(`wrote ${join(dir, 'report.html')}  (and report.md, research-report.html, email-draft.md)`);
 }
 
 /* -- the pipeline ------------------------------------------------------- */
@@ -382,7 +582,7 @@ async function report(argv: string[]): Promise<void> {
     console.error(`Stage 01 cannot run: ${gate01.missing.join(', ')} missing. This stage is mandatory.`);
     process.exit(3);
   }
-  console.error('[01/06] subject — mapping and scraping their own surface');
+  console.error('[01/07] subject — mapping and scraping their own surface');
   const subject = await runSubjectStage(cache, ledger, domain, now, {
     categoryQueryOverride: args.category,
   });
@@ -401,12 +601,12 @@ async function report(argv: string[]): Promise<void> {
   const gate02 = checkStage('02-peers');
   if (!gate02.ok) {
     stageNotes.push(`stage 02 skipped: ${gate02.missing.join(', ')} missing`);
-    console.error(`[02/06] peers — SKIPPED (${gate02.missing.join(', ')} missing)`);
+    console.error(`[02/07] peers — SKIPPED (${gate02.missing.join(', ')} missing)`);
   } else if (subject.pagesCrawled === 0) {
     stageNotes.push('stage 02 skipped: no subject pages crawled, so no category description to search with');
-    console.error('[02/06] peers — SKIPPED (no subject content to derive a category from)');
+    console.error('[02/07] peers — SKIPPED (no subject content to derive a category from)');
   } else {
-    console.error('[02/06] peers — Exa category search plus find-similar');
+    console.error('[02/07] peers — Exa category search plus find-similar');
     try {
       peers = await runPeersStage(
         cache,
@@ -440,12 +640,12 @@ async function report(argv: string[]): Promise<void> {
   const gate03 = checkStage('03-peer-evidence');
   if (!gate03.ok) {
     stageNotes.push(`stage 03 skipped: ${gate03.missing.join(', ')} missing`);
-    console.error(`[03/06] peer evidence — SKIPPED (${gate03.missing.join(', ')} missing)`);
+    console.error(`[03/07] peer evidence — SKIPPED (${gate03.missing.join(', ')} missing)`);
   } else if (!peers || peers.peers.length === 0) {
     stageNotes.push('stage 03 skipped: no peers to research');
-    console.error('[03/06] peer evidence — SKIPPED (no peers)');
+    console.error('[03/07] peer evidence — SKIPPED (no peers)');
   } else {
-    console.error('[03/06] peer evidence — Perplexity, citation-resolved, plus peer sites');
+    console.error('[03/07] peer evidence — Perplexity, citation-resolved, plus peer sites');
     try {
       evidence = await runPeerEvidenceStage(cache, ledger, domain, peers.peers, now, {
         maxPeers: args.peers ?? 6,
@@ -484,9 +684,9 @@ async function report(argv: string[]): Promise<void> {
   const gate04 = checkStage('04-demand');
   if (!gate04.ok) {
     stageNotes.push(`stage 04 skipped: ${gate04.missing.join(', ')} missing`);
-    console.error(`[04/06] demand — SKIPPED (${gate04.missing.join(', ')} missing)`);
+    console.error(`[04/07] demand — SKIPPED (${gate04.missing.join(', ')} missing)`);
   } else {
-    console.error('[04/06] demand — DataForSEO Labs, pull date stamped inline');
+    console.error('[04/07] demand — DataForSEO Labs, pull date stamped inline');
     try {
       demand = await runDemandStage(cache, ledger, domain, subject.categoryQuery.query, now, {
         // Body text from the crawl, so a seed term has to be attested on the
@@ -511,7 +711,7 @@ async function report(argv: string[]): Promise<void> {
   mark('04 demand');
 
   /* claims — deterministic, no network, no model. */
-  console.error('[05/06] claims — deterministic, no model');
+  console.error('[05/07] claims — deterministic, no model');
   const input = { subject, peers, evidence, demand };
   const claims = buildClaims(input);
   const { renderable, rejected } = partitionClaims(claims);
@@ -524,12 +724,12 @@ async function report(argv: string[]): Promise<void> {
   let synthesis: SynthesisArtifact | null = null;
   if (args.noSynthesis) {
     stageNotes.push('stage 06 skipped: --no-synthesis');
-    console.error('[06/06] analysis — SKIPPED (--no-synthesis)');
+    console.error('[06/07] analysis — SKIPPED (--no-synthesis)');
   } else if (missingCredentials(['ANTHROPIC_API_KEY']).length > 0) {
     stageNotes.push('stage 06 skipped: ANTHROPIC_API_KEY missing');
-    console.error('[06/06] analysis — SKIPPED (ANTHROPIC_API_KEY missing)');
+    console.error('[06/07] analysis — SKIPPED (ANTHROPIC_API_KEY missing)');
   } else {
-    console.error('[06/06] analysis — every figure checked against the claims it cites');
+    console.error('[06/07] analysis — every figure checked against the claims it cites');
     try {
       synthesis = await runSynthesisStage(
         cache,
@@ -600,6 +800,25 @@ async function report(argv: string[]): Promise<void> {
   await writeFile(join(dir, 'report.html'), html);
 
   if (!args.quiet) console.log(markdown);
+  mark('06 analysis + render');
+
+  /* stage 07 and the two documents the offer actually delivers. */
+  await writeTwoDocs({
+    dir,
+    meta: { runId, domain, startedAt: now, trigger: args.trigger, companyName: args.company },
+    company,
+    oneLiner: args.category ?? subject.categoryQuery.seedText,
+    recipientName: args.name,
+    claims,
+    coverage,
+    synthesis,
+    stageNotes,
+    ledger,
+    cache,
+    now,
+    skip: args.noOneThing,
+  });
+  mark('07 one thing + print');
 
   console.error(`\n---\n${claims.length} claim(s) built, ${renderable.length} renderable, ${rejected.length} rejected`);
   for (const r of rejected) {
@@ -612,14 +831,13 @@ async function report(argv: string[]): Promise<void> {
       `peersWithDatedAiEvidence=${coverage.peersWithDatedAiEvidence} ` +
       `observedClaims=${coverage.observedClaims} comparativeClaims=${coverage.comparativeClaims}`
   );
-  mark('06 analysis + render');
   console.error('\nTime per stage:');
   for (const t of timings) {
     console.error(`  ${t.stage.padEnd(22)} ${(t.ms / 1000).toFixed(1)}s`);
   }
   console.error(`  ${'TOTAL'.padEnd(22)} ${((Date.now() - runStart) / 1000).toFixed(1)}s`);
   console.error(`\n${ledger.format()}`);
-  console.error(`\nwrote ${join(dir, 'report.html')}  (and report.md)`);
+  console.error(`\nwrote ${join(dir, 'research-report.html')}  (and email-draft.md, report.html, report.md)`);
 }
 
 const [command, ...rest] = process.argv.slice(2);
@@ -634,7 +852,10 @@ switch (command) {
   case 'revise':
     await revise(rest);
     break;
+  case 'onething':
+    await oneThingOnly(rest);
+    break;
   default:
-    console.error('Usage: cli.ts <prototype|report|revise> [args]');
+    console.error('Usage: cli.ts <prototype|report|revise|onething> [args]');
     process.exit(1);
 }

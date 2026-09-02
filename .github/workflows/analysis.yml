@@ -1,14 +1,20 @@
-# Runs one AI Opportunity Brief, sends one that was already run, or revises
-# one against a person's notes.
+# Runs the research for one lead and posts the two documents to Slack: the
+# research report (PDF) and the email draft (the one thing we would build,
+# footnoted to the report). A person reads both and sends the email by hand.
 #
-# Fired by POST /api/run in sites/reality-check, which is reached by a signed
-# link in the Slack alert. Three modes so the review gate survives being
-# turned into links: `run` generates and posts a link to read, `revise`
-# rewrites against notes without re-paying for research, `send` emails it.
-# The operator reads the brief between any of these.
+# Fired two ways: by /api/intake the moment a lead lands (EXPOSURE_AUTORUN),
+# or by POST /api/run from a signed link in the Slack alert. Three modes:
+# `run` researches and posts, `revise` re-writes the analysis and the
+# recommendation against a person's notes without re-paying for research,
+# `send` emails the legacy web brief (kept; the offer no longer uses it).
 #
-# The recipient never reaches this workflow by hand — the signed token carries
+# The recipient never reaches this workflow by hand — the dispatch carries
 # the intake, so the inputs here are provably the values the form collected.
+#
+# The PDF is printed by the CLI itself through whatever Chrome the runner
+# has; ubuntu-latest ships Google Chrome, so no install step is needed. If
+# it is ever missing, the run still completes and the Slack message says the
+# PDF did not print.
 name: analysis
 
 on:
@@ -103,12 +109,13 @@ jobs:
           # is signed over data a stranger typed into a public form.
           IN_DOMAIN: ${{ inputs.domain }}
           IN_COMPANY: ${{ inputs.company }}
+          IN_NAME: ${{ inputs.name }}
           IN_CATEGORY: ${{ inputs.category }}
           IN_TRIGGER: ${{ inputs.trigger }}
           IN_PEERS: ${{ inputs.peers }}
         run: |
           set -euo pipefail
-          args=(report "$IN_DOMAIN" --quiet --company "$IN_COMPANY")
+          args=(report "$IN_DOMAIN" --quiet --company "$IN_COMPANY" --name "$IN_NAME")
           [ -n "$IN_CATEGORY" ] && args+=(--category "$IN_CATEGORY")
           [ -n "$IN_TRIGGER" ]  && args+=(--trigger "$IN_TRIGGER")
           IFS=',' read -ra peers <<< "$IN_PEERS"
@@ -221,8 +228,9 @@ jobs:
           [ -n "$IN_RUN_ID" ] && args+=(--run "$IN_RUN_ID")
           node --experimental-strip-types scripts/ci-release.mjs "${args[@]}"
 
-      # Kept for a fortnight so a released brief can be re-read, revised or
-      # re-sent without paying for the research again.
+      # Kept for a fortnight so a released run can be re-read, revised or
+      # re-sent without paying for the research again. Includes the PDF and
+      # the email draft.
       - name: Keep the run
         if: always() && (inputs.mode == 'run' || inputs.mode == 'revise')
         uses: actions/upload-artifact@v4

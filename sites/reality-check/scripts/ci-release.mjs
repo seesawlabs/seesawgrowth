@@ -5,18 +5,24 @@
    stores and announces what those already wrote.
 
    Two branches, not three: `send` mints and emails; anything else (`run` or
-   `revise`, both of which just produced a fresh run directory) uploads,
-   mints a read link, and posts to Slack with read/revise/send links so the
-   loop can continue.
+   `revise`, both of which just produced a fresh run directory) uploads what
+   the run wrote and posts it to Slack.
 
-     --mode run     upload the brief, post read/revise/send links. No email.
+     --mode run     upload the research report PDF and the brief, post the
+                    PDF link and the email draft to Slack. No email to anyone.
      --mode revise  identical release path to run — see above.
-     --mode send    mint the read link again and email it to the recipient.
+     --mode send    mint the read link again and email the brief. Legacy: the
+                    offer now sends the email draft by hand.
+
+   WHAT LANDS IN SLACK (2026-08-31). The two documents the offer promises: the
+   research report as a PDF, and the email draft as text, footnoted. The team
+   reads both and decides. A "revise" link follows so a person can ask for a
+   different cut without re-paying for research; the web brief is linked too,
+   as the long-form view of the same claims.
 
    THE REVIEW GATE SURVIVES BEING AUTOMATED. Neither `run` nor `revise` ever
-   emails. What they post is a link for a human to read and two links to act
-   on. Turning the commands into clicks must not quietly turn several steps
-   into one.
+   emails the lead. What they post is for people on our side to read. Turning
+   the commands into clicks must not quietly turn several steps into one.
 
    WHY `send` NEEDS NO RUN DIRECTORY. The magic link is a signature over the
    report id, and the site fetches the document from the store. So sending is
@@ -160,7 +166,16 @@ const bundle = {
   claims: await readOptional('claims'),
   coverage,
   '06-synthesis': await readOptional('06-synthesis'),
+  '07-one-thing': await readOptional('07-one-thing'),
+  intake: await readOptional('intake'),
 };
+
+/* The two documents. Either may be missing: stage 07 can fail and Chrome can
+   be absent, and the run is still worth releasing, so both are optional and
+   the Slack message says plainly which one did not arrive. */
+const pdf = await readFile(join(runPath, 'research-report.pdf')).catch(() => null);
+const emailDraft = await readFile(join(runPath, 'email-draft.md'), 'utf8').catch(() => null);
+const oneThing = bundle['07-one-thing'];
 
 /* Upload before minting anything. A link that resolves to nothing is worse
    than no link, and this is the step most likely to fail on a fresh setup. */
@@ -216,20 +231,31 @@ try {
   );
 }
 
+/* The PDF. Same store, same unguessable stem, its own extension. It is the
+   artefact the team opens, so a failure here is loud rather than a footnote. */
+let pdfUrl = null;
+if (pdf) {
+  try {
+    const pdfPathname = `${prefix ? `${prefix}/` : ''}${storageNameFor(reportId, secret)}.report.pdf`;
+    const up = await put(pdfPathname, pdf, {
+      access: 'public',
+      contentType: 'application/pdf',
+      token: blobToken,
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    pdfUrl = up.url;
+    console.log(`Uploaded ${pdfPathname}`);
+  } catch (error) {
+    await slack(`:warning: *${company}* — the research report PDF failed to upload: ${String(error.message).slice(0, 200)}`);
+  }
+}
+
 /* What the reader clicks. The same link the client would get, so a reviewer
    sees exactly what was sent rather than a preview of it. */
 const readLink = linkFor(
   origin,
   mintToken({ reportId: reportIdFor(domain, runId), email, ttlDays: DEFAULT_TTL_DAYS }, secret)
-);
-
-/* And the link that sends it, carrying the run id so the click needs nothing. */
-const sendLink = actionLink(
-  origin,
-  mintActionToken(
-    { a: 'send', domain, email, name, company, category: '', peers: [], run: runId },
-    secret
-  )
 );
 
 /* The loop: notes typed on the confirmation page, not carried in the token —
@@ -245,23 +271,59 @@ const reviseLink = actionLink(
 );
 
 const short = coverage.sufficient
-  ? `:white_check_mark: *${pct}% coverage* — enough to send.`
-  : `:warning: *${pct}% coverage — below threshold.* Short: ${(coverage.shortfalls ?? []).join('; ')}. Read it before deciding.`;
+  ? `:white_check_mark: *${pct}% coverage.*`
+  : `:warning: *${pct}% coverage — below threshold.* Short: ${(coverage.shortfalls ?? []).join('; ')}. The evidence is thin; weigh the recommendation accordingly.`;
+
+/* Anything stage 07 wants a reviewer to know before they read: redactions,
+   leftover validation problems, a missing recommendation. */
+const caveats = [];
+if (!oneThing) caveats.push(':x: Stage 07 did not produce a recommendation; the PDF carries the research only.');
+else {
+  if (oneThing.redacted > 0) caveats.push(`:no_entry_sign: ${oneThing.redacted} unsourced figure(s) were redacted. Read those sentences first.`);
+  const other = (oneThing.problems ?? []).filter((p) => p.code !== 'unsourced_numeral');
+  if (other.length) caveats.push(`:warning: ${other.length} validation problem(s) remain: ${other.map((p) => `${p.field} ${p.code}`).join('; ')}.`);
+}
+if (!pdf) caveats.push(':warning: No PDF was printed on the runner (no Chrome). The web brief link still works.');
 
 await slack(
   [
-    `*${company}* (${domain}) — analysis ready`,
+    `:page_facing_up: *${company}* (${domain}) — research done`,
+    oneThing ? `*${oneThing.oneThing.headline}*` : '',
     short,
     `For ${name} <${email}>`,
+    ...caveats,
     '',
-    `:eyes: *<${readLink}|Read it first>*`,
-    `:pencil2: *<${reviseLink}|Want changes? Revise it>*`,
-    `:outbox_tray: *<${sendLink}|Then send it>*`,
+    pdfUrl ? `:page_facing_up: *<${pdfUrl}|Research report (PDF)>*` : '',
+    `:globe_with_meridians: *<${readLink}|Web brief>*`,
+    `:pencil2: *<${reviseLink}|Different cut? Revise it>*`,
     runUrl ? `\n_${runUrl}_` : '',
   ]
     .filter(Boolean)
     .join('\n')
 );
 
-console.log(`\nReady. Coverage ${pct}%. Review: ${readLink}\n`);
+/* The email draft, as its own message so it can be copied whole. Slack's
+   incoming webhooks take about 40,000 characters; a footnoted draft is a
+   tenth of that. The markdown link syntax is stripped to plain text because
+   Slack renders mrkdwn, not markdown, and a reviewer should see the words. */
+if (emailDraft) {
+  const plain = emailDraft
+    .replace(/^# .*\n/, '')
+    .replace(/\*\*Subject:\*\*/, 'Subject:')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 — $2')
+    .replace(/^### /gm, '')
+    .replace(/^---$/gm, '—')
+    .replace(/`/g, '')
+    .trim();
+  await slack(
+    [
+      `:email: *Email draft for ${name} <${email}>* — edit it, then send it by hand. Nothing has gone to them.`,
+      '```',
+      plain.slice(0, 36_000),
+      '```',
+    ].join('\n')
+  );
+}
+
+console.log(`\nReady. Coverage ${pct}%. ${pdfUrl ? `PDF: ${pdfUrl}` : 'No PDF.'} Brief: ${readLink}\n`);
 if (!uploaded?.url) console.error('Note: upload returned no URL, which is unexpected.');

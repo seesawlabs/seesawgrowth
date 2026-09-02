@@ -8,6 +8,8 @@
     "test": "node --experimental-strip-types --test src/test.ts",
     "prototype": "node --experimental-strip-types src/cli.ts prototype",
     "report": "node --experimental-strip-types src/cli.ts report",
+    "revise": "node --experimental-strip-types src/cli.ts revise",
+    "onething": "node --experimental-strip-types src/cli.ts onething",
     "check:voice": "node --experimental-strip-types scripts/check-voice.mjs"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 # Current status
 
-*Last updated 2026-08-31.*
+*Last updated 2026-09-02.*
 
 > **The free offer was re-cut on 2026-08-31, after the team landed on its intent.** The page
 > now leads with the 45-minute session; shortly after the call the lead gets a report of the
@@ -8,8 +8,9 @@
 > see — with every claim traced to a source. The multi-section brief is retired. Two
 > specimens set the shape: BetterRX (delivery-time prediction in the order screen, on the
 > back of CMS HOPE's two-day symptom clock) and Cultivate Advisors (an advisor-facing memory
-> over 2,000 engagements, against a $29/month white-label AI-coach market). Both are in the
-> session that produced them; the pipeline is being repointed to generate that shape.
+> over 2,000 engagements, against a $29/month white-label AI-coach market). The pipeline now
+> generates that shape: stage 07 picks the one thing, the research report prints to PDF with
+> a claim register, and the email draft is footnoted to it.
 >
 > **Scoring is retired from the live flow.** Revenue and stage are no longer asked. Every lead
 > is researched, every lead sees the calendar, and the team decides from the alert. The model
@@ -66,7 +67,7 @@ actively trying to do less of it.
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric. Needs a pass against the one-big-thing agenda** |
 | └ Website build (page, form, scheduler) | Calvin | **Deployed on Vercel (SeeSaw-owned), Astro. Calendar wired via Cal.com embed, single host** |
 | └ Research pipeline (`tools/exposure`) | Calvin | **Runs end to end in GitHub Actions from a Slack click or auto-run. ~$1.40–1.90 and 7–11 min a run** |
-| └ ─ Two-doc output (report PDF + email draft) | Calvin | **In progress. Specimens exist for BetterRX and Cultivate; generator and Slack posting being built** |
+| └ ─ Two-doc output (report PDF + email draft) | Calvin | **Built 2026-09-02: stage 07 in `tools/exposure`, research report printed to PDF, email draft footnoted to the claim register, both posted to Slack by the workflow. Tested on the Cultivate run; first end-to-end run from a fresh lead still to do** |
 | └ ─ Landing page + intake (site root) | Calvin | **Leads with the session. `/reality-check`, `/book`, `/brief` and `/sample` are redirects** |
 | └ ─ Public sample (`/sample-brief`) | Calvin | **Old multi-section format. Regenerate in the one-big-thing shape before linking it again** |
 | └ ─ Emails | Calvin | **Ack rewritten for the new offer (booked-first variant). Resend live in Vercel** |

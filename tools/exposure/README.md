@@ -1,16 +1,26 @@
-# AI Exposure Report — generation scripts
+# The research pipeline — generation scripts
 
-Scripts that build an **AI Exposure Report** for a company from public evidence:
-where AI is creating opportunity for them, where it's a threat, and what we
-couldn't determine without asking.
+Scripts that research a company from public evidence and produce the two
+documents the free offer promises (re-cut 2026-08-31, see `docs/00-status.md`):
 
-Built as repeatable scripts first, deliberately. The report format teaches us
-what inputs it needs — not the other way round.
+- **The research report** (`research-report.html`, printed to `.pdf`): the one
+  thing we would build, why now, what we would refuse, the fork we could not
+  see from outside, the ideas not chosen, what comparable companies did, and a
+  **claim register** where every claim carries an id, a source URL, the date we
+  read it and how we know it. Every citation in the prose is an id that points
+  at a row.
+- **The email draft** (`email-draft.md`): the same recommendation in about
+  three hundred words, footnoted to the register. A person edits and sends it.
+
+Both come out of stage 07 over the validated claims and the stage 06 analysis.
+Nothing is sent automatically; the workflow posts both to Slack.
 
 ```bash
-npm test           # 13 tests, no network, no credentials
-npm run prototype  # assemble the fixture -> stdout + runs/
-npm run report -- <domain>   # full pipeline (needs credentials)
+npm test                        # no network, no credentials
+npm run prototype               # assemble the fixture -> stdout + runs/
+npm run report -- <domain>      # full pipeline, stages 01-07 (needs credentials)
+npm run onething -- <domain>    # re-run stage 07 on an existing run (one model call)
+npm run revise -- <domain> --notes "..."   # rewrite 06 and 07 against notes
 ```
 
 ## Where this sits in the ladder
@@ -80,6 +90,8 @@ those files rather than calling earlier stages. Any stage can be re-run alone.
 | 03 peer evidence | Firecrawl + Perplexity | dated, sourced AI moves | Perplexity summarizes; keep the citation or drop the claim |
 | 04 demand | DataForSEO Labs | category demand, terms peers rank for | stale by default — stamp *both* dates, ours and Google's |
 | 05 assemble | none | `report.md` | deterministic, no network, no model |
+| 06 analysis | Claude | `06-synthesis.json` | every figure checked against the claims it cites; the industry brief is judgement, not evidence |
+| 07 the one thing | Claude | `07-one-thing.json`, `research-report.html/.pdf`, `email-draft.md` | one build, one refusal, one fork. Unsourced figures are redacted to a visible marker, never rendered |
 
 **Stage 01's highest-yield targets** are the ones that describe operations
 rather than marketing: the help center (a published description of their manual
@@ -174,9 +186,16 @@ than hidden, which is the point of logging every rejection:
   what the API reports, with the source and both dates attached, but do not
   lead with a figure like that in front of a clinician.
 
-**Not decided yet:** whether reports send automatically. Ship with a human read
-before every send; drop the gate after 20 consecutive reports with zero
-fabricated figures. That review period is the long pole here, not the code.
+**Decided 2026-08-31:** nothing is sent automatically. The research runs on
+its own when a lead lands; the report PDF and the email draft post to Slack; a
+person reads both and sends the email by hand. The web brief and its magic
+link still exist for the long-form view, and `send` still works, but the
+offer no longer uses it.
+
+**Stage 07 status.** Tested against the Cultivate Advisors run of 2026-08-25
+(one model call, about $0.16, the recommendation validated with no redactions).
+Not yet run end to end from a fresh lead in GitHub Actions; that is the next
+live test, at roughly $2.
 
 ## What a run costs
 
@@ -184,10 +203,12 @@ Measured, not estimated, except where the API refuses to say. Three services
 report dollars per call and the ledger uses their figures; Firecrawl reports
 credits only, so its line is always labelled an estimate at a configured rate.
 
-A full five-stage run on a mid-size site costs roughly **$0.15–$0.20**, and
-re-running the same domain is free apart from the stages you pass `--refresh`
-to. `EXPOSURE_RUN_BUDGET_USD` caps it and the pipeline aborts rather than
-exceeding the cap.
+A full run on a mid-size site costs roughly **$1.40–$2.10**: the research
+stages are cents, and the three model calls (industry research with web
+search, the analysis, the one thing) are the rest. Re-running the same domain
+is free apart from the stages you pass `--refresh` to, and `onething` re-picks
+the recommendation for about $0.16. `EXPOSURE_RUN_BUDGET_USD` caps a run and
+the pipeline aborts rather than exceeding the cap.
 
 ## Flags
 
@@ -201,8 +222,15 @@ npm run report -- <domain> [flags]
   --budget <usd>       override EXPOSURE_RUN_BUDGET_USD
   --peers <n>          how many peers to research in stage 03
   --no-peer-crawl      skip crawling peers' own sites
+  --no-synthesis       skip stage 06 (and therefore 07)
+  --no-one-thing       skip stage 07
+  --name "..."         the recipient, for the email draft's salutation
   --quiet              don't print the report to stdout
 ```
+
+The PDF is printed through whatever Chrome the machine has (`CHROME_BIN`
+overrides the search). No Chrome means no PDF and a note in the run; the HTML
+and the email draft are still written.
 
 A stage that cannot run degrades the report and says so, rather than aborting
 the run — four good stages and one honest gap beats nothing. Stage 01 is the
