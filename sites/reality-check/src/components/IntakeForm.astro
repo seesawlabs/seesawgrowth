@@ -223,8 +223,9 @@ import { ONE_LINER_MIN } from '../lib/intake';
   }
   .q__head .lede { margin: 0; }
 
-  .q__step { display: none; }
+  .q__step { display: none; scroll-margin-top: calc(84px + var(--sp-6)); }
   .q__step.is-on { display: block; }
+  .q__out { scroll-margin-top: calc(84px + var(--sp-6)); }
 
   .q__stepline {
     font-family: var(--font-accent);
@@ -558,10 +559,16 @@ import { ONE_LINER_MIN } from '../lib/intake';
     const showErr = (id: string) => document.getElementById(id)?.classList.add('is-on');
 
     const show = (n: number) => {
+      let active: HTMLElement | null = null;
       form.querySelectorAll<HTMLElement>('.q__step').forEach((s) => {
-        s.classList.toggle('is-on', s.dataset.step === String(n));
+        const on = s.dataset.step === String(n);
+        s.classList.toggle('is-on', on);
+        if (on) active = s;
       });
-      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      /* Land on the step itself, not the form: the form's top is the
+         previous step's scroll position. scroll-margin-top on .q__step keeps
+         it clear of the sticky header. */
+      (active ?? form).scrollIntoView({ block: 'start', behavior: 'smooth' });
     };
 
     form.querySelectorAll<HTMLButtonElement>('[data-go]').forEach((b) => {
