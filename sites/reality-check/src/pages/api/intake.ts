@@ -26,7 +26,7 @@
 --------------------------------------------------------------------------- */
 import type { APIRoute } from 'astro';
 
-import { coerceIntake, validate, normalise, type Intake, type NormalisedIntake } from '../../lib/intake';
+import { coerceIntake, validate, normalise, type Intake, type NormalisedIntake, researchBrief } from '../../lib/intake';
 import { ackEmail, sendEmail } from '../../lib/email';
 import { serverEnv } from '../../lib/server-env';
 import { bookingUrl } from '../../lib/booking';
@@ -118,10 +118,11 @@ async function alertAndRun(intake: NormalisedIntake): Promise<void> {
         domain: intake.domain,
         email: intake.email,
         name: intake.name,
-        company: intake.company,
-        category: intake.oneLiner,
-        peers: intake.competitorDomains,
-        trigger: intake.tried,
+        /* The domain stands in for the name; the pipeline reads the real one
+           off the homepage and treats a company equal to its domain as
+           "derive it". Category and peers are inferred there too. */
+        company: intake.domain,
+        trigger: researchBrief(intake),
       },
       { token: ghToken, ref: serverEnv('GITHUB_DISPATCH_REF') ?? DEFAULT_REF }
     );
@@ -138,10 +139,12 @@ async function alertAndRun(intake: NormalisedIntake): Promise<void> {
           domain: intake.domain,
           email: intake.email,
           name: intake.name,
-          company: intake.company,
-          category: intake.oneLiner,
-          peers: intake.competitorDomains,
-          trigger: intake.tried?.slice(0, 600),
+          company: intake.domain,
+          category: '',
+          peers: [],
+          /* The token rides in a URL, so the brief is bounded here. The full
+             text is in the alert above the link, and in the function log. */
+          trigger: researchBrief(intake).slice(0, 1_500) || undefined,
         },
         secret
       )
@@ -152,18 +155,16 @@ async function alertAndRun(intake: NormalisedIntake): Promise<void> {
       ':warning: No runner configured: set EXPOSURE_AUTORUN with GITHUB_DISPATCH_TOKEN, or EXPOSURE_LINK_SECRET and PUBLIC_SITE_ORIGIN for a run link. See DEPLOY.md §3a.';
   }
 
+  const answer = (label: string, text?: string) =>
+    text ? `*${label}*\n> ${clip(text, 1_500).replace(/\n/g, '\n> ')}` : `*${label}*\n> _(left blank)_`;
+
   const lines = [
-    `:large_blue_circle: *New opportunity* — ${intake.company} (${intake.domain})`,
+    `:large_blue_circle: *New opportunity* — ${intake.domain}`,
     `${intake.name}${intake.roleTitle ? `, ${intake.roleTitle}` : ''} · ${intake.email}${intake.role ? ` · ${intake.role}` : ''}`,
-    intake.bookedFirst
-      ? ':calendar: *Booked the call first*, then answered.'
-      : ':calendar: Offered the calendar on the confirmation screen.',
     '',
-    `> ${intake.oneLiner}`,
-    intake.industry ? `Industry: ${intake.industry}` : null,
-    intake.tried ? `Tried so far / why now: ${clip(intake.tried, 1_500)}` : null,
-    intake.competitors.length ? `Named competitors: ${intake.competitors.join(', ')}` : null,
-    intake.referredBy ? `Referred by: ${intake.referredBy}` : null,
+    answer('What changed recently', intake.changed),
+    answer('Where the team burns time', intake.burn),
+    answer('Already tried, evaluated or ruled out', intake.tried),
     intake.domainMismatch
       ? ':warning: work address on a different domain than the site — confirm the company before trusting the research'
       : null,
@@ -196,9 +197,8 @@ async function alertAndRun(intake: NormalisedIntake): Promise<void> {
 async function acknowledge(intake: NormalisedIntake): Promise<void> {
   const message = ackEmail({
     name: intake.name,
-    company: intake.company,
+    company: intake.domain,
     bookingUrl: bookingUrl(),
-    bookedFirst: Boolean(intake.bookedFirst),
   });
   const result = await sendEmail(intake.email, message, {
     RESEND_TOKEN: serverEnv('RESEND_TOKEN'),

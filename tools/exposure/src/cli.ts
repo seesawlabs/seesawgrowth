@@ -716,7 +716,14 @@ async function report(argv: string[]): Promise<void> {
   const claims = buildClaims(input);
   const { renderable, rejected } = partitionClaims(claims);
   const coverage = scoreCoverage(coverageFrom(input, renderable));
-  const company = args.company?.trim() || subject.pages.find((p) => p.category === 'home')?.title || domain;
+  /* The form no longer asks for a company name, so the intake passes the
+     domain in its place. A company equal to its own domain means "derive it":
+     the homepage title is the name they use for themselves. */
+  const given = args.company?.trim();
+  const company =
+    (given && given.toLowerCase() !== domain.toLowerCase() ? given : '') ||
+    subject.pages.find((p) => p.category === 'home')?.title ||
+    domain;
   mark('05 claims');
 
   /* stage 06 — the analyst. Without this the document is a list of sourced

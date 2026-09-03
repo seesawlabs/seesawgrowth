@@ -1,27 +1,33 @@
 /* ---------------------------------------------------------------------------
    One intake for the offer: the 45-minute session, and the report after it.
 
-   WHAT IS ASKED, AND WHY. Who they are and where the research starts (name,
-   work email, company, website); the two fields that aim the research (the
-   one-line description and the competitors they name); their role and
-   industry, for context; and one open question — what they have already
-   tried and what makes this worth their time now. That question replaced two
-   multiple-choice ones about revenue and stage. Those existed to feed a score,
-   and nothing is scored any more.
+   WHAT IS ASKED, AND WHY (re-cut 2026-09-02). Who they are and where the
+   research starts: name, work email, website. Their role, one tap. And three
+   open questions, in their words, that the research cannot get from a website:
+
+     changed   "What changed recently that made this worth your time right
+               now?" Aims the research at what is actually live for them.
+     burn      "Where does your team burn time in a way that feels dumb?"
+               Points at where the buildable gap lives.
+     tried     "Anything you've already tried, evaluated, or ruled out here?"
+               Kills the accurate-but-obvious recommendation, which is the
+               machine's most expensive failure.
+
+   WHAT WAS DROPPED, AND WHY. Company name, the one-line description, industry,
+   named competitors and the referral field. All of them were things the
+   pipeline can read or infer from the website, and every field we ask for is
+   a reason to stop typing. The company name comes from the homepage title;
+   the category from the crawl; the competitive set from peer discovery. If
+   any of those inferences proves weak in practice, the fix is in the
+   pipeline, not another form field.
 
    SCORING IS RETIRED FROM THIS FLOW. `qualifier.ts` still holds the model and
    its spec (docs/06), but this module no longer calls it: every lead is
    researched and every lead sees the calendar, and the team reads the alert
-   and decides. Reintroduce a gate deliberately, in one place, or not at all.
+   and decides.
 
-   NO CHARACTER LIMITS THE VISITOR CAN HIT. The one-liner keeps a minimum,
-   because a three-word description makes the research about an industry
-   rather than a company. Nothing has a maximum a person would reach; the only
-   ceiling is an abuse cap that exists so a pasted novel cannot break a Slack
-   message or a prompt.
-
-   WHAT WE DELIBERATELY STILL DO NOT ASK. Volumes, cycle times, headcount,
-   spend. Those are the questions the call is for.
+   NO CHARACTER LIMITS THE VISITOR CAN HIT. The only ceiling is an abuse cap
+   that exists so a pasted novel cannot break a Slack message or a prompt.
 --------------------------------------------------------------------------- */
 
 import {
@@ -33,28 +39,22 @@ import {
 } from './qualifier.ts';
 
 export interface Intake {
-  /* who they are */
+  /* who they are, and where the research starts */
   name: string;
   email: string;
-  company: string;
   website: string;
 
-  /* what aims the research */
-  /** "In one line, what does your company do?" The highest-value field. */
-  oneLiner: string;
-  /** Up to three competitor domains or names. */
-  competitors: string[];
-
   /* context, read by a person */
-  industry?: string;
   role?: Answers['role'];
   roleTitle?: string;
-  /** Free text: what they have tried, and what is driving this now. */
+
+  /* the three open questions, in their words */
+  /** What changed recently that made this worth their time right now. */
+  changed?: string;
+  /** Where the team burns time in a way that feels dumb. */
+  burn?: string;
+  /** Anything already tried, evaluated, or ruled out. */
   tried?: string;
-  referredBy?: string;
-  budgetAck?: boolean;
-  /** True when they picked a time on the calendar before answering. */
-  bookedFirst?: boolean;
 
   attribution?: Record<string, string>;
 }
@@ -63,13 +63,30 @@ export type FieldError = { field: keyof Intake; message: string };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export const ONE_LINER_MIN = 20;
-export const MAX_COMPETITORS = 3;
 /**
  * Not a limit anyone types up to. It stops a pasted document from breaking
  * the Slack alert or ballooning a prompt, and that is all it is for.
  */
 export const TEXT_ABUSE_CAP = 20_000;
+
+/** The three questions, as the form asks them. One place, so the alert and the form agree. */
+export const OPEN_QUESTIONS: { key: 'changed' | 'burn' | 'tried'; label: string; briefLabel: string }[] = [
+  {
+    key: 'changed',
+    label: 'What changed recently that made this worth your time right now?',
+    briefLabel: 'WHAT CHANGED RECENTLY',
+  },
+  {
+    key: 'burn',
+    label: 'Where does your team burn time in a way that feels dumb?',
+    briefLabel: 'WHERE THE TEAM BURNS TIME',
+  },
+  {
+    key: 'tried',
+    label: 'Anything you’ve already tried, evaluated, or ruled out here?',
+    briefLabel: 'ALREADY TRIED, EVALUATED OR RULED OUT',
+  },
+];
 
 /**
  * Bare registrable host, or null. Accepts what people paste — a full URL, a
@@ -105,33 +122,16 @@ export function coerceIntake(raw: unknown): Partial<Intake> {
     const s = str(v);
     return (allowed as readonly string[]).includes(s) ? (s as T) : undefined;
   };
-  const bool = (v: unknown) => v === true || v === 'true' || v === 'on' || v === 1 || v === '1';
-
-  const list = (v: unknown): string[] => {
-    if (Array.isArray(v)) return v.map(str).filter(Boolean);
-    const one = str(v);
-    return one
-      ? one
-          .split(/[,\n;]+/)
-          .map((x) => x.trim())
-          .filter(Boolean)
-      : [];
-  };
 
   return {
     name: str(input.name),
     email: str(input.email),
-    company: str(input.company),
     website: str(input.website),
-    oneLiner: str(input.oneLiner),
-    competitors: list(input.competitors),
-    industry: str(input.industry) || undefined,
     role: pick(input.role, ['cto', 'ceo', 'caio', 'product', 'other'] as const),
     roleTitle: str(input.roleTitle) || undefined,
+    changed: str(input.changed) || undefined,
+    burn: str(input.burn) || undefined,
     tried: str(input.tried) || undefined,
-    referredBy: str(input.referredBy) || undefined,
-    budgetAck: bool(input.budgetAck),
-    bookedFirst: bool(input.bookedFirst),
     attribution:
       input.attribution && typeof input.attribution === 'object'
         ? (input.attribution as Record<string, string>)
@@ -148,27 +148,17 @@ export function validate(input: Partial<Intake>): FieldError[] {
   if (!email) push('email', 'We need an email to send the report to.');
   else if (!EMAIL.test(email)) push('email', 'That does not look like an email address.');
 
-  if (!input.company?.trim()) push('company', 'We need the company name.');
-
   if (!input.website?.trim()) push('website', 'We need a website to read.');
   else if (!normaliseSite(input.website)) push('website', 'That does not look like a website address.');
-
-  const one = (input.oneLiner ?? '').trim();
-  if (!one) push('oneLiner', 'One line about what you do. This is what we search on.');
-  else if (one.length < ONE_LINER_MIN)
-    push('oneLiner', `A few more words, please. At least ${ONE_LINER_MIN} characters.`);
-  else if (one.length > TEXT_ABUSE_CAP) push('oneLiner', 'That is longer than a description.');
-
-  if ((input.competitors ?? []).filter((c) => c.trim()).length > MAX_COMPETITORS) {
-    push('competitors', `Up to ${MAX_COMPETITORS}, please.`);
-  }
 
   /* Role is the one qualifying answer that stays required: it is context the
      team reads, and one tap. Nothing else about them is gated. */
   if (!input.role) push('role', 'Pick the closest role.');
 
-  if ((input.tried ?? '').length > TEXT_ABUSE_CAP) {
-    push('tried', 'That is longer than we can take through this form. Email it to us instead.');
+  for (const q of OPEN_QUESTIONS) {
+    if ((input[q.key] ?? '').length > TEXT_ABUSE_CAP) {
+      push(q.key, 'That is longer than we can take through this form. Email it to us instead.');
+    }
   }
 
   return errors;
@@ -176,11 +166,10 @@ export function validate(input: Partial<Intake>): FieldError[] {
 
 export interface NormalisedIntake extends Intake {
   domain: string;
-  competitorDomains: string[];
   emailDomain: string;
   /** True when we could not derive a company domain from the email. */
   freeMail: boolean;
-  /** Free-mail address whose domain does not match the site they gave us. */
+  /** Work address whose domain does not match the site they gave us. */
   domainMismatch: boolean;
 }
 
@@ -189,31 +178,34 @@ export function normalise(input: Intake): NormalisedIntake {
   const domain = normaliseSite(input.website) ?? '';
   const email = input.email.trim().toLowerCase();
   const mailDomain = emailDomain(email);
-  const competitors = (input.competitors ?? [])
-    .map((c) => c.trim())
-    .filter(Boolean)
-    .slice(0, MAX_COMPETITORS);
 
   return {
     ...input,
     name: input.name.trim(),
     email,
-    company: input.company.trim(),
     website: `https://${domain}`,
     domain,
-    oneLiner: input.oneLiner.trim(),
+    changed: input.changed?.trim() || undefined,
+    burn: input.burn?.trim() || undefined,
     tried: input.tried?.trim() || undefined,
-    competitors,
-    /* A competitor may be typed as a name rather than a domain. Only the ones
-       that parse as hosts can seed peer discovery; the rest still reach the
-       team, who can look them up. */
-    competitorDomains: competitors
-      .map((c) => normaliseSite(c))
-      .filter((d): d is string => Boolean(d)),
     emailDomain: mailDomain,
     freeMail: isFreeEmail(mailDomain),
     domainMismatch: isFreeEmail(mailDomain) ? false : Boolean(mailDomain) && mailDomain !== domain,
   };
+}
+
+/**
+ * The three answers as one labelled text, for the research prompts.
+ *
+ * The pipeline takes a single `trigger` string; the labels are what let the
+ * analyst treat the answers differently (what changed sets "why now", where
+ * time burns points at the gap, what was ruled out is a list of things not to
+ * recommend). Empty answers are omitted rather than labelled as empty.
+ */
+export function researchBrief(i: Intake): string {
+  return OPEN_QUESTIONS.map((q) => (i[q.key]?.trim() ? `${q.briefLabel}: ${i[q.key]!.trim()}` : null))
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 /**
@@ -224,20 +216,14 @@ export function normalise(input: Intake): NormalisedIntake {
  * the pipeline receives cannot diverge. The first line carries the recipient as
  * well as the research arguments: the second pass reads them back from the run
  * directory, so nobody ever retypes an email address to release a client's
- * document.
+ * document. No --company and no --category: the pipeline derives both from
+ * the site, which is the point of not asking.
  */
 export function fulfilCommands(i: NormalisedIntake): { generate: string; release: string } {
   const q = (v: string) => JSON.stringify(v);
-  const parts = [
-    'npm run fulfil --',
-    `--domain ${i.domain}`,
-    `--email ${i.email}`,
-    `--name ${q(i.name)}`,
-    `--company ${q(i.company)}`,
-    `--category ${q(i.oneLiner)}`,
-  ];
-  for (const d of i.competitorDomains) parts.push(`--peer ${d}`);
-  if (i.tried) parts.push(`--trigger ${q(i.tried.slice(0, 2_000))}`);
+  const parts = ['npm run fulfil --', `--domain ${i.domain}`, `--email ${i.email}`, `--name ${q(i.name)}`];
+  const brief = researchBrief(i);
+  if (brief) parts.push(`--trigger ${q(brief.slice(0, 6_000))}`);
 
   return {
     generate: parts.join(' '),

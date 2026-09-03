@@ -6,7 +6,8 @@
    have one before typing anything; the questions come after, aimed by the
    knowledge that a call already exists. A visitor who would rather explain
    first answers the form and books on the confirmation. Both paths submit the
-   same payload.
+   same payload. Three open questions, in their words, aim the research; the
+   company name, category and competitive set are inferred from the website.
 
    WHAT IS NOT ASKED ANY MORE. Revenue band and "where are you with this" are
    gone: they existed to feed a score that decided who was offered the session,
@@ -22,8 +23,8 @@
    default; the book-first pane is what the script reveals. A visitor whose
    script fails still sees a working form.
 --------------------------------------------------------------------------- */
-import { ROLES, INDUSTRY_GROUPS } from '../lib/qualifier';
-import { ONE_LINER_MIN } from '../lib/intake';
+import { ROLES } from '../lib/qualifier';
+import { OPEN_QUESTIONS } from '../lib/intake';
 ---
 
 <section class="q" id="qualifier" aria-labelledby="q-title">
@@ -59,34 +60,20 @@ import { ONE_LINER_MIN } from '../lib/intake';
         <p class="q__err" id="q-err-role" role="alert">Pick the closest one.</p>
       </fieldset>
 
-      <fieldset class="q__set">
-        <legend>
-          What have you tried so far, and what&rsquo;s making this worth your time now?
-          <span class="q__optional">Optional</span>
-        </legend>
-        <p class="q__hint">
-          In your words. A pilot that stalled, a board asking for a number, a
-          manual process that broke. As long or as short as you like.
-        </p>
-        <textarea id="q-tried" name="tried" rows="6"
-          placeholder="We built a prototype that works for our own team, and now we need to know whether it's a product."></textarea>
-      </fieldset>
-
-      <fieldset class="q__set">
-        <legend>
-          Who are your closest competitors?
-          <span class="q__optional">Optional, up to 3</span>
-        </legend>
-        <p class="q__hint">
-          You know your market better than our search does. Naming even one
-          sharpens the comparison.
-        </p>
-        <div class="q__comps">
-          <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 1" />
-          <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 2" />
-          <input type="text" name="competitor" placeholder="competitor.com" aria-label="Competitor 3" />
-        </div>
-      </fieldset>
+      {OPEN_QUESTIONS.map((q, i) => (
+        <fieldset class="q__set">
+          <legend>
+            {q.label}
+            <span class="q__optional">Optional</span>
+          </legend>
+          {i === 2 && (
+            <p class="q__hint">
+              We&rsquo;d rather not send you something you rejected two years ago.
+            </p>
+          )}
+          <textarea id={`q-${q.key}`} name={q.key} rows="4"></textarea>
+        </fieldset>
+      ))}
 
       <div class="q__btns">
         <button type="button" class="btn" data-go="2">Continue</button>
@@ -109,58 +96,17 @@ import { ONE_LINER_MIN } from '../lib/intake';
       </div>
 
       <div class="q__row">
-        <label class="q__lab" for="q-company">Company</label>
-        <input type="text" id="q-company" name="company" autocomplete="organization" />
-      </div>
-
-      <div class="q__row">
         <label class="q__lab" for="q-website">Company website</label>
         <input type="text" id="q-website" name="website" placeholder="company.com" />
         <p class="q__hint" id="q-website-hint">Where the research starts.</p>
       </div>
 
-      <div class="q__row">
-        <label class="q__lab" for="q-oneliner">In one line, what does the company do?</label>
-        <textarea id="q-oneliner" name="oneLiner" rows="2"
-          placeholder="Specialty pharmacy handling prior authorization and patient onboarding for prescribers"></textarea>
-        <p class="q__hint">
-          Your words, not your homepage&rsquo;s. This is what we search on, and
-          it decides whether the research is about your market or your industry.
-        </p>
-        <p class="q__err" id="q-err-oneliner" role="alert">
-          A sentence, please. At least {ONE_LINER_MIN} characters.
-        </p>
-      </div>
-
-      <div class="q__row">
-        <label class="q__lab" for="q-industry">Industry</label>
-        <select id="q-industry" name="industry">
-          <option value="">Select one&hellip;</option>
-          {INDUSTRY_GROUPS.map((g) => (
-            <optgroup label={g.group}>
-              {g.options.map((o) => <option value={o.value}>{o.label}</option>)}
-            </optgroup>
-          ))}
-        </select>
-        <div class="q__row" id="q-ind-other-row" hidden style="margin-top:var(--sp-3)">
-          <input type="text" id="q-ind-other" name="industryOther" placeholder="What industry?" />
-        </div>
-      </div>
-
-      <div class="q__row">
-        <label class="q__lab" for="q-ref">
-          Anyone we should thank for the intro?
-          <span class="q__optional">Optional</span>
-        </label>
-        <input type="text" id="q-ref" name="referredBy" />
-      </div>
-
       <p class="q__err" id="q-err-contact" role="alert">
-        We need your name, work email, company, website, and industry.
+        We need your name, work email, and website.
       </p>
 
       <div class="q__btns">
-        <button type="submit" class="btn" id="q-submit">Send it</button>
+        <button type="submit" class="btn" id="q-submit">Book the call</button>
         <button type="button" class="btn btn--ghost" data-go="1">Back</button>
       </div>
 
@@ -177,8 +123,8 @@ import { ONE_LINER_MIN } from '../lib/intake';
   <div class="q__out" data-out="booked" hidden>
     <h3>Got it. Now pick your 45 minutes.</h3>
     <p>
-      We&rsquo;ll research <strong data-fill="company">your company</strong> before
-      we talk, and the report follows shortly after the call. Confirmation and
+      We&rsquo;ll research your company before we talk, and the report follows
+      shortly after the call. Confirmation and
       details go to <strong data-fill="email">the address you gave us</strong>.
     </p>
 
@@ -396,9 +342,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
     text-align: center;
   }
 
-  /* Three stacked inputs need air between them; without it the borders touch
-     and the group reads as one tall broken field. */
-  .q__comps { display: grid; gap: var(--sp-3); }
 </style>
 
 <script>
@@ -532,10 +475,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
     $<HTMLDivElement>('#q-roles').addEventListener('change', () => {
       $<HTMLDivElement>('#q-title-row').hidden = pick('role') !== 'other';
     });
-    const industry = $<HTMLSelectElement>('#q-industry');
-    industry.addEventListener('change', () => {
-      $<HTMLDivElement>('#q-ind-other-row').hidden = industry.value !== 'ind_other';
-    });
 
     /* ------------------------------ steps ----------------------------- */
     const clearErrs = () =>
@@ -570,24 +509,19 @@ import { ONE_LINER_MIN } from '../lib/intake';
     const collect = () => ({
       role: pick('role') as Answers['role'],
       roleTitle: val('q-role-title') || undefined,
+      changed: val('q-changed') || undefined,
+      burn: val('q-burn') || undefined,
       tried: val('q-tried') || undefined,
       name: val('q-name'),
       email: val('q-email'),
-      company: val('q-company'),
       website: val('q-website'),
       websiteSource,
-      industry: industry.value === 'ind_other' ? val('q-ind-other') : industry.value,
-      referredBy: val('q-ref') || undefined,
-      oneLiner: val('q-oneliner'),
-      competitors: [...form.querySelectorAll<HTMLInputElement>('input[name="competitor"]')]
-        .map((i) => i.value.trim())
-        .filter(Boolean),
     });
 
     /* ----------------------------- reveal ----------------------------- */
     const reveal = (
       pane: 'booked' | 'error',
-      opts: { bookingUrl?: string; company?: string; email?: string } = {}
+      opts: { bookingUrl?: string; email?: string } = {}
     ) => {
       form.hidden = true;
       head.hidden = true;
@@ -595,11 +529,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
       if (out) out.hidden = false;
       if (out && pane !== 'error') {
         /* Their own words back to them, via textContent: this is visitor text. */
-        if (opts.company) {
-          out.querySelectorAll<HTMLElement>('[data-fill="company"]').forEach((el) => {
-            el.textContent = opts.company as string;
-          });
-        }
         if (opts.email) {
           out.querySelectorAll<HTMLElement>('[data-fill="email"]').forEach((el) => {
             el.textContent = opts.email as string;
@@ -621,14 +550,8 @@ import { ONE_LINER_MIN } from '../lib/intake';
 
       const a = collect();
       let bad = false;
-      if (!a.name || !a.email || !a.company || !a.website || !a.industry) {
+      if (!a.name || !a.email || !a.website) {
         showErr('q-err-contact');
-        bad = true;
-      }
-      /* Mirrors ONE_LINER_MIN in lib/intake.ts. The server is the authority;
-         this just saves a round trip on the field people rush. */
-      if (a.oneLiner.length < 20) {
-        showErr('q-err-oneliner');
         bad = true;
       }
       if (bad) return;
@@ -652,7 +575,6 @@ import { ONE_LINER_MIN } from '../lib/intake';
         const data = await res.json();
         reveal('booked', {
           bookingUrl: data.bookingUrl,
-          company: a.company,
           email: a.email,
         });
       } catch {
@@ -661,7 +583,7 @@ import { ONE_LINER_MIN } from '../lib/intake';
         reveal('error');
       } finally {
         submit.disabled = false;
-        submit.textContent = 'Send it';
+        submit.textContent = 'Book the call';
       }
     });
   }

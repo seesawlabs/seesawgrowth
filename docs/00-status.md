@@ -63,7 +63,7 @@ actively trying to do less of it.
 | Website rebuild (7 items) | Calvin | Not started |
 | The offer as a product (Roadmap page + booking flow) | Calvin | **Plan drafted — awaiting team alignment** |
 | The free offer (45-min session + the one-big-thing report) | Calvin | **Re-cut 2026-08-31. Page, intake and alert shipped; pipeline output being repointed to the two-doc shape** |
-| └ Intake form | Calvin | **Revenue and stage removed; free text unlimited; one path (questions, then calendar). Scoring retired — see `06` §5 note** |
+| └ Intake form | Calvin | **Re-cut 2026-09-02: name, work email, website, role, and three open questions (what changed, where time burns, what was tried or ruled out). Company, category and competitors are inferred from the site. Scoring retired — see `06` §5 note** |
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric. Needs a pass against the one-big-thing agenda** |
 | └ Website build (page, form, scheduler) | Calvin | **Deployed on Vercel (SeeSaw-owned), Astro. Calendar wired via Cal.com embed, single host** |
 | └ Research pipeline (`tools/exposure`) | Calvin | **Runs end to end in GitHub Actions from a Slack click or auto-run. ~$1.40–1.90 and 7–11 min a run** |

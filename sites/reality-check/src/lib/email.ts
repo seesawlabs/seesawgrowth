@@ -88,7 +88,7 @@ export function ackEmail(args: {
   const opening = args.bookedFirst ? `You're booked, ${first}.` : `Thanks, ${first}.`;
   const lines = [
     opening,
-    `Before we talk, we research ${args.company} from the outside: your website and job postings, what comparable companies have shipped and when, and where your category is moving. We open the call with what we found and you tell us where it's wrong.`,
+    `Before we talk, we research your business from the outside: your website, what comparable companies have shipped and when, and where your category is moving. We open the call with what we found and you tell us where it's wrong.`,
     `Shortly after the call you get the report: the one thing we'd build first, why now, and how we'd do it, with the evidence behind it. Yours to keep.`,
   ];
   const closing = args.bookedFirst

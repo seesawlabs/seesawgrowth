@@ -3,48 +3,41 @@
  * Asserts the intake boundary cannot 500, and that it asks for what it says.
  *
  * The form is not the only thing that posts to /api/intake. A string where the
- * spec says list crashed `validate` on `.filter is not a function`, which is a
- * 500 on a public lead form — the one failure mode that loses a lead without
- * leaving a trace. These are the shapes that actually arrive: hand-written
- * JSON, a scanner, a stale client, an empty body.
+ * spec says list once crashed `validate` on a public lead form — the one
+ * failure mode that loses a lead without leaving a trace. These are the shapes
+ * that actually arrive: hand-written JSON, a scanner, a stale client, an empty
+ * body.
  *
- * Scoring is retired from this flow (docs/00-status.md, 2026-08-31), so there
- * are no routing assertions here any more. What is asserted instead: that a
- * lead without a revenue band or a stage answer is accepted, that long free
- * text is accepted, and that `bookedFirst` survives the boundary — because the
- * alert tells the team which order the lead did things in.
+ * What is asserted (re-cut 2026-09-02): a lead with only name, email, website
+ * and role is accepted; the three open answers are optional and unlimited
+ * short of the abuse cap; the research brief carries each answer under its
+ * label, and omits the ones left blank; the hand-run command carries the
+ * recipient and no company or category, because those are inferred.
  *
  *   npm run check:intake
  */
-import { coerceIntake, validate, normalise, fulfilCommands } from '../src/lib/intake.ts';
+import { coerceIntake, validate, normalise, fulfilCommands, researchBrief } from '../src/lib/intake.ts';
 
-/* A submission that should pass cleanly. No revenue, no stage: neither is
-   asked any more. Role stays, because it is one tap and the team reads it. */
 const good = {
   name: 'Dana Whitfield',
   email: 'dana@cultivateadvisors.com',
-  company: 'Cultivate Advisors',
   website: 'cultivateadvisors.com',
-  oneLiner: 'Monthly one-to-one business advising for owner-operated companies.',
   role: 'ceo',
 };
 
 const cases = [
-  ["the form's own shape", { ...good, competitors: ['eosworldwide.com', 'vistage.com'] }, 0],
-  ['no revenue, no stage — accepted', { ...good }, 0],
-  ['competitors as a comma string', { ...good, competitors: 'eosworldwide.com, vistage.com' }, 0],
-  ['competitors as newlines', { ...good, competitors: 'a.com\nb.com\n' }, 0],
-  ['competitors as an object', { ...good, competitors: { a: 1 } }, 0],
-  ['competitors as mixed junk', { ...good, competitors: [1, null, 'ok.com'] }, 0],
-  ['four competitors', { ...good, competitors: ['a.com', 'b.com', 'c.com', 'd.com'] }, 1],
-  ['numbers where strings go', { ...good, name: 42, company: 7 }, 0],
-  ['a long answer is not a problem', { ...good, tried: 'We tried things. '.repeat(400) }, 0],
-  ['a one-liner well over the old 300 cap', { ...good, oneLiner: 'x'.repeat(1_200) }, 0],
+  ['the minimum: name, email, website, role', { ...good }, 0],
+  ['all three answers', { ...good, changed: 'Board asked.', burn: 'Prep.', tried: 'A bot; killed it.' }, 0],
+  ['website pasted as a URL', { ...good, website: 'https://www.cultivateadvisors.com/about' }, 0],
+  ['numbers where strings go', { ...good, name: 42 }, 0],
+  ['a long answer is not a problem', { ...good, burn: 'We retype things. '.repeat(500) }, 0],
   ['a pasted novel is refused', { ...good, tried: 'x'.repeat(25_000) }, 1],
-  ['empty object', {}, 5],
-  ['a bare string', 'nope', 5],
-  ['null', null, 5],
-  ['an array', [1, 2, 3], 5],
+  ['no role', { ...good, role: undefined }, 1],
+  ['a non-website', { ...good, website: 'not a site' }, 1],
+  ['empty object', {}, 4],
+  ['a bare string', 'nope', 4],
+  ['null', null, 4],
+  ['an array', [1, 2, 3], 4],
 ];
 
 let failed = 0;
@@ -63,52 +56,48 @@ for (const [label, body, expectedErrors] of cases) {
     continue;
   }
   const n = errors.length;
-  /* Exact counts on the well-formed cases; a floor on the empty ones, since the
-     point there is "rejected with field errors", not which fields. */
   const ok = expectedErrors === 0 ? n === 0 : expectedErrors === 1 ? n === 1 : n >= expectedErrors;
   console.log(`  ${ok ? 'ok     ' : 'FAIL   '} ${label} (${n} error${n === 1 ? '' : 's'})`);
   if (!ok) failed += 1;
 }
 
-/* -- what reaches the team ------------------------------------------------ */
+/* -- what reaches the team and the pipeline -------------------------------- */
 
 {
-  const yes = normalise(coerceIntake({ ...good, bookedFirst: true }));
-  const str = normalise(coerceIntake({ ...good, bookedFirst: 'true' }));
-  const no = normalise(coerceIntake({ ...good }));
-  check('bookedFirst true survives the boundary', yes.bookedFirst === true);
-  check('bookedFirst as the string "true" is true', str.bookedFirst === true);
-  check('bookedFirst absent is false', no.bookedFirst === false);
+  const intake = normalise(coerceIntake({ ...good, changed: '  New CEO.  ', tried: 'Chatbot pilot, killed it.' }));
+  check('the domain is derived from the website', intake.domain === 'cultivateadvisors.com', intake.domain);
+  const brief = researchBrief(intake);
+  check('the brief labels what changed', brief.includes('WHAT CHANGED RECENTLY: New CEO.'), brief);
+  check('the brief labels what was ruled out', brief.includes('ALREADY TRIED, EVALUATED OR RULED OUT: Chatbot pilot, killed it.'), brief);
+  check('a blank answer is omitted, not labelled empty', !brief.includes('WHERE THE TEAM BURNS TIME'), brief);
+  check('the brief separates answers with a blank line', brief.split('\n\n').length === 2, JSON.stringify(brief));
+}
+
+{
+  const intake = normalise(coerceIntake({ ...good }));
+  check('no answers means an empty brief', researchBrief(intake) === '', researchBrief(intake));
 }
 
 {
   const long = 'A pilot stalled at integration. '.repeat(200);
-  const intake = normalise(coerceIntake({ ...good, tried: long }));
-  check('long free text reaches the team intact', intake.tried === long.trim(), `${intake.tried?.length} chars`);
+  const intake = normalise(coerceIntake({ ...good, burn: long }));
+  check('long free text reaches the team intact', intake.burn === long.trim(), `${intake.burn?.length} chars`);
 }
 
-/* The competitor domains are what seed peer discovery, so a name that is not a
-   host must not silently become one. */
 {
-  const intake = normalise(coerceIntake({ ...good, competitors: ['Vistage', 'eosworldwide.com'] }));
-  check(
-    'a competitor typed as a name is kept but not treated as a domain',
-    intake.competitors.length === 2 && intake.competitorDomains.length === 1,
-    JSON.stringify({ competitors: intake.competitors, domains: intake.competitorDomains })
-  );
+  const mismatch = normalise(coerceIntake({ ...good, email: 'dana@othercompany.com' }));
+  check('a work address on another domain is flagged', mismatch.domainMismatch === true);
+  const free = normalise(coerceIntake({ ...good, email: 'dana@gmail.com' }));
+  check('a consumer address is flagged as free mail, not as a mismatch', free.freeMail === true && free.domainMismatch === false);
 }
 
-/* The hand-run commands are the fallback operator interface. If the recipient
-   stops riding along in the first one, releasing goes back to retyping an
-   email address by hand, which is how a client's document reaches a stranger. */
+/* The hand-run commands are the fallback operator interface. */
 {
-  const intake = normalise(
-    coerceIntake({ ...good, email: 'dana@cultivateadvisors.com', competitors: ['eosworldwide.com'] })
-  );
+  const intake = normalise(coerceIntake({ ...good, changed: 'Board asked for a plan.' }));
   const { generate, release } = fulfilCommands(intake);
   check('the run command carries the recipient', generate.includes('dana@cultivateadvisors.com'), generate);
-  check('the run command carries the one-liner', generate.includes('--category'), generate);
-  check('a named competitor is seeded', generate.includes('--peer eosworldwide.com'), generate);
+  check('the run command carries the brief', generate.includes('WHAT CHANGED RECENTLY: Board asked'), generate);
+  check('the run command passes no company or category; both are inferred', !generate.includes('--company') && !generate.includes('--category'), generate);
   check('the release command needs only the domain', /--domain \S+ --release/.test(release), release);
   check('the release command carries no address to mistype', !release.includes('@'), release);
 }

@@ -37,10 +37,11 @@ export interface DispatchResult {
 
 /**
  * The prompt that reads `trigger` is the one place a very long paste costs
- * money, so it is bounded here rather than at the form. The full text still
- * reaches the team in Slack.
+ * money, so it is bounded here rather than at the form. Three open answers
+ * fit comfortably; a pasted document does not. The full text still reaches
+ * the team in Slack.
  */
-export const TRIGGER_MAX_FOR_PIPELINE = 2_000;
+export const TRIGGER_MAX_FOR_PIPELINE = 6_000;
 
 export async function dispatchAnalysis(
   inputs: DispatchInputs,
