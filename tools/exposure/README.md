@@ -68,6 +68,31 @@ evidence, not inside-vs-outside:
 launch is a threat in a category they compete in and an opportunity in one
 nobody has entered.
 
+## The five rules the report enforces (2026-09-02)
+
+1. **Outbound draws on Verified claims only.** Every claim carries a status
+   (`src/lib/claim-status.ts`): Verified (read on the publishing page), Cited
+   (citation-backed search), Tool data (a data API), Ours (inference). The email
+   draft may cite Verified claims only; stage 07 is validated and retried on it,
+   and a leak that survives is marked † in the draft and named in the report's
+   banner. Cited and Tool data are call material by definition.
+2. **Every peer carries a buyer-fit judgement.** Who they sell to and whether
+   that buyer overlaps the target's (yes / partial / no / unknown), on every
+   competitor row. A shipped product at a company that sells to a different
+   buyer is context, not a threat.
+3. **Every cited URL is re-fetched at report time** (`src/lib/liveness.ts`):
+   HTTP status, redirect target, and a screenshot through headless Chrome. The
+   register gets a Live column and the report an appendix of thumbnails. The
+   verdict stays human; the clicking does not.
+4. **The fork must fork.** A first-class field on the first page: the question,
+   the first build under each answer, and what differs. Validation rejects
+   identical branches and the "changes the sequencing rather than the
+   destination" hedge. `found: false` with a reason is allowed and rendered as
+   an admission.
+5. **No is an answer.** `verdict: nothing_worth_a_call` renders its own
+   template with the same register and method: what we looked at, what we set
+   aside and why, the one question that could reopen it, and a shorter email.
+
 ## Coverage — when *not* to send
 
 Research quality varies enormously by target. A company with docs, a changelog
@@ -92,7 +117,7 @@ those files rather than calling earlier stages. Any stage can be re-run alone.
 | 04 demand | DataForSEO Labs | category demand, terms peers rank for | stale by default — stamp *both* dates, ours and Google's |
 | 05 assemble | none | `report.md` | deterministic, no network, no model |
 | 06 analysis | Claude | `06-synthesis.json` | every figure checked against the claims it cites; the industry brief is judgement, not evidence |
-| 07 the one thing | Claude | `07-one-thing.json`, `research-report.html/.pdf`, `email-draft.md` | three or four candidate builds, one picked and argued against the others; one refusal; one fork. Unsourced figures are redacted to a visible marker, never rendered |
+| 07 the one thing | Claude | `07-one-thing.json`, `research-report.html/.pdf`, `email-draft.md`, `sources.json` | a verdict (recommend, or nothing worth a call); three or four candidate builds, one picked and argued against the others; a fork that must fork; buyer fit per peer; one refusal. The email may cite Verified claims only. Unsourced figures are redacted to a visible marker, never rendered. Every cited URL is re-fetched and photographed |
 
 **Stage 01's highest-yield targets** are the ones that describe operations
 rather than marketing: the help center (a published description of their manual

@@ -7,6 +7,13 @@
    against the page it came from before sending, and so the recipient, if the
    footnotes are kept, can do the same.
 
+   THE OUTBOUND RULE, ENFORCED HERE TOO. Stage 07 is told the email may cite
+   Verified claims only, and it is validated and retried on that. If a Cited
+   or Tool-data citation survives anyway, this renderer does not hide it: the
+   marker becomes [n†] and the footnote is prefixed CALL MATERIAL, so the
+   sentence cannot be sent as written without a person noticing. The report's
+   banner lists the same ids.
+
    Adds no facts. An id that matches no claim is removed and reported, never
    left in as a dangling reference and never invented into a source.
 
@@ -15,6 +22,7 @@
 --------------------------------------------------------------------------- */
 
 import type { Claim } from '../lib/claim.ts';
+import { claimStatus, isOutboundSafe, callMaterialReason } from '../lib/claim-status.ts';
 import type { OneThing } from '../stages/07-one-thing.ts';
 
 export interface EmailDraftInput {
@@ -29,6 +37,8 @@ export interface Footnote {
   n: number;
   id: string;
   claim: Claim;
+  /** False when the claim is not Verified: the sentence is call material. */
+  outboundSafe: boolean;
 }
 
 export interface EmailDraft {
@@ -40,6 +50,9 @@ export interface EmailDraft {
   footnotes: Footnote[];
   /** Ids the draft cited that match no claim. Empty is the goal. */
   unresolved: string[];
+  /** Ids cited that are not Verified. Empty is the goal. */
+  callMaterial: string[];
+  verdict: OneThing['verdict'];
 }
 
 const ID_GROUP = /\(\s*([a-z0-9._-]+(?:\s*,\s*[a-z0-9._-]+)*)\s*\)/gi;
@@ -47,7 +60,8 @@ const ID_GROUP = /\(\s*([a-z0-9._-]+(?:\s*,\s*[a-z0-9._-]+)*)\s*\)/gi;
 /**
  * Replace `(id)` and `(id, id)` groups with `[n]` markers, numbering by first
  * appearance. One marker per group: a sentence resting on three claims gets
- * one footnote pointing at the first, and the register carries the rest.
+ * one footnote pointing at the first, and the register carries the rest. A
+ * non-Verified citation gets a dagger so it cannot pass as clean.
  */
 export function footnoteClaimIds(
   text: string,
@@ -66,10 +80,11 @@ export function footnoteClaimIds(
     }
     if (!numbers.has(id)) {
       numbers.set(id, numbers.size + 1);
-      footnotes.push({ n: numbers.size, id, claim });
+      footnotes.push({ n: numbers.size, id, claim, outboundSafe: isOutboundSafe(claim) });
     }
     return numbers.get(id)!;
   };
+  const marker = (id: string, n: number) => (isOutboundSafe(byId.get(id)!) ? `[${n}]` : `[${n}†]`);
 
   let out = text.replace(ID_GROUP, (whole, inner) => {
     const parts = String(inner)
@@ -85,7 +100,7 @@ export function footnoteClaimIds(
        the sentence. */
     for (const part of parts) {
       const n = numberFor(part);
-      if (n !== null) return `[${n}]`;
+      if (n !== null) return marker(part, n);
     }
     return '';
   });
@@ -94,12 +109,12 @@ export function footnoteClaimIds(
   for (const id of [...byId.keys()].sort((a, b) => b.length - a.length)) {
     if (!out.includes(id)) continue;
     const n = numberFor(id);
-    out = out.split(id).join(n ? `[${n}]` : '');
+    out = out.split(id).join(n ? marker(id, n) : '');
   }
 
   return {
     text: out
-      .replace(/\s+(\[\d+\])/g, '$1')
+      .replace(/\s+(\[\d+†?\])/g, '$1')
       .replace(/\s+([.,;:])/g, '$1')
       .replace(/[ \t]{2,}/g, ' ')
       .trim(),
@@ -115,16 +130,27 @@ function sourceLine(claim: Claim): string {
   return `${label ? `${label} — ` : ''}${s.url} (retrieved ${s.retrievedAt.slice(0, 10)})`;
 }
 
+function noteHead(f: Footnote): string {
+  const status = claimStatus(f.claim).label;
+  return f.outboundSafe ? `[${f.n}] ` : `[${f.n}†] CALL MATERIAL (${status}: ${callMaterialReason(f.claim)}). Do not send this sentence as written. `;
+}
+
 export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
   const { oneThing, claims } = input;
   const { text: body, footnotes, unresolved } = footnoteClaimIds(oneThing.email.body, claims);
   const first = input.recipientName?.trim().split(/\s+/)[0];
   const salutation = first ? `${first},` : '';
+  const callMaterial = footnotes.filter((f) => !f.outboundSafe).map((f) => f.id);
+
+  const banner =
+    callMaterial.length > 0
+      ? `REVIEW BEFORE SENDING: ${callMaterial.length} footnote(s) marked † cite claims that are not Verified. They are call material. Cut the sentence or say it on the call.`
+      : '';
 
   const notesText = footnotes
     .map((f) => {
       const peer = f.claim.peerName ? `${f.claim.peerName}: ` : '';
-      return `[${f.n}] ${peer}${f.claim.statement}\n    ${sourceLine(f.claim)}`;
+      return `${noteHead(f)}${peer}${f.claim.statement}\n    ${sourceLine(f.claim)}`;
     })
     .join('\n');
 
@@ -135,11 +161,15 @@ export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
       const src = s
         ? `[${s.title || s.publisher || s.url}](${s.url}), retrieved ${s.retrievedAt.slice(0, 10)}`
         : 'no source recorded';
-      return `${f.n}. ${peer}${f.claim.statement} · ${src} · \`${f.id}\``;
+      const head = f.outboundSafe
+        ? `${f.n}. `
+        : `${f.n}. **† CALL MATERIAL** (${claimStatus(f.claim).label}: ${callMaterialReason(f.claim)}). `;
+      return `${head}${peer}${f.claim.statement} · ${src} · \`${f.id}\` · ${claimStatus(f.claim).label}`;
     })
     .join('\n');
 
   const text = [
+    banner ? `*** ${banner} ***\n` : null,
     `Subject: ${oneThing.email.subject}`,
     '',
     salutation,
@@ -156,6 +186,9 @@ export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
   const markdown = [
     `# Email draft — ${input.company}`,
     '',
+    oneThing.verdict === 'nothing_worth_a_call' ? '> Verdict: nothing worth a call. This is the honest-no email.' : '',
+    banner ? `> **${banner}**` : '',
+    '',
     `**Subject:** ${oneThing.email.subject}`,
     '',
     salutation,
@@ -170,5 +203,14 @@ export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  return { subject: oneThing.email.subject, body, text, markdown, footnotes, unresolved };
+  return {
+    subject: oneThing.email.subject,
+    body,
+    text,
+    markdown,
+    footnotes,
+    unresolved,
+    callMaterial,
+    verdict: oneThing.verdict,
+  };
 }

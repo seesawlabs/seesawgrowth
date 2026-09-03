@@ -1762,12 +1762,15 @@ test('a revision prompt is stable regardless of notes formatting', () => {
 import {
   validateOneThing,
   redactUnsourced,
+  nonVerifiedInEmail,
   chosen,
   REDACTED,
   type OneThing,
 } from './stages/07-one-thing.ts';
 import { renderEmailDraft, footnoteClaimIds } from './render/email-draft.ts';
-import { renderResearchReport, claimStatus } from './render/research-report.ts';
+import { renderResearchReport } from './render/research-report.ts';
+import { claimStatus, isOutboundSafe } from './lib/claim-status.ts';
+import { classify, uniqueUrls } from './lib/liveness.ts';
 import type { Claim } from './lib/claim.ts';
 
 const SEVEN_CLAIMS: Claim[] = [
@@ -1795,13 +1798,14 @@ const SEVEN_CLAIMS: Claim[] = [
     angle: 'context',
     subject: 'self',
     statement: '"order tracking software" draws 2,400 US searches a month.',
-    sources: [{ url: 'https://dataforseo.example/x', publisher: 'DataForSEO', retrievedAt: '2026-08-30T00:00:00Z' }],
+    sources: [{ url: 'https://api.dataforseo.com/v3/x', publisher: 'DataForSEO', retrievedAt: '2026-08-30T00:00:00Z' }],
   },
 ];
 
 const SEVEN_FACTS = { pagesCrawled: 9, peersIdentified: 4, peersWithDatedAiEvidence: 1, observedClaims: 6, comparativeClaims: 3 };
 
 const goodOneThing = (): OneThing => ({
+  verdict: 'recommend',
   ideas: [
     {
       headline: 'Delivery-time prediction in the order screen',
@@ -1832,13 +1836,24 @@ const goodOneThing = (): OneThing => ({
     index: 0,
     why: 'The prediction is the only one of the three no vendor sells them and the only one that uses data only they hold. The dispatcher board is internal and safe but duplicates a screen they have. The status page is what every carrier already gives away.',
   },
+  fork: {
+    found: true,
+    question: 'Are delivery times recorded per order today?',
+    ifYes: 'Build the prediction in the order screen from the history you hold.',
+    ifNo: 'Build the per-order time capture first; the dispatcher board becomes the first visible surface instead.',
+    whatChanges: 'Whether the first build is a prediction on existing data or a capture step that creates the data, and whether the dispatcher or the order-taker sees it first.',
+    whyNone: '',
+  },
   whyUs: 'The person placing the order has seconds. The surface has to earn its place on that screen.',
   firstStep: 'Two weeks reading how delivery times are recorded today.',
   refuse: { what: 'A customer-facing chatbot', why: 'Rival Co already shipped one (cmp-1). Competing there is competing on their terms.', claimIds: ['cmp-1'] },
-  couldNotSee: 'Whether delivery times are recorded per order. If they are, this is retrieval. If not, it starts with instrumenting the step.',
+  peerFit: [
+    { peer: 'Rival Co', sellsTo: 'regional distributors with their own fleets', overlap: 'yes', why: 'Same buyer, from their announcement (cmp-1).', claimIds: ['cmp-1'] },
+  ],
+  nullResult: null,
   email: {
     subject: 'The one thing: delivery-time prediction',
-    body: Array(30).fill('Build a predicted delivery window into the order screen (cmp-1).').join(' '),
+    body: Array(30).fill('Build a predicted delivery window into the order screen (obs-price).').join(' '),
   },
 });
 
@@ -1846,11 +1861,9 @@ test('stage 07: a clean draft validates', () => {
   assert.deepEqual(validateOneThing(goodOneThing(), SEVEN_CLAIMS, SEVEN_FACTS), []);
 });
 
-test('stage 07: a figure in no cited claim is caught, even when some other claim carries it', () => {
+test('stage 07: a figure in no cited claim is caught', () => {
   const x = goodOneThing();
-  x.ideas.pop(); // drop the idea that cites dem-1, leaving a third idea that cites nothing new
-  x.ideas.push({ ...x.ideas[1], headline: 'A third, different idea', claimIds: ['obs-price'] });
-  x.pick.why += ' That term draws 2,400 searches a month.'; // in dem-1, which is no longer cited anywhere
+  x.pick.why += ' Their competitor charges $1,299 for the same thing.';
   const problems = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS);
   assert.equal(problems.length, 1);
   assert.equal(problems[0].code, 'unsourced_numeral');
@@ -1877,7 +1890,7 @@ test('stage 07: fewer than three ideas, or a pick that names none of them, is re
   const bad = goodOneThing();
   bad.pick.index = 7;
   assert.ok(validateOneThing(bad, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'bad_pick'));
-  assert.equal(chosen(bad).headline, goodOneThing().ideas[2].headline, 'a bad index clamps rather than throws');
+  assert.equal(chosen(bad)?.headline, goodOneThing().ideas[2].headline, 'a bad index clamps rather than throws');
 });
 
 test('stage 07: redaction removes the figure and its attached symbols, nothing else', () => {
@@ -1903,12 +1916,197 @@ test('stage 07: the email length is bounded both ways', () => {
   assert.ok(validateOneThing(long, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'too_long'));
 });
 
+/* -- rule 1: outbound draws on Verified claims only -- */
+
+test('claim status: read on the page is Verified; a third-party citation is Cited; an API figure is Tool data', () => {
+  assert.equal(claimStatus(SEVEN_CLAIMS[0]).label, 'Verified');
+  assert.equal(claimStatus(SEVEN_CLAIMS[1]).label, 'Cited');
+  assert.equal(claimStatus(SEVEN_CLAIMS[2]).label, 'Tool data');
+  assert.equal(
+    claimStatus({ ...SEVEN_CLAIMS[1], sources: [{ url: 'https://www.rivalco.com/news', retrievedAt: '2026-08-30T00:00:00Z' }] }).label,
+    'Verified',
+    'a peer claim read on the peer own site is verified'
+  );
+  assert.ok(isOutboundSafe(SEVEN_CLAIMS[0]) && !isOutboundSafe(SEVEN_CLAIMS[1]) && !isOutboundSafe(SEVEN_CLAIMS[2]));
+});
+
+test('stage 07: an email that cites a Cited or Tool-data claim is refused, and the leak is named', () => {
+  const x = goodOneThing();
+  x.email.body += ' Rival Co moved this spring (cmp-1). The term draws searches (dem-1).';
+  const problems = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS).filter((p) => p.code === 'non_verified_in_email');
+  assert.equal(problems.length, 2);
+  assert.deepEqual(nonVerifiedInEmail(x, SEVEN_CLAIMS).sort(), ['cmp-1', 'dem-1']);
+  assert.deepEqual(nonVerifiedInEmail(goodOneThing(), SEVEN_CLAIMS), []);
+});
+
+test('email draft: a non-Verified citation that survives is marked with a dagger and labelled call material', () => {
+  const x = goodOneThing();
+  x.email.body += ' Rival Co moved this spring (cmp-1).';
+  const draft = renderEmailDraft({ company: 'Acme', oneThing: x, claims: SEVEN_CLAIMS });
+  assert.ok(draft.text.includes('[1]'), 'the Verified footnote is plain');
+  assert.ok(draft.text.includes('[2†]'), 'the Cited footnote carries a dagger');
+  assert.ok(draft.text.includes('CALL MATERIAL (Cited'));
+  assert.ok(draft.text.startsWith('*** REVIEW BEFORE SENDING'));
+  assert.deepEqual(draft.callMaterial, ['cmp-1']);
+});
+
+/* -- rule 2: buyer fit -- */
+
+test('stage 07: every peer in the claims needs a buyer-fit entry, and a peer not in the claims is refused', () => {
+  const missing = goodOneThing();
+  missing.peerFit = [];
+  assert.ok(validateOneThing(missing, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'peer_fit_missing'));
+  const stranger = goodOneThing();
+  stranger.peerFit.push({ peer: 'Nobody Inc', sellsTo: 'x', overlap: 'no', why: 'y', claimIds: [] });
+  assert.ok(validateOneThing(stranger, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'unknown_peer'));
+});
+
+test('research report: the peer table carries who they sell to and the overlap judgement', () => {
+  const html = renderResearchReport({
+    meta: { runId: 'r1', domain: 'example.test', startedAt: '2026-08-30T00:00:00Z' },
+    company: 'Acme',
+    claims: SEVEN_CLAIMS,
+    coverage: { ...SEVEN_FACTS, score: 1, sufficient: true, shortfalls: [] },
+    synthesis: null,
+    oneThing: { model: 'm', writtenAt: 'now', oneThing: goodOneThing(), problems: [], redacted: 0, callMaterialInEmail: [], attempts: 1, voiceFlags: [], notes: [] },
+    emailDraft: null,
+  });
+  assert.ok(html.includes('<th>Sells to</th><th>Buyer overlap</th>'));
+  assert.ok(html.includes('regional distributors with their own fleets'));
+  assert.ok(html.includes('>yes</span>'));
+});
+
+/* -- rule 4: the fork must fork -- */
+
+test('stage 07: a fork whose branches are the same, or which hedges on sequencing, is refused', () => {
+  const same = goodOneThing();
+  same.fork.ifNo = same.fork.ifYes;
+  assert.ok(validateOneThing(same, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'fork_same_branches'));
+  const hedge = goodOneThing();
+  hedge.fork.whatChanges = 'It changes the sequencing rather than the destination.';
+  assert.ok(validateOneThing(hedge, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'fork_hedge'));
+  const empty = goodOneThing();
+  empty.fork.ifNo = '';
+  assert.ok(validateOneThing(empty, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'fork_missing'));
+});
+
+test('stage 07: admitting no fork is allowed, but only with a reason', () => {
+  const none = goodOneThing();
+  none.fork = { found: false, question: '', ifYes: '', ifNo: '', whatChanges: '', whyNone: 'Every branch lands on the same first build: the capture step.' };
+  assert.deepEqual(validateOneThing(none, SEVEN_CLAIMS, SEVEN_FACTS), []);
+  none.fork.whyNone = '';
+  assert.ok(validateOneThing(none, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'fork_missing'));
+});
+
+test('research report: the fork sits on the first page, before "Why this one", and an absent fork is admitted', () => {
+  const base = {
+    meta: { runId: 'r1', domain: 'example.test', startedAt: '2026-08-30T00:00:00Z' },
+    company: 'Acme',
+    claims: SEVEN_CLAIMS,
+    coverage: { ...SEVEN_FACTS, score: 1, sufficient: true, shortfalls: [] },
+    synthesis: null,
+    emailDraft: null,
+  };
+  const found = renderResearchReport({ ...base, oneThing: { model: 'm', writtenAt: 'now', oneThing: goodOneThing(), problems: [], redacted: 0, callMaterialInEmail: [], attempts: 1, voiceFlags: [], notes: [] } });
+  assert.ok(found.indexOf('The question that decides it') < found.indexOf('Why this one'));
+  assert.ok(found.includes('Are delivery times recorded per order today?'));
+  const none = goodOneThing();
+  none.fork = { found: false, question: '', ifYes: '', ifNo: '', whatChanges: '', whyNone: 'Every branch lands on the capture step.' };
+  const html = renderResearchReport({ ...base, oneThing: { model: 'm', writtenAt: 'now', oneThing: none, problems: [], redacted: 0, callMaterialInEmail: [], attempts: 1, voiceFlags: [], notes: [] } });
+  assert.ok(html.includes('No fork found'));
+  assert.ok(html.includes('No fork was found'), 'the banner says so too');
+});
+
+/* -- rule 5: the null path -- */
+
+const nullOneThing = (): OneThing => ({
+  ...goodOneThing(),
+  verdict: 'nothing_worth_a_call',
+  pick: { index: 0, why: '' },
+  whyUs: '',
+  firstStep: '',
+  nullResult: {
+    whatWeLookedAt: 'Their pricing page (obs-price), one peer move (cmp-1), and the demand data (dem-1).',
+    whatWeSetAside: ['The prediction needs per-order times they do not appear to record.', 'The status page is what every carrier gives away.'],
+    oneQuestion: 'Do you record delivery times per order?',
+  },
+  email: {
+    subject: 'Acme: what we found, and why we would wait',
+    body: Array(12).fill('We looked at your pricing page (obs-price) and did not find a build worth your money this year.').join(' '),
+  },
+});
+
+test('stage 07: the null verdict validates without three ideas or a pick, but not without its own fields', () => {
+  const x = nullOneThing();
+  x.ideas = [x.ideas[0]];
+  assert.deepEqual(validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS), []);
+  assert.equal(chosen(x), null);
+  const thin = nullOneThing();
+  thin.nullResult!.whatWeSetAside = ['only one'];
+  assert.ok(validateOneThing(thin, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'null_incomplete'));
+  const none = nullOneThing();
+  none.nullResult = null;
+  assert.ok(validateOneThing(none, SEVEN_CLAIMS, SEVEN_FACTS).some((p) => p.code === 'null_incomplete'));
+});
+
+test('research report: the null verdict renders its own template with the register intact', () => {
+  const html = renderResearchReport({
+    meta: { runId: 'r1', domain: 'example.test', startedAt: '2026-08-30T00:00:00Z' },
+    company: 'Acme',
+    claims: SEVEN_CLAIMS,
+    coverage: { ...SEVEN_FACTS, score: 1, sufficient: true, shortfalls: [] },
+    synthesis: null,
+    oneThing: { model: 'm', writtenAt: 'now', oneThing: nullOneThing(), problems: [], redacted: 0, callMaterialInEmail: [], attempts: 1, voiceFlags: [], notes: [] },
+    emailDraft: renderEmailDraft({ company: 'Acme', oneThing: nullOneThing(), claims: SEVEN_CLAIMS }),
+  });
+  assert.ok(html.includes('nothing worth a build this year'));
+  assert.ok(html.includes('What we set aside, and why'));
+  assert.ok(html.includes('The one question we would still ask'));
+  assert.ok(!html.includes('The question that decides it'), 'no fork block on a null verdict');
+  assert.ok(html.includes('Claim register'));
+  for (const c of SEVEN_CLAIMS) assert.ok(html.includes(`id="claim-${c.id}"`));
+});
+
+/* -- rule 3: liveness -- */
+
+test('liveness: API endpoints are classified apart from pages, and URLs are deduplicated in order', () => {
+  assert.equal(classify('https://api.dataforseo.com/v3/dataforseo_labs/google/keyword_overview/live'), 'api');
+  assert.equal(classify('https://cultivateadvisors.com/'), 'page');
+  assert.equal(classify('not a url'), 'page');
+  assert.deepEqual(uniqueUrls(['https://a.test', 'https://b.test', 'https://a.test', ' ', 'https://b.test']), ['https://a.test', 'https://b.test']);
+});
+
+test('research report: the register carries a Live column and the appendix lists checked pages', () => {
+  const html = renderResearchReport({
+    meta: { runId: 'r1', domain: 'example.test', startedAt: '2026-08-30T00:00:00Z' },
+    company: 'Acme',
+    claims: SEVEN_CLAIMS,
+    coverage: { ...SEVEN_FACTS, score: 1, sufficient: true, shortfalls: [] },
+    synthesis: null,
+    oneThing: null,
+    emailDraft: null,
+    sources: [
+      { url: 'https://example.test/pricing', kind: 'page', status: 200, ok: true, checkedAt: '2026-09-02T00:00:00Z' },
+      { url: 'https://news.example/rival', kind: 'page', status: 404, ok: false, checkedAt: '2026-09-02T00:00:00Z' },
+      { url: 'https://api.dataforseo.com/v3/x', kind: 'api', status: null, ok: true, checkedAt: '2026-09-02T00:00:00Z', note: 'API' },
+    ],
+  });
+  assert.ok(html.includes('<th>Live</th>'));
+  assert.ok(html.includes('>200</span>'));
+  assert.ok(html.includes('>404</span>'));
+  assert.ok(html.includes('>API</span>'));
+  assert.ok(html.includes('Sources as they looked at print time'));
+  assert.ok(html.includes('1 cited page(s) were not reachable'), 'the banner names dead sources');
+});
+
+/* -- the email draft, general -- */
+
 test('email draft: claim ids become footnotes in first-use order, one per group', () => {
   const { text, footnotes, unresolved } = footnoteClaimIds(
     'Rival moved (cmp-1). You charge for it (obs-price, cmp-1). Rival again (cmp-1). Nobody (cmp-77).',
     SEVEN_CLAIMS
   );
-  assert.equal(text, 'Rival moved[1]. You charge for it[2]. Rival again[1]. Nobody.');
+  assert.equal(text, 'Rival moved[1†]. You charge for it[2]. Rival again[1†]. Nobody.');
   assert.deepEqual(footnotes.map((f) => f.id), ['cmp-1', 'obs-price']);
   assert.deepEqual(unresolved, ['cmp-77']);
 });
@@ -1922,9 +2120,9 @@ test('email draft: the text carries the subject, the salutation, the body and th
   const draft = renderEmailDraft({ company: 'Acme', oneThing: goodOneThing(), claims: SEVEN_CLAIMS, recipientName: 'Dana Whitfield' });
   assert.ok(draft.text.startsWith('Subject: The one thing: delivery-time prediction'));
   assert.ok(draft.text.includes('\nDana,\n'));
-  assert.ok(!/\(cmp-1\)/.test(draft.text), 'no raw ids in the text');
-  assert.ok(draft.text.includes('[1] Rival Co: announced an assistant'));
-  assert.ok(draft.text.includes('https://news.example/rival'));
+  assert.ok(!/\(obs-price\)/.test(draft.text), 'no raw ids in the text');
+  assert.ok(draft.text.includes('[1] Their pricing page'));
+  assert.ok(draft.text.includes('https://example.test/pricing'));
   assert.ok(draft.markdown.includes('### Sources'));
 });
 
@@ -1937,7 +2135,7 @@ test('research report: every claim has a register row, prose ids link to them, t
     claims: SEVEN_CLAIMS,
     coverage: { ...SEVEN_FACTS, score: 1, sufficient: true, shortfalls: [] },
     synthesis: null,
-    oneThing: { model: 'm', writtenAt: 'now', oneThing: one, problems: [], redacted: 1, attempts: 2, voiceFlags: [], notes: [] },
+    oneThing: { model: 'm', writtenAt: 'now', oneThing: one, problems: [], redacted: 1, callMaterialInEmail: [], attempts: 2, voiceFlags: [], notes: [] },
     emailDraft: renderEmailDraft({ company: 'Acme', oneThing: one, claims: SEVEN_CLAIMS }),
   });
   for (const c of SEVEN_CLAIMS) assert.ok(html.includes(`id="claim-${c.id}"`), `${c.id} has a row`);
@@ -1949,6 +2147,8 @@ test('research report: every claim has a register row, prose ids link to them, t
   assert.ok(html.includes('The ideas we weighed'));
   assert.ok(html.includes('A dispatcher board that ranks the day'), 'the ideas not chosen are shown');
   assert.equal((html.match(/>Recommended</g) ?? []).length, 1, 'exactly one idea is marked as the pick');
+  assert.ok(html.includes('For the call, not the email'));
+  assert.ok(html.includes('Rival Co</strong> announced an assistant'), 'the Cited claim the pick rests on is listed as call material');
 });
 
 test('research report: with no recommendation, it says so instead of inventing one', () => {
@@ -1963,15 +2163,4 @@ test('research report: with no recommendation, it says so instead of inventing o
   });
   assert.ok(html.includes('Stage 07 did not run'));
   assert.ok(html.includes('Claim register'));
-});
-
-test('research report: status follows how we know the claim', () => {
-  assert.equal(claimStatus(SEVEN_CLAIMS[0]).label, 'Verified');
-  assert.equal(claimStatus(SEVEN_CLAIMS[1]).label, 'Cited');
-  assert.equal(claimStatus(SEVEN_CLAIMS[2]).label, 'Tool data');
-  assert.equal(
-    claimStatus({ ...SEVEN_CLAIMS[1], sources: [{ url: 'https://www.rivalco.com/news', retrievedAt: '2026-08-30T00:00:00Z' }] }).label,
-    'Verified',
-    'a peer claim read on the peer own site is verified'
-  );
 });

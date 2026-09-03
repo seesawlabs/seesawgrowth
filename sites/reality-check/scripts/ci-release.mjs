@@ -288,7 +288,15 @@ if (!pdf) caveats.push(':warning: No PDF was printed on the runner (no Chrome). 
 await slack(
   [
     `:page_facing_up: *${company}* (${domain}) — research done`,
-    oneThing ? `*${oneThing.oneThing.headline}*` : '',
+    oneThing
+      ? oneThing.oneThing.verdict === 'nothing_worth_a_call'
+        ? ':no_entry_sign: *Verdict: nothing worth a call.* The report says what we looked at and set aside; the email is the honest-no version.'
+        : `:dart: *${oneThing.oneThing.ideas?.[oneThing.oneThing.pick?.index ?? 0]?.headline ?? oneThing.oneThing.headline ?? 'Recommendation'}*` +
+          (oneThing.oneThing.fork && !oneThing.oneThing.fork.found ? ' · _no fork found_' : '')
+      : '',
+    oneThing?.callMaterialInEmail?.length
+      ? `:warning: The email draft cites ${oneThing.callMaterialInEmail.length} non-Verified claim(s), marked † — cut or say on the call.`
+      : '',
     short,
     `For ${name} <${email}>`,
     ...caveats,

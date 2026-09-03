@@ -546,7 +546,7 @@ export function buildUserPrompt(
      labelled as their words and the model is told not to treat it as evidence.
      It steers emphasis, not conclusions. */
   const context = trigger?.trim()
-    ? `\nWHAT THEY TOLD US IS DRIVING THIS (their words, not evidence — use it to decide what to lead with, never as a fact to assert):\n"${trigger.trim()}"\n`
+    ? `\nWHAT THEY TOLD US (their words, not evidence — use it to decide what to lead with, never as a fact to assert). Three labelled answers may appear: WHAT CHANGED RECENTLY sets why now; WHERE THE TEAM BURNS TIME points at where a buildable gap lives; ALREADY TRIED, EVALUATED OR RULED OUT is a list of ideas not to offer them again:\n${trigger.trim()}\n`
     : '';
 
   const brief = industryBrief?.trim()

@@ -52,8 +52,9 @@ import { runSynthesisStage, type SynthesisArtifact } from './stages/06-synthesis
 import { renderReportHtml } from './render/report-html.ts';
 import { renderResearchReport } from './render/research-report.ts';
 import { renderEmailDraft, type EmailDraft } from './render/email-draft.ts';
-import { runOneThingStage, chosen, type OneThingArtifact } from './stages/07-one-thing.ts';
+import { runOneThingStage, chosen, isNull, type OneThingArtifact } from './stages/07-one-thing.ts';
 import { renderPdf } from './lib/pdf.ts';
+import { checkSources, screenshotDataUri, summariseLiveness } from './lib/liveness.ts';
 import { registrableDomain } from './lib/domain.ts';
 import { FIXTURE_CLAIMS, FIXTURE_META } from './fixtures/prototype.ts';
 
@@ -185,6 +186,8 @@ interface TwoDocArgs {
   cache: CacheOptions;
   now: string;
   skip: boolean;
+  /** Skip the URL re-fetch and screenshots (tests, offline). */
+  skipLiveness?: boolean;
 }
 
 async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact | null; draft: EmailDraft | null }> {
@@ -216,7 +219,12 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
         a.now
       );
       await writeArtifact(a.dir, '07-one-thing', oneThing);
-      console.error(`        ${oneThing.oneThing.ideas.length} ideas; picked "${chosen(oneThing.oneThing).headline}" — ${oneThing.model}, ${oneThing.attempts} draft(s)`);
+      console.error(
+        isNull(oneThing.oneThing)
+          ? `        VERDICT: nothing worth a call (${oneThing.oneThing.ideas.length} ideas weighed) — ${oneThing.model}, ${oneThing.attempts} draft(s)`
+          : `        ${oneThing.oneThing.ideas.length} ideas; picked "${chosen(oneThing.oneThing)?.headline}"; fork ${oneThing.oneThing.fork.found ? 'found' : 'NOT found'} — ${oneThing.model}, ${oneThing.attempts} draft(s)`
+      );
+      if (oneThing.callMaterialInEmail.length) console.error(`        EMAIL CITES NON-VERIFIED: ${oneThing.callMaterialInEmail.join(', ')}`);
       for (const note of oneThing.notes) console.error(`        - ${note}`);
       if (oneThing.redacted > 0) console.error(`        REDACTED ${oneThing.redacted} unsourced figure(s)`);
     } catch (error) {
@@ -230,8 +238,34 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
     : null;
   if (draft) await writeFile(join(a.dir, 'email-draft.md'), draft.markdown);
 
+  /* Liveness: re-fetch every cited URL and photograph the pages, so the
+     reviewer reads a column instead of opening thirty tabs. Never fatal. */
+  const urls = renderable.flatMap((c) => c.sources.map((s) => s.url));
+  let sources: Awaited<ReturnType<typeof checkSources>> = [];
+  const screenshots: Record<string, string> = {};
+  if (!a.skipLiveness) {
+    console.error(`        checking ${new Set(urls).size} source URL(s) for liveness`);
+    try {
+      sources = await checkSources(urls, { dir: join(a.dir, 'sources'), now: a.now });
+      await writeArtifact(a.dir, 'sources', sources);
+      for (const s of sources) {
+        if (s.screenshot) {
+          const uri = screenshotDataUri(s.screenshot);
+          if (uri) screenshots[s.url] = uri;
+        }
+      }
+      console.error(`        ${summariseLiveness(sources)}`);
+    } catch (error) {
+      a.stageNotes.push(`liveness check failed: ${(error as Error).message.slice(0, 160)}`);
+    }
+  } else {
+    a.stageNotes.push('liveness check skipped');
+  }
+
   const html = renderResearchReport({
     meta: a.meta,
+    sources,
+    screenshots,
     company: a.company,
     oneLiner: a.oneLiner,
     recipientName: a.recipientName,
@@ -269,6 +303,7 @@ async function oneThingOnly(argv: string[]): Promise<void> {
     if (a === '--run') run = argv[++i];
     else if (a === '--name') name = argv[++i];
     else if (a === '--refresh') process.env.EXPOSURE_ONE_THING_REFRESH = '1';
+    else if (a === '--no-liveness') process.env.EXPOSURE_NO_LIVENESS = '1';
     else if (!a.startsWith('-') && !domain) domain = a;
   }
   if (!domain) {
@@ -319,6 +354,7 @@ async function oneThingOnly(argv: string[]): Promise<void> {
     cache,
     now,
     skip: false,
+    skipLiveness: process.env.EXPOSURE_NO_LIVENESS === '1',
   });
   console.error(`\n${ledger.format()}`);
   console.error(`\nwrote ${join(dir, 'research-report.html')}  (and email-draft.md)`);

@@ -1,6 +1,6 @@
 # Current status
 
-*Last updated 2026-09-02.*
+*Last updated 2026-09-03.*
 
 > **The free offer was re-cut on 2026-08-31, after the team landed on its intent.** The page
 > now leads with the 45-minute session; shortly after the call the lead gets a report of the
@@ -67,7 +67,7 @@ actively trying to do less of it.
 | └ Interview guide | Calvin | **Written. Includes 8 outlier branches + fit rubric. Needs a pass against the one-big-thing agenda** |
 | └ Website build (page, form, scheduler) | Calvin | **Deployed on Vercel (SeeSaw-owned), Astro. Calendar wired via Cal.com embed, single host** |
 | └ Research pipeline (`tools/exposure`) | Calvin | **Runs end to end in GitHub Actions from a Slack click or auto-run. ~$1.40–1.90 and 7–11 min a run** |
-| └ ─ Two-doc output (report PDF + email draft) | Calvin | **Built 2026-09-02: stage 07 in `tools/exposure`, research report printed to PDF, email draft footnoted to the claim register, both posted to Slack by the workflow. Tested on the Cultivate run; first end-to-end run from a fresh lead still to do** |
+| └ ─ Two-doc output (report PDF + email draft) | Calvin | **Built 2026-09-02, five rules added 2026-09-03 (see `tools/exposure/README.md`): email cites Verified claims only; buyer fit per peer; every cited URL re-fetched and photographed; the fork is a first-page field that must fork; a null verdict with its own template. Tested on the Cultivate run; first end-to-end run from a fresh lead still to do** |
 | └ ─ Landing page + intake (site root) | Calvin | **Leads with the session. `/reality-check`, `/book`, `/brief` and `/sample` are redirects** |
 | └ ─ Public sample (`/sample-brief`) | Calvin | **Old multi-section format. Regenerate in the one-big-thing shape before linking it again** |
 | └ ─ Emails | Calvin | **Ack rewritten for the new offer (booked-first variant). Resend live in Vercel** |
