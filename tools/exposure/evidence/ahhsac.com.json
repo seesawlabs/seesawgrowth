@@ -1,0 +1,22 @@
+{
+  "domain": "ahhsac.com",
+  "updatedAt": "2026-09-04T16:56:35.929Z",
+  "items": [
+    {
+      "statement": "Advanced Home Health and Hospice, Inc. publicly announced deploying Apricot, an AI-powered documentation platform, on January 21, 2026, to reduce clinician documentation time while maintaining accuracy and quality.",
+      "observedAt": "2026-01-21",
+      "citations": [
+        {
+          "marker": 1,
+          "url": "https://www.apricothealth.ai/articles/advanced-home-health-and-hospice-press-release",
+          "title": "Advanced Home Health & Hospice Chooses Apricot",
+          "publisher": "web",
+          "date": "2026-01-21"
+        }
+      ],
+      "firstSeenRun": "2026-09-04T16-56-35-929Z",
+      "lastSeenRun": "2026-09-04T16-56-35-929Z",
+      "timesSeen": 1
+    }
+  ]
+}

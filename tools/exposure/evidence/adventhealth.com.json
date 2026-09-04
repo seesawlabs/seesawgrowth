@@ -1,0 +1,29 @@
+{
+  "domain": "adventhealth.com",
+  "updatedAt": "2026-09-04T16:56:35.929Z",
+  "items": [
+    {
+      "statement": "The only relevant AdventHealth sources describe system-wide AI use, not anything tied to AdventHealth Home Infusion itself.",
+      "observedAt": "2023-11-07",
+      "citations": [
+        {
+          "marker": 14,
+          "url": "https://www.adventhealth.com/medical/adventhealthmd/news/how-ai-and-human-expertise-are-working-together-adventhealth-improve-patient-care",
+          "title": "How AI and Human Expertise are Working Together at ...",
+          "publisher": "web",
+          "date": "2023-11-07"
+        },
+        {
+          "marker": 1,
+          "url": "https://www.adventhealth.com/news/artificial-intelligence-how-adventhealth-using-technology-improve-whole-person-care",
+          "title": "Artificial intelligence: how AdventHealth is using ...",
+          "publisher": "web",
+          "date": "2024-03-06"
+        }
+      ],
+      "firstSeenRun": "2026-09-04T16-56-35-929Z",
+      "lastSeenRun": "2026-09-04T16-56-35-929Z",
+      "timesSeen": 1
+    }
+  ]
+}
