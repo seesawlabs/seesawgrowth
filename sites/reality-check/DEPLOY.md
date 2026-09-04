@@ -128,8 +128,11 @@ format. Either way, no laptop with six API keys on it.
 **From a teammate's machine, including cold outreach.** The `/one-thing` skill in
 `.claude/skills/one-thing/` starts the same workflow through `gh` (mode `cold` for
 a company that has not asked us for anything), downloads the finished run, and
-walks the reviewer through the send gate. It needs only a GitHub login with write
-access to this repo. A cold run needs the domain and the recipient's name and role,
+walks the reviewer through the send gate. It reaches Actions one of two ways: a
+`gh auth login` on the teammate's own machine, or `GITHUB_DISPATCH_TOKEN` in a
+Claude Code session's environment variables (fine-grained, this repo, Actions:
+Read and write — the same token this section describes for Vercel). A session's
+default `GITHUB_TOKEN` is read-only for Actions and cannot start a run. A cold run needs the domain and the recipient's name and role,
 nothing else: stage 03b looks for the dated reason to write on their own news,
 press and blog pages, and a teammate's own "why now" is an optional override that
 is still verified against the page it cites. Cold runs also post a third Slack

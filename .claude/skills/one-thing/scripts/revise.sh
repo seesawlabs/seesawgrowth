@@ -20,10 +20,9 @@ done
   echo "Usage: revise.sh --domain <domain> --run <pipeline runId> --notes \"…\" [--email …] [--name …]" >&2; exit 2; }
 domain="$(domain_of "$domain")"
 
-gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$REF" \
-  -f mode=revise -f "domain=$domain" -f "email=${email:-review@seesawlabs.com}" -f "name=${name:-Reviewer}" \
-  -f "company=$domain" -f "category=" -f "peers=" -f "trigger=" -f "runId=$run" -f "notes=$notes"
+dispatch revise "$domain" "${email:-review@seesawlabs.com}" "${name:-Reviewer}" "$domain" \
+  "" "" "" "$run" "$notes"
 sleep 6
 id="$(latest_run_id)"
 echo "Revising $domain from run $run. GitHub run: $id"
-echo "https://github.com/$REPO/actions/runs/$id"
+run_url "$id"

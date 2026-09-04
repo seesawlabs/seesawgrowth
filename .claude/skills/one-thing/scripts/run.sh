@@ -110,25 +110,16 @@ else
 fi
 
 # company=domain tells the pipeline to derive the name from the homepage.
-gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$REF" \
-  -f "mode=$mode" \
-  -f "domain=$domain" \
-  -f "email=$to_email" \
-  -f "name=$name_for_pipeline" \
-  -f "company=$domain" \
-  -f "category=$category" \
-  -f "peers=$peers" \
-  -f "trigger=${brief:0:6000}" \
-  -f "runId=" \
-  -f "notes="
+dispatch "$mode" "$domain" "$to_email" "$name_for_pipeline" "$domain" \
+  "$category" "$peers" "${brief:0:6000}" "" ""
 
 sleep 6
 id="$(latest_run_id)"
-echo "Started $mode research for $domain."
+echo "Started $mode research for $domain (via $TRANSPORT)."
 if [ "$mode" = "cold" ] && [ -z "$why_now" ]; then
   echo "No why-now given: stage 03b will look for one on their own news, press and blog pages."
 fi
 echo "GitHub run: $id"
-echo "https://github.com/$REPO/actions/runs/$id"
+run_url "$id"
 echo "About ten minutes and about \$2. Slack gets the report PDF and the email draft when it finishes."
 echo "Then: scripts/fetch.sh $id && node scripts/review.mjs ~/one-thing/$domain/$id"

@@ -12,8 +12,20 @@ takes the reviewer through the gate. It never runs the pipeline on a laptop: the
 runner is the one place where the API keys, Chrome, the evidence ledger and the
 validation code are all known-good.
 
-The person needs `gh` logged in to an account with write access to
-`seesawlabs/seesawgrowth`. No API keys.
+## What it needs to reach Actions
+
+Either one, and no API keys either way:
+
+- **On your own machine:** `gh auth login`, once, with an account that has write
+  access to `seesawlabs/seesawgrowth`. Nothing else to install.
+- **In a Claude Code session, including one on the web:** `GITHUB_DISPATCH_TOKEN`
+  set in the environment's variables — a fine-grained token, this repository only,
+  Repository permissions → **Actions: Read and write**. The same scope the Vercel
+  auto-run path uses. The scripts read it, never print it, and never commit it.
+
+The session's own `GITHUB_TOKEN` is not enough: in a Claude Code session it is
+read-only for Actions, so a dispatch with it returns 403. The scripts say so
+plainly rather than failing obscurely.
 
 ## The day this fits into
 
@@ -179,12 +191,14 @@ These are enforced in code; the skill's job is to make sure nobody works around 
 
 - `run.sh` fails with 404 or 403: the account lacks write access to the repo, or `gh`
   is logged in to the wrong account. `gh auth status` shows which.
-- **A Claude Code session on the web cannot start a run.** Its GitHub token is
-  read-only for Actions — proven 2026-09-04, `403 Resource not accessible by
-  integration` on the dispatch — so this skill needs a session on a machine where
-  the person's own `gh` is logged in. From the web, use the workflow's Run workflow
-  form in the GitHub UI instead: mode `cold`, the domain, `unknown@<domain>` as the
-  email, their name, and the domain again as the company.
+- **"No way to reach GitHub Actions from here."** Neither transport is available:
+  no `gh` logged in, and no `GITHUB_DISPATCH_TOKEN` in the environment. See *What
+  it needs to reach Actions* above. The fallback that always works is the
+  workflow's own **Run workflow** form in the GitHub UI: mode `cold`, the domain,
+  `unknown@<domain>` as the email, their name, and the domain again as the company.
+- **403 on a dispatch with a token set.** The token lacks Actions: Read and write
+  on this repository, or it is the session's default `GITHUB_TOKEN`, which is
+  read-only for Actions.
 - The run fails in Actions: `status.sh` prints the failed step. Read the job log with
   `gh run view <id> --log-failed`. A 401 from a service means a wrong secret in the
   repo's Actions settings, not a code problem.
