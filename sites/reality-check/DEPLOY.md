@@ -125,6 +125,11 @@ link instead, and the same two documents post when someone clicks it. The
 older **revise it** and **send it** links still work for the legacy brief
 format. Either way, no laptop with six API keys on it.
 
+**From a teammate's machine.** The `/one-thing` skill in `.claude/skills/one-thing/`
+starts the same workflow through `gh`, downloads the finished run, and walks the
+reviewer through the send gate. It needs only a GitHub login with write access to
+this repo. See that folder's `SKILL.md`.
+
 `.github/workflows/analysis.yml` is the runner. To turn it on:
 
 **A GitHub token, in Vercel.** Fine-grained, this repository only, Repository
