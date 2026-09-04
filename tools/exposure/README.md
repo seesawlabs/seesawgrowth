@@ -255,12 +255,25 @@ Measured, not estimated, except where the API refuses to say. Three services
 report dollars per call and the ledger uses their figures; Firecrawl reports
 credits only, so its line is always labelled an estimate at a configured rate.
 
-A full run on a mid-size site costs roughly **$1.40–$2.10**: the research
-stages are cents, and the three model calls (industry research with web
-search, the analysis, the one thing) are the rest. Re-running the same domain
+A full run costs **$1.80–$2.90**: the research stages are cents, and the model
+calls (industry research with web search, the analysis, the one thing, plus a
+retry when validation rejects a draft) are the rest. Re-running the same domain
 is free apart from the stages you pass `--refresh` to, and `onething` re-picks
 the recommendation for about $0.16. `EXPOSURE_RUN_BUDGET_USD` caps a run and
 the pipeline aborts rather than exceeding the cap.
+
+Measured on the cold path, 2026-09-04:
+
+| Run | Where | Total | Anthropic | Research stages | Wall clock |
+|---|---|---|---|---|---|
+| senderrarx.com | local, some cache hits | $1.78 | $1.75, 4 calls | $0.03 | 11m 6s |
+| compassus.com | Actions, cold cache | $2.84 | $2.65, 5 calls | $0.19 | 12m 53s |
+
+The earlier $1.40–$2.10 envelope predates stage 03b and the LinkedIn output,
+and it predates a run needing a second stage 07 draft. Two model calls decide
+the number: stage 06's industry research (12 web searches on the Compassus run,
+506 of its 773 seconds) and stage 07, twice when the first draft fails
+validation. The research stages are still noise at $0.19.
 
 ## Flags
 
