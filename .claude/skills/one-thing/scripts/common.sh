@@ -12,10 +12,16 @@
 # The session's own GITHUB_TOKEN is not enough: in a Claude Code session it is
 # read-only for Actions (403 on the dispatch, proven 2026-09-04), which is
 # correct for a token an agent carries by default and useless for starting a
-# run. So the api transport wants GITHUB_DISPATCH_TOKEN — a fine-grained token
-# for this repository with Actions: read and write, the same scope the Vercel
-# auto-run path uses — set in the environment's variables. It is read here and
-# never printed, logged or committed.
+# run. So the api transport wants a token of its own — fine-grained, this
+# repository, Actions: read and write, the same scope the Vercel auto-run path
+# uses — set in the *environment's* variables, next to FIRECRAWL_API_KEY and
+# the rest. It is read here and never printed, logged or committed.
+#
+# SEESAW_DISPATCH_TOKEN is the name to use. GITHUB_DISPATCH_TOKEN is accepted
+# because that is what the Vercel side calls it, but GitHub reserves the
+# GITHUB_ prefix in its own settings, which sends anyone who tries to add it
+# there into a validation error — so the unprefixed name is the one the docs
+# give. GH_TOKEN is accepted last, since the gh CLI reads it too.
 set -euo pipefail
 
 REPO="${ONE_THING_REPO:-seesawlabs/seesawgrowth}"
@@ -34,7 +40,7 @@ need() {
 need node
 need curl
 
-api_token() { printf '%s' "${GITHUB_DISPATCH_TOKEN:-${GH_TOKEN:-}}"; }
+api_token() { printf '%s' "${SEESAW_DISPATCH_TOKEN:-${GITHUB_DISPATCH_TOKEN:-${GH_TOKEN:-}}}"; }
 
 have_gh() { command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; }
 
@@ -43,6 +49,11 @@ if have_gh; then
 elif [ -n "$(api_token)" ]; then
   TRANSPORT=api
   need unzip
+  # Which variable answered, so a 403 later is traceable to a choice. Never
+  # the value.
+  if [ -n "${SEESAW_DISPATCH_TOKEN:-}" ]; then TOKEN_FROM=SEESAW_DISPATCH_TOKEN
+  elif [ -n "${GITHUB_DISPATCH_TOKEN:-}" ]; then TOKEN_FROM=GITHUB_DISPATCH_TOKEN
+  else TOKEN_FROM=GH_TOKEN; fi
 else
   cat >&2 <<'MSG'
 No way to reach GitHub Actions from here. Either:
@@ -50,10 +61,10 @@ No way to reach GitHub Actions from here. Either:
   1. On your own machine: install the GitHub CLI and run `gh auth login` with an
      account that has write access to seesawlabs/seesawgrowth. Nothing else.
 
-  2. In a Claude Code session: set GITHUB_DISPATCH_TOKEN in the environment's
-     variables — a fine-grained token, this repository only, Repository
-     permissions -> Actions: Read and write. The same scope the Vercel auto-run
-     path uses.
+  2. In a Claude Code session: set SEESAW_DISPATCH_TOKEN in the ENVIRONMENT's
+     variables — the same place FIRECRAWL_API_KEY and the other keys live, not
+     the repository's Actions settings. It wants a fine-grained GitHub token,
+     this repository only, Repository permissions -> Actions: Read and write.
 
 The session's default GITHUB_TOKEN cannot start a run: it is read-only for
 Actions, so a dispatch with it returns 403.
@@ -82,7 +93,18 @@ rest() {
   printf '%s' "$out" | sed '$d'
   case "$code" in
     2*) ;;
-    403) echo "GitHub refused $method $path (403). GITHUB_DISPATCH_TOKEN needs Actions: Read and write on $REPO." >&2; return 1 ;;
+    403)
+      cat >&2 <<MSG
+GitHub refused $method $path with 403.
+
+The token being used (from \$$TOKEN_FROM) cannot act on Actions for $REPO. In a
+Claude Code session that is usually the default GH_TOKEN, which is present in
+every session and is read-only for Actions. Set SEESAW_DISPATCH_TOKEN in the ENVIRONMENT's variables
+— the same place FIRECRAWL_API_KEY lives, not the repository's Actions settings
+— to a fine-grained GitHub token scoped to this repository with Repository
+permissions -> Actions: Read and write.
+MSG
+      return 1 ;;
     404) echo "GitHub returned 404 for $method $path. Wrong repo, or the token cannot see it." >&2; return 1 ;;
     *) echo "GitHub API $method $path -> HTTP $code" >&2; return 1 ;;
   esac

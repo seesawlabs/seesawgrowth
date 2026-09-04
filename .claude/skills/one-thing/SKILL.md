@@ -14,18 +14,49 @@ validation code are all known-good.
 
 ## What it needs to reach Actions
 
-Either one, and no API keys either way:
+Either one, and no API keys either way.
 
-- **On your own machine:** `gh auth login`, once, with an account that has write
-  access to `seesawlabs/seesawgrowth`. Nothing else to install.
-- **In a Claude Code session, including one on the web:** `GITHUB_DISPATCH_TOKEN`
-  set in the environment's variables — a fine-grained token, this repository only,
-  Repository permissions → **Actions: Read and write**. The same scope the Vercel
-  auto-run path uses. The scripts read it, never print it, and never commit it.
+**On a laptop:** `gh auth login`, once, with an account that has write access to
+`seesawlabs/seesawgrowth`. Nothing else to install, nothing to set.
 
-The session's own `GITHUB_TOKEN` is not enough: in a Claude Code session it is
-read-only for Actions, so a dispatch with it returns 403. The scripts say so
-plainly rather than failing obscurely.
+**In a Claude Code session, including one on the web:** one environment variable,
+`SEESAW_DISPATCH_TOKEN`. Set it once and every session on this repo can start a
+run. Two parts:
+
+*Make the token* (about a minute):
+
+1. github.com/settings/personal-access-tokens/new — Settings → Developer settings
+   → Personal access tokens → **Fine-grained tokens** → Generate new token.
+2. **Token name:** `seesaw-one-thing`. **Expiration:** 90 days is sensible; the
+   scripts fail loudly with a 403 when it lapses.
+3. **Resource owner:** `seesawlabs`, not your personal account — the repository
+   belongs to the org. An org owner approves the request if it needs approving.
+4. **Repository access:** Only select repositories → `seesawlabs/seesawgrowth`.
+5. **Permissions** → Repository permissions → **Actions: Read and write**. That
+   one. (Metadata: Read-only is added for you.) Nothing else: this token starts
+   runs, reads their status and downloads their artifacts, and can do nothing to
+   the code.
+6. Generate, and copy the `github_pat_…` value. It is shown once.
+
+*Put it in the environment*, next to `FIRECRAWL_API_KEY`, `EXA_API_KEY` and the
+other keys these sessions already carry — the environment's variables in Claude
+Code's settings, **not** anything under the repository's own Settings tab. Name it
+`SEESAW_DISPATCH_TOKEN`. A session started after that picks it up.
+
+Two traps, both of which have caught us:
+
+- **Not the repository's Actions variables.** GitHub → Settings → Actions
+  variables is a different thing entirely: those are for the workflow, they are
+  public plain text, and GitHub reserves the `GITHUB_` prefix there, so the name
+  is rejected with a validation error. The token belongs to the session, not to
+  the repo.
+- **The session's own `GH_TOKEN` is not enough.** It is present in every Claude
+  Code session and is read-only for Actions, so a dispatch with it returns 403.
+  The scripts name the variable that answered and say what to set instead.
+
+`GITHUB_DISPATCH_TOKEN` and `GH_TOKEN` are also accepted, in that order, since the
+Vercel side uses the first name. The scripts read the value, never print it, and
+never commit it.
 
 ## The day this fits into
 
@@ -192,7 +223,7 @@ These are enforced in code; the skill's job is to make sure nobody works around 
 - `run.sh` fails with 404 or 403: the account lacks write access to the repo, or `gh`
   is logged in to the wrong account. `gh auth status` shows which.
 - **"No way to reach GitHub Actions from here."** Neither transport is available:
-  no `gh` logged in, and no `GITHUB_DISPATCH_TOKEN` in the environment. See *What
+  no `gh` logged in, and no dispatch token in the environment. See *What
   it needs to reach Actions* above. The fallback that always works is the
   workflow's own **Run workflow** form in the GitHub UI: mode `cold`, the domain,
   `unknown@<domain>` as the email, their name, and the domain again as the company.
