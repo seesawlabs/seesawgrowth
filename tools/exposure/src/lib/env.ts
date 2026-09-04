@@ -76,6 +76,10 @@ export const STAGE_CREDENTIALS: Record<string, CredentialName[]> = {
   '01-subject': ['FIRECRAWL_API_KEY'],
   '02-peers': ['EXA_API_KEY'],
   '03-peer-evidence': ['PERPLEXITY_API_KEY', 'FIRECRAWL_API_KEY'],
+  /* Their own news pages are the pass that produces a Verified opener, so
+     Firecrawl is the floor; the Perplexity and Exa passes are skipped
+     individually when their keys are absent. */
+  '03b-target-news': ['FIRECRAWL_API_KEY'],
   '04-demand': ['DATAFORSEO_LOGIN', 'DATAFORSEO_PASSWORD'],
 };
 

@@ -19,11 +19,23 @@
 
    Two outputs from one pass: plain text (for Slack, and for pasting into a
    mail client) and markdown (the file in the run directory). Same words.
+
+   THE LINKEDIN MESSAGES, for cold outreach, are rendered twice on purpose. The
+   paste-ready pair has the claim ids stripped, because a connection request
+   with "(news-1)" in it looks like a mail merge and the 300-character limit is
+   measured on what gets pasted. The review pair keeps the footnotes, because
+   the person sending it still has to check each sentence against the page
+   behind it. Same words, two audiences, and the file says which is which.
 --------------------------------------------------------------------------- */
 
 import type { Claim } from '../lib/claim.ts';
 import { claimStatus, isOutboundSafe, callMaterialReason } from '../lib/claim-status.ts';
-import type { OneThing } from '../stages/07-one-thing.ts';
+import {
+  pastable,
+  LINKEDIN_MESSAGE_MAX,
+  LINKEDIN_NOTE_MAX,
+  type OneThing,
+} from '../stages/07-one-thing.ts';
 
 export interface EmailDraftInput {
   company: string;
@@ -42,6 +54,23 @@ export interface Footnote {
   outboundSafe: boolean;
 }
 
+export interface LinkedInDraft {
+  /** Paste-ready: claim ids stripped, nothing else changed. */
+  note: string;
+  message: string;
+  noteChars: number;
+  messageChars: number;
+  /** Over the platform's limit. Should never happen; stage 07 validates it. */
+  noteOverLimit: boolean;
+  messageOverLimit: boolean;
+  /** The same text with [n] footnote markers, for the reviewer. */
+  noteCited: string;
+  messageCited: string;
+  footnotes: Footnote[];
+  callMaterial: string[];
+  unresolved: string[];
+}
+
 export interface EmailDraft {
   subject: string;
   /** Body with [n] markers, no salutation, no footnotes. */
@@ -53,6 +82,8 @@ export interface EmailDraft {
   unresolved: string[];
   /** Ids cited that are not Verified. Empty is the goal. */
   callMaterial: string[];
+  /** Cold outreach only: the two messages, paste-ready and annotated. */
+  linkedin: LinkedInDraft | null;
   verdict: OneThing['verdict'];
 }
 
@@ -94,7 +125,7 @@ export function footnoteClaimIds(
       .filter(Boolean);
     /* Only treat it as a citation if every part looks like one of our ids, so
        an ordinary parenthetical ("(and the ordering screen)") survives. */
-    if (!parts.every((x) => byId.has(x) || /^(obs|cmp|dem|hyp)[a-z0-9._-]*$/i.test(x))) return whole;
+    if (!parts.every((x) => byId.has(x) || /^(obs|cmp|dem|hyp|news|brief)[a-z0-9._-]*$/i.test(x))) return whole;
     /* The first id in a group is the one that carries the sentence; the model
        is told to put it first. The rest are in the register. An unresolved
        first id falls through to the next, so a typo costs the footnote, not
@@ -136,16 +167,42 @@ function noteHead(f: Footnote): string {
   return f.outboundSafe ? `[${f.n}] ` : `[${f.n}†] CALL MATERIAL (${status}: ${callMaterialReason(f.claim)}). Do not send this sentence as written. `;
 }
 
+/** The two messages, paste-ready and annotated. Null when there are none. */
+export function renderLinkedIn(oneThing: OneThing, claims: Claim[]): LinkedInDraft | null {
+  const li = oneThing.linkedin;
+  if (!li || !li.connectionNote.trim() || !li.message.trim()) return null;
+  const ids = claims.map((c) => c.id);
+  const note = pastable(li.connectionNote, ids);
+  const message = pastable(li.message, ids);
+  const annotated = footnoteClaimIds(`${li.connectionNote}\n\n@@\n\n${li.message}`, claims);
+  const [noteCited = note, messageCited = message] = annotated.text.split(/\s*@@\s*/);
+  return {
+    note,
+    message,
+    noteChars: note.length,
+    messageChars: message.length,
+    noteOverLimit: note.length > LINKEDIN_NOTE_MAX,
+    messageOverLimit: message.length > LINKEDIN_MESSAGE_MAX,
+    noteCited,
+    messageCited,
+    footnotes: annotated.footnotes,
+    callMaterial: annotated.footnotes.filter((f) => !f.outboundSafe).map((f) => f.id),
+    unresolved: annotated.unresolved,
+  };
+}
+
 export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
   const { oneThing, claims } = input;
   const { text: body, footnotes, unresolved } = footnoteClaimIds(oneThing.email.body, claims);
+  const linkedin = renderLinkedIn(oneThing, claims);
   const first = input.recipientName?.trim().split(/\s+/)[0];
   const salutation = first ? `${first},` : '';
   const callMaterial = footnotes.filter((f) => !f.outboundSafe).map((f) => f.id);
 
+  const leaked = [...new Set([...callMaterial, ...(linkedin?.callMaterial ?? [])])];
   const banner =
-    callMaterial.length > 0
-      ? `REVIEW BEFORE SENDING: ${callMaterial.length} footnote(s) marked † cite claims that are not Verified. They are call material. Cut the sentence or say it on the call.`
+    leaked.length > 0
+      ? `REVIEW BEFORE SENDING: ${leaked.length} footnote(s) marked † cite claims that are not Verified. They are call material. Cut the sentence or say it on the call.`
       : '';
 
   const notesText = footnotes
@@ -198,6 +255,7 @@ export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
     body,
     '',
     footnotes.length ? `---\n\n### Sources\n\n${notesMd}` : '',
+    linkedin ? linkedInMarkdown(linkedin) : '',
     unresolved.length ? `\n> Cited ids with no claim behind them were removed: ${unresolved.join(', ')}` : '',
   ]
     .filter((x) => x !== null)
@@ -213,6 +271,55 @@ export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
     footnotes,
     unresolved,
     callMaterial,
+    linkedin,
     verdict: oneThing.verdict,
   };
+}
+
+/**
+ * The LinkedIn section of the draft file. Paste-ready first, because that is
+ * what the sender needs; the annotated pair underneath, because that is what
+ * the reviewer needs. The character counts are printed against the limits so
+ * nobody has to count.
+ */
+export function linkedInMarkdown(li: LinkedInDraft): string {
+  const count = (n: number, max: number, over: boolean) => `${n}/${max} characters${over ? ' — OVER THE LIMIT' : ''}`;
+  const notes = li.footnotes.length
+    ? li.footnotes
+        .map((f) => {
+          const head = f.outboundSafe ? `${f.n}. ` : `${f.n}. **† CALL MATERIAL** (${claimStatus(f.claim).label}: ${callMaterialReason(f.claim)}). `;
+          const s = f.claim.sources[0];
+          const src = s ? `[${s.title || s.publisher || s.url}](${s.url})` : 'no source recorded';
+          return `${head}${f.claim.statement} · ${src} · \`${f.id}\``;
+        })
+        .join('\n')
+    : '';
+
+  return [
+    '---',
+    '',
+    '## LinkedIn — paste these',
+    '',
+    `**Connection request note** (${count(li.noteChars, LINKEDIN_NOTE_MAX, li.noteOverLimit)})`,
+    '',
+    '```',
+    li.note,
+    '```',
+    '',
+    `**First message** (${count(li.messageChars, LINKEDIN_MESSAGE_MAX, li.messageOverLimit)})`,
+    '',
+    '```',
+    li.message,
+    '```',
+    '',
+    '### The same two with the evidence marked — for review, not for pasting',
+    '',
+    `Note: ${li.noteCited}`,
+    '',
+    `Message: ${li.messageCited}`,
+    notes ? `\n${notes}` : '',
+    li.unresolved.length ? `\n> Cited ids with no claim behind them were removed: ${li.unresolved.join(', ')}` : '',
+  ]
+    .filter((x) => x !== '')
+    .join('\n');
 }

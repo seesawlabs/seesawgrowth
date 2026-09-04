@@ -61,8 +61,13 @@ evidence, not inside-vs-outside:
 | Tier | Source | Needs |
 |---|---|---|
 | `observed` | the subject's own public surface | ≥1 source |
-| `comparative` | a named peer | ≥1 source, and a peer name |
+| `comparative` | a named peer, or third-party reporting about the subject | ≥1 source, and a peer name when the subject is a peer |
 | `hypothesis` | inference | declared blanks; may have no source |
+
+`readOnPage` cuts across the tiers: true when the stage fetched the page and
+kept what it says, false when the claim rests on a citation nobody opened. It
+is what separates Verified from Cited, and the stage sets it because only the
+stage knows.
 
 `angle` is orthogonal: `opportunity`, `threat`, or `context`. The same peer
 launch is a threat in a category they compete in and an opportunity in one
@@ -92,6 +97,24 @@ nobody has entered.
 5. **No is an answer.** `verdict: nothing_worth_a_call` renders its own
    template with the same register and method: what we looked at, what we set
    aside and why, the one question that could reopen it, and a shorter email.
+
+### Two more, for cold outreach (2026-09-04)
+
+6. **The pipeline finds the reason to write.** Stage 03b
+   (`src/stages/03b-target-news.ts`) looks for dated changes at the target from
+   the domain alone. A line read on their own page is `observed` and
+   `readOnPage`, so it is Verified and may open a message; anything found
+   through a search index is Cited and stays call material however good the
+   source. Dates never come from a summary. With no dated Verified item, the
+   report's first page says so and the review gate blocks the send: another
+   target beats a vaguer sentence.
+7. **The message is written where it gets sent.** For cold outreach stage 07
+   writes a LinkedIn connection note (≤300 characters) and a first message
+   (300–900), validated on the text as it will be pasted with the claim ids
+   stripped, and required to ask for the forty-five minutes. The annotated pair,
+   footnoted to the pages behind each sentence, is at the end of
+   `email-draft.md`. The pipeline never touches LinkedIn itself: finding the
+   person and sending the message are a person's job.
 
 ## Coverage — when *not* to send
 
@@ -251,10 +274,12 @@ npm run report -- <domain> [flags]
   --no-peer-crawl      skip crawling peers' own sites
   --no-synthesis       skip stage 06 (and therefore 07)
   --no-one-thing       skip stage 07
+  --no-target-news     skip stage 03b (dated changes at the target)
   --name "..."         the recipient, for the email draft's salutation
   --cold               cold outreach: the recipient did not ask. The email is
-                       120-220 words, opens with the dated thing we noticed
-                       (a Verified brief-N claim), never says "you told us"
+                       120-220 words, opens with a dated Verified observation
+                       (news-N from their own pages, or brief-N), never says
+                       "you told us", and the LinkedIn pair is written too
   --trigger "..."      the brief. Labelled lines: WHAT CHANGED RECENTLY, WHERE
                        THE TEAM BURNS TIME, ALREADY TRIED..., plus for cold runs
                        OUTREACH: cold and EVIDENCE: <url> | <note> (stage 00)

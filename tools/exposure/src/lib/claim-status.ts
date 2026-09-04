@@ -7,7 +7,8 @@
    import it without pulling in a renderer.
 
      Verified   read on the page that publishes it: the subject's own site
-                (stage 01), or a peer's own site (stage 03's own-surface pass)
+                (stages 01 and 03b), a peer's own site (stage 03's own-surface
+                pass), or a page the brief cited that we opened (stage 00)
      Cited      found through a citation-backed search and attributed to the
                 page the citation named; the page was not read by us
      Tool data  returned by a paid data API (DataForSEO) with a pull date
@@ -55,7 +56,20 @@ export function claimStatus(claim: Claim): ClaimStatus {
   if (claim.tier === 'hypothesis') return { label: 'Ours', cls: 'ours' };
   if (claim.id.startsWith('dem-')) return { label: 'Tool data', cls: 'tool' };
   if (claim.tier === 'observed') return { label: 'Verified', cls: 'verified' };
+  /* The stage's own word, where it gave one. `readOnOwnSite` is the fallback
+     for claims made before the field existed. */
+  if (claim.readOnPage === true) return { label: 'Verified', cls: 'verified' };
+  if (claim.readOnPage === false) return { label: 'Cited', cls: 'cited' };
   return readOnOwnSite(claim) ? { label: 'Verified', cls: 'verified' } : { label: 'Cited', cls: 'cited' };
+}
+
+/**
+ * May a cold email open with this claim? It has to be Verified and dated: the
+ * opening sentence of an email to a stranger is a claim about their recent
+ * past, and "recent" without a date is a guess.
+ */
+export function isDatedOpener(claim: Claim): boolean {
+  return isOutboundSafe(claim) && Boolean(claim.observedAt);
 }
 
 /** May this claim be cited in something we send without a conversation around it? */

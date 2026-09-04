@@ -105,6 +105,43 @@ export function searchCompanies(
 }
 
 /**
+ * News about one company, published since a date.
+ *
+ * `category: 'news'` plus `startPublishedDate` is the whole point: stage 03b
+ * needs recent, dated reporting, and an undated result is unusable there. Exa
+ * returns `publishedDate` per result and the stage drops anything without one,
+ * so the filter is belt and braces rather than trust.
+ *
+ * `type: 'auto'` because a company name is a keyword query as much as a
+ * semantic one, and neural search on a name returns the sector.
+ */
+export function searchNews(
+  cache: CacheOptions,
+  ledger: Ledger,
+  query: string,
+  numResults: number,
+  startPublishedDate: string,
+  now: string,
+  textChars = 800
+): Promise<ExaResponse> {
+  return call(
+    cache,
+    ledger,
+    'search',
+    {
+      query,
+      numResults,
+      category: 'news',
+      type: 'auto',
+      startPublishedDate,
+      contents: { text: { maxCharacters: textChars } },
+    },
+    `news ${query.slice(0, 40)}`,
+    now
+  );
+}
+
+/**
  * Find pages similar to a URL.
  *
  * Kept as a *candidate generator only*. On hpsrx.com with

@@ -201,6 +201,9 @@ export type DropReason =
   | 'no_action_verb'
   | 'not_about_ai'
   | 'does_not_name_peer'
+  /* Dated, sourced, correctly attributed — and old. Only stage 03b uses this:
+     recency is its substitute for stage 03's AI-relevance gate. */
+  | 'stale'
   | 'too_short';
 
 export interface DroppedStatement {

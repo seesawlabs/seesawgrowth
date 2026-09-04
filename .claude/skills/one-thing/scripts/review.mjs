@@ -53,6 +53,7 @@ const pdfPath = find(root, 'research-report.pdf');
 const metaPath = find(root, '00-meta.json');
 const coveragePath = find(root, 'coverage.json');
 const briefPath = find(root, '00-brief.json');
+const newsPath = find(root, '03b-target-news.json');
 
 const read = (p) => (p ? JSON.parse(readFileSync(p, 'utf8')) : null);
 const art = read(oneThingPath);
@@ -60,6 +61,7 @@ const sources = read(sourcesPath) ?? [];
 const meta = read(metaPath);
 const coverage = read(coveragePath);
 const brief = read(briefPath);
+const news = read(newsPath);
 const draft = draftPath ? readFileSync(draftPath, 'utf8') : '';
 
 const blockers = [];
@@ -108,6 +110,16 @@ if (coverage && !coverage.sufficient) {
   flags.push(`Coverage below minimums: ${coverage.shortfalls.join('; ')}. The evidence is thin.`);
   cautions.push('coverage below minimums');
 }
+const verifiedBrief = (brief?.results ?? []).filter((r) => r.status === 'verified').length;
+const ownSiteNews = news?.ownSiteItems ?? 0;
+if (meta?.audience === 'cold' && verifiedBrief + ownSiteNews === 0) {
+  flags.push(
+    'NO DATED VERIFIED OPENER: nothing dated about this company was read on a page we opened, so the ' +
+      'first sentence has nothing true and recent to stand on. Find a page that carries one, or write ' +
+      'to someone else today.'
+  );
+  blockers.push('cold outreach with no dated Verified opener');
+}
 const deadPages = sources.filter((s) => s.kind === 'page' && !s.ok);
 const challenged = sources.filter((s) => s.kind === 'page' && s.status === 202);
 if (deadPages.length) {
@@ -131,14 +143,22 @@ if (brief?.results?.length) {
     if (r.detail) line(`    ${r.detail}`);
   }
   const bad = brief.results.filter((r) => r.status !== 'verified');
-  if (bad.length) {
-    cautions.push(`${bad.length} brief citation(s) not supported by the page`);
-    if (meta?.audience === 'cold' && bad.length === brief.results.length) {
-      blockers.push('cold outreach with no verified why-now: the email has no true dated opener');
-    }
+  if (bad.length) cautions.push(`${bad.length} brief citation(s) not supported by the page`);
+}
+
+/* 1c. what the pipeline found about them, unaided */
+if (news) {
+  head('1c. What changed at their company (stage 03b, from the domain alone)');
+  line(`  window: ${news.windowMonths} months   read on their own pages: ${news.ownSiteItems}   total dated items: ${news.items.length}`);
+  for (const item of news.items) {
+    const label = item.readOnPage ? 'VERIFIED' : 'cited   ';
+    line(`  ${label} ${item.observedAt.padEnd(11)} ${item.statement.slice(0, 96)}`);
+    line(`           ${item.sources[0]?.url ?? 'no source'}  (${item.dateBasis})`);
   }
-} else if (meta?.audience === 'cold') {
-  cautions.push('cold outreach with no brief evidence recorded');
+  if (news.items.length === 0) line('  nothing dated inside the window. That is a finding about their public footprint.');
+  line('  Only the VERIFIED lines may open a message we send. The cited ones are call material.');
+  const drops = Object.entries(news.dropSummary ?? {});
+  if (drops.length) line(`  dropped: ${drops.map(([k, v]) => `${k}=${v}`).join(' ')}`);
 }
 
 /* 2. verdict */
@@ -184,6 +204,28 @@ if (daggers) line('  Every † sentence is call material: cut it or say it on th
 if (redactions) line('  Every redaction marker is a number the model could not source. Never type one in.');
 line('  Refusal: ' + x.refuse.what);
 
+/* 5b. the LinkedIn messages */
+if (art.linkedinPaste) {
+  head('5b. The LinkedIn messages (what a person pastes)');
+  const p = art.linkedinPaste;
+  const over = (n, max) => (n > max ? `  OVER THE LIMIT (${max})` : '');
+  line(`  Connection note: ${p.noteChars}/300 characters${over(p.noteChars, 300)}`);
+  line(`    ${p.note}`);
+  line(`  First message: ${p.messageChars}/900 characters${over(p.messageChars, 900)}`);
+  for (const para of p.message.split(/\n+/)) line(`    ${para}`);
+  if (p.noteChars > 300) blockers.push(`the connection note is ${p.noteChars} characters; LinkedIn cuts it at 300`);
+  if (p.messageChars > 900) blockers.push(`the first message is ${p.messageChars} characters, over our 900 ceiling`);
+  if ((art.callMaterialInLinkedIn ?? []).length) {
+    blockers.push(`the LinkedIn messages cite non-Verified claim(s): ${art.callMaterialInLinkedIn.join(', ')}`);
+  }
+  if (p.note.includes('[figure removed: unsourced]') || p.message.includes('[figure removed: unsourced]')) {
+    blockers.push('a redaction marker is in the LinkedIn text');
+  }
+  line('  Read the first sentence as the stranger would: is it true, specific, and about them?');
+} else if (meta?.audience === 'cold') {
+  blockers.push('cold outreach with no LinkedIn messages written');
+}
+
 /* 6. sources */
 head('6. Sources');
 const pages = sources.filter((s) => s.kind === 'page');
@@ -202,4 +244,4 @@ if (cautions.length) {
   for (const c of cautions) line(`  - ${c}`);
 }
 if (meta) line(`\nRevise: scripts/revise.sh --domain ${meta.domain} --run ${meta.runId} --notes "…"`);
-if (draftPath) line(`Draft: ${draftPath}`);
+if (draftPath) line(`Draft: ${draftPath}  (the LinkedIn pair, annotated, is at the end of it)`);

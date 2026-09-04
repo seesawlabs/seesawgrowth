@@ -86,6 +86,16 @@ export const VOICE_PATTERNS: VoicePattern[] = [
     budget: 0,
   },
   {
+    /* Outbound clichés. Added when stage 07 started writing the LinkedIn
+       messages: these phrases are the house style of every automated
+       connection request ever sent, and one of them in the first line tells
+       the reader they are on a list. Budget zero, everywhere in the document. */
+    id: 'outbound-cliche',
+    re: /\bhope (?:this|you)[^.!?]{0,24}\b(?:finds you well|are well|is well)\b|\bquick question\b|\bjust (?:following up|checking in|circling back)\b|\bcircl(?:e|ing) back\b|\btouch base\b|\b(?:I'?d |we'?d )?love to connect\b|\breaching out because\b|\bpicked your brain\b|\bpick your brain\b/gi,
+    note: 'A phrase from every automated outreach message ever sent. Open with the specific thing you noticed instead.',
+    budget: 0,
+  },
+  {
     id: 'triad',
     re: /\bno [a-z]{3,12}, no [a-z]{3,12}(?:,| and) no [a-z]{3,12}\b/gi,
     note: 'A three-item list used for rhythm rather than because there are three things.',

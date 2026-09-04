@@ -179,6 +179,8 @@ export async function verifyBriefEvidence(
       peerName: ownSite ? undefined : host || item.url,
       statement: `${title ? `"${title}" says: ` : 'The page says: '}"${found.quote}"`,
       sources: [{ url: item.url, title, retrievedAt: now }],
+      /* We fetched this page and matched the quote against its text. */
+      readOnPage: true,
       confidence: 'high',
     };
     claims.push(claim);

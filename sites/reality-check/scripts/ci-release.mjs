@@ -161,6 +161,11 @@ const readOptional = async (name) =>
     .catch(() => null);
 const bundle = {
   '00-meta': await readOptional('00-meta'),
+  /* The brief's verified evidence and what stage 03b found about the target.
+     Both are evidence a revise must not have to re-buy, and both carry the
+     Verified dated opener a cold message is allowed to lead with. */
+  '00-brief': await readOptional('00-brief'),
+  '03b-target-news': await readOptional('03b-target-news'),
   '01-subject': await readOptional('01-subject'),
   '02-peers': await readOptional('02-peers'),
   claims: await readOptional('claims'),
@@ -285,6 +290,23 @@ else {
 }
 if (!pdf) caveats.push(':warning: No PDF was printed on the runner (no Chrome). The web brief link still works.');
 
+/* The one thing a cold message cannot do without: a dated observation we read
+   on a page ourselves. Stage 03b looks for it; the brief may carry one. */
+const news = bundle['03b-target-news'];
+const verifiedBrief = (bundle['00-brief']?.results ?? []).filter((r) => r.status === 'verified').length;
+const isCold = bundle['00-meta']?.audience === 'cold';
+if (isCold && (news?.ownSiteItems ?? 0) + verifiedBrief === 0) {
+  caveats.push(
+    ':no_entry_sign: *No dated Verified opener.* Nothing dated about them was read on a page we opened, ' +
+      'so the first sentence has nothing recent to stand on. Find a page that carries one, or write to someone else today.'
+  );
+} else if (isCold && news) {
+  caveats.push(`:mag: ${news.ownSiteItems} dated item(s) read on their own pages, ${news.items.length} in total.`);
+}
+if (oneThing?.callMaterialInLinkedIn?.length) {
+  caveats.push(`:no_entry_sign: The LinkedIn messages cite non-Verified claim(s): ${oneThing.callMaterialInLinkedIn.join(', ')}. Do not send as written.`);
+}
+
 await slack(
   [
     `:page_facing_up: *${company}* (${domain}) — research done`,
@@ -328,6 +350,28 @@ if (emailDraft) {
       `:email: *Email draft for ${name} <${email}>* — edit it, then send it by hand. Nothing has gone to them.`,
       '```',
       plain.slice(0, 36_000),
+      '```',
+    ].join('\n')
+  );
+}
+
+/* The LinkedIn pair, paste-ready. Its own message because that is how it gets
+   used: the sender copies one block into the connection request and the other
+   into the first message, and anything else in the way costs a step. The
+   annotated version, with the footnotes, is in the email draft above. */
+if (oneThing?.linkedinPaste) {
+  const li = oneThing.linkedinPaste;
+  const over = (n, max) => (n > max ? ` — OVER THE ${max} LIMIT, do not send` : '');
+  await slack(
+    [
+      `:handshake: *LinkedIn, for ${name}* — paste as-is, after you have read it. Nothing has gone to them.`,
+      `_Connection note, ${li.noteChars}/300 characters${over(li.noteChars, 300)}_`,
+      '```',
+      li.note,
+      '```',
+      `_First message, ${li.messageChars}/900 characters${over(li.messageChars, 900)}_`,
+      '```',
+      li.message,
       '```',
     ].join('\n')
   );

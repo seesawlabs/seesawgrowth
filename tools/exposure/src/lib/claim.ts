@@ -60,6 +60,18 @@ export interface Claim {
   observedAt?: string;
   confidence?: Confidence;
   /**
+   * True when we fetched the page ourselves and kept what it says; false when
+   * the claim rests on a citation we did not open.
+   *
+   * Set by the stage that made the claim, because only the stage knows. Before
+   * this field claim-status.ts inferred it by comparing the source's host with
+   * the peer's name, which works for a press release on a company's own domain
+   * and fails for everything else — a claim about the subject built from a
+   * third-party article was read as Verified because no peer name was there to
+   * compare. Left undefined, that heuristic still applies.
+   */
+  readOnPage?: boolean;
+  /**
    * True for evidence that should inform the analysis but never appear in the
    * client's document.
    *

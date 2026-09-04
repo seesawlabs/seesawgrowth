@@ -1,0 +1,22 @@
+{
+  "domain": "carepathrxllc.com",
+  "updatedAt": "2026-09-04T16:19:33.334Z",
+  "items": [
+    {
+      "statement": "CarepathRx has one clearly dated, citable AI/automation initiative in the sources gathered: in a Feb. 9, 2026 case study, CarepathRx and Centric Consulting said they deployed a hyperautomation workflow combining RPA, OCR, Python, and AWS Bedrock/Claude to extract data from hospital discharge notes and unstructured medical records, achieving near-100% accuracy and reducing document processing cost to about $0.04 per document.",
+      "observedAt": "2026-02-09",
+      "citations": [
+        {
+          "marker": 1,
+          "url": "https://centricconsulting.com/client-stories/using-ai-to-capture-unstructured-medical-records-data/",
+          "title": "Using AI to Capture Unstructured Medical Records Data",
+          "publisher": "web",
+          "date": "2026-02-09"
+        }
+      ],
+      "firstSeenRun": "2026-09-04T16-19-33-334Z",
+      "lastSeenRun": "2026-09-04T16-19-33-334Z",
+      "timesSeen": 1
+    }
+  ]
+}

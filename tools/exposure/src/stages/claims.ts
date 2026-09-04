@@ -261,6 +261,8 @@ export function comparativeClaimsFrom(evidence: PeerEvidenceArtifact): Claim[] {
         peerName: sanitize(item.peerName),
         statement: sanitize(item.statement),
         observedAt: item.observedAt,
+        /* Perplexity resolved the citation; nobody here opened the page. */
+        readOnPage: false,
         sources: item.citations.map((c) => ({
           url: c.url,
           title: c.title ? sanitize(c.title).slice(0, 120) : undefined,
@@ -281,6 +283,7 @@ export function comparativeClaimsFrom(evidence: PeerEvidenceArtifact): Claim[] {
         subject: 'peer',
         peerName: sanitize(peer.peerName),
         statement: `says on its own site: "${shorten(quote.quote)}"`,
+        readOnPage: true,
         sources: [pageSource(quote.url, evidence.gatheredAt)],
         confidence: peer.confidence === 'low' ? 'low' : 'medium',
       });
@@ -458,6 +461,11 @@ export function coverageFrom(
     peersIdentified: input.peers?.peers.length ?? 0,
     peersWithDatedAiEvidence: input.evidence?.peersWithDatedAiEvidence ?? 0,
     observedClaims: renderable.filter((c) => c.tier === 'observed').length,
-    comparativeClaims: renderable.filter((c) => c.tier === 'comparative').length,
+    /* Peer evidence only. Stage 03b makes `comparative` claims about the
+       subject from third-party reporting, and those are real evidence but they
+       are not what this minimum is for: it asks whether we know enough about
+       comparable companies to reason from. Counting press about the target here
+       would let a well-covered company look like a well-researched category. */
+    comparativeClaims: renderable.filter((c) => c.tier === 'comparative' && c.subject === 'peer').length,
   };
 }

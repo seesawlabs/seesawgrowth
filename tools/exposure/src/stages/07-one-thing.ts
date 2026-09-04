@@ -56,7 +56,7 @@ import type { Ledger } from '../lib/budget.ts';
 import { cached, type CacheOptions } from '../lib/cache.ts';
 import { requireCredential } from '../lib/env.ts';
 import { checkVoice, describeFlags, type VoiceFlag } from '../lib/voice.ts';
-import { claimStatus, isOutboundSafe } from '../lib/claim-status.ts';
+import { claimStatus, isDatedOpener, isOutboundSafe } from '../lib/claim-status.ts';
 import {
   DEFAULT_MODEL,
   SYSTEM_PROMPT as ANALYST_VOICE,
@@ -173,6 +173,36 @@ const NullResultSchema = z.object({
     .describe('The single question we would still want to ask them, because its answer could reopen the verdict. One sentence.'),
 });
 
+/**
+ * THE LINKEDIN MESSAGE, for cold outreach only.
+ *
+ * The step this stage was missing. A teammate finds the company, finds the
+ * person, and then writes to them where that person actually is, which is
+ * LinkedIn and not their inbox. An email with numbered footnotes does not
+ * paste into a connection request, and asking a reviewer to shorten one by
+ * hand is how the discipline gets lost: the citations come off, the character
+ * count goes over, and nobody notices which sentence stopped being sourced.
+ *
+ * So the message is written here, under the same rules as the cold email and
+ * two harder limits. LinkedIn allows 300 characters in a connection note and
+ * cuts a first message off in the preview at roughly a thousand, so those are
+ * the bounds and they are validated on the text as it will be pasted, with
+ * claim ids stripped. The ids stay in the review file, where the reviewer
+ * checks each sentence against the page behind it.
+ */
+const LinkedInSchema = z.object({
+  connectionNote: z
+    .string()
+    .describe(
+      'The connection request note: at most 300 characters INCLUDING spaces, and that limit is hard. One or two sentences: the dated thing we noticed, and that we have a thought about what to build. No link, no pitch, no sign-off.'
+    ),
+  message: z
+    .string()
+    .describe(
+      'The first message once connected: 300 to 900 characters including spaces. Opens with the dated thing we noticed, names the one build in a sentence, says why it is worth their time now, and asks for forty-five minutes in which we bring the reasoning and they say where it is wrong. Cite claim ids in parentheses; they are stripped from the pasted text and kept in the review copy. No sign-off, no attachments, no links.'
+    ),
+});
+
 export const OneThingSchema = z.object({
   verdict: z
     .enum(['recommend', 'nothing_worth_a_call'])
@@ -208,6 +238,9 @@ export const OneThingSchema = z.object({
     .array(PeerFitSchema)
     .describe('One entry for every peer that appears in the claims. Who they sell to and whether that buyer overlaps the target’s.'),
   nullResult: NullResultSchema.nullable().describe('Required for the null verdict; null otherwise.'),
+  linkedin: LinkedInSchema.nullable().describe(
+    'For cold outreach only: the connection note and the first message, ready to paste. Null for an inbound lead, who gets the email.'
+  ),
   email: z.object({
     subject: z.string().describe('Under sixty characters. Names the build or the company, never "AI".'),
     body: z
@@ -222,6 +255,7 @@ export type OneThing = z.infer<typeof OneThingSchema>;
 export type Idea = z.infer<typeof IdeaSchema>;
 export type Fork = z.infer<typeof ForkSchema>;
 export type PeerFit = z.infer<typeof PeerFitSchema>;
+export type LinkedInMessage = z.infer<typeof LinkedInSchema>;
 
 export const isNull = (x: OneThing): boolean => x.verdict === 'nothing_worth_a_call';
 
@@ -250,7 +284,12 @@ export interface OneThingProblem {
     | 'non_verified_in_email'
     | 'unknown_peer'
     | 'peer_fit_missing'
-    | 'null_incomplete';
+    | 'null_incomplete'
+    | 'linkedin_missing'
+    | 'linkedin_too_long'
+    | 'linkedin_too_short'
+    | 'non_verified_in_linkedin'
+    | 'no_ask';
   detail: string;
 }
 
@@ -319,6 +358,10 @@ export function proseFields(x: OneThing): [string, string][] {
     x.nullResult.whatWeSetAside.forEach((t, i) => out.push([`nullResult.whatWeSetAside[${i}]`, t]));
     out.push(['nullResult.oneQuestion', x.nullResult.oneQuestion]);
   }
+  if (x.linkedin) {
+    out.push(['linkedin.connectionNote', x.linkedin.connectionNote]);
+    out.push(['linkedin.message', x.linkedin.message]);
+  }
   out.push(['email.subject', x.email.subject]);
   out.push(['email.body', x.email.body]);
   return out;
@@ -360,11 +403,43 @@ export function mapProse(x: OneThing, fn: (field: string, text: string) => strin
           oneQuestion: fn('nullResult.oneQuestion', x.nullResult.oneQuestion),
         }
       : null,
+    linkedin: x.linkedin
+      ? {
+          connectionNote: fn('linkedin.connectionNote', x.linkedin.connectionNote),
+          message: fn('linkedin.message', x.linkedin.message),
+        }
+      : null,
     email: { subject: fn('email.subject', x.email.subject), body: fn('email.body', x.email.body) },
   };
 }
 
 const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+/* LinkedIn's own limits. The connection note is hard-capped by the platform at
+   300 characters; the first message is not, but the preview a stranger decides
+   on shows about a screen, so 900 is our own ceiling. Minimums exist because a
+   two-line "saw your news, let's chat" wastes the research. */
+export const LINKEDIN_NOTE_MAX = 300;
+export const LINKEDIN_NOTE_MIN = 80;
+export const LINKEDIN_MESSAGE_MAX = 900;
+export const LINKEDIN_MESSAGE_MIN = 300;
+
+const ASKS_FOR_TIME = /\b(forty-?five|45)[\s-]?(minutes?|min\b)|\bforty-?five[\s-]?minute\b/i;
+const IMPLIES_THEY_TOLD_US = /\byou (told|mentioned|said|wrote)\b|\bas you (said|mentioned|noted)\b/i;
+
+/**
+ * The text as it will be pasted: claim ids removed, whitespace tidied. The
+ * character limits are measured on this, never on the annotated draft, because
+ * the annotation is for us and the limit is the platform's.
+ */
+export function pastable(text: string, ids: readonly string[]): string {
+  return stripClaimIds(text, ids)
+    .replace(/\(\s*\)/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 
 /**
  * Every numeral anywhere must be in a claim cited somewhere in this document
@@ -437,11 +512,51 @@ export function validateOneThing(
   }
   const haystack = evidence.join(' ');
 
-  /* -- the outbound rule: Verified only in the email -- */
+  /* -- the outbound rule: Verified only in anything we send -- */
   for (const id of citedIn(x.email.body, ids)) {
     const claim = byId.get(id);
     if (claim && !isOutboundSafe(claim)) {
       p('email.body', 'non_verified_in_email', `"${id}" is ${claimStatus(claim).label}, not Verified; it is call material. Cite a Verified claim or drop the figure`);
+    }
+  }
+
+  /* -- LinkedIn: required for cold outreach, and bounded by the platform -- */
+  if (audience === 'cold') {
+    const li = x.linkedin;
+    if (!li || !li.connectionNote.trim() || !li.message.trim()) {
+      p('linkedin', 'linkedin_missing', 'cold outreach is sent on LinkedIn: the connection note and the first message are both required');
+    } else {
+      const note = pastable(li.connectionNote, ids);
+      const message = pastable(li.message, ids);
+      if (note.length > LINKEDIN_NOTE_MAX) {
+        p('linkedin.connectionNote', 'linkedin_too_long', `${note.length} characters once the claim ids come out; LinkedIn cuts a connection note at ${LINKEDIN_NOTE_MAX}`);
+      }
+      if (note.length < LINKEDIN_NOTE_MIN) {
+        p('linkedin.connectionNote', 'linkedin_too_short', `${note.length} characters; that is a wave, not a reason to connect`);
+      }
+      if (message.length > LINKEDIN_MESSAGE_MAX) {
+        p('linkedin.message', 'linkedin_too_long', `${message.length} characters once the claim ids come out; ${LINKEDIN_MESSAGE_MAX} is the ceiling`);
+      }
+      if (message.length < LINKEDIN_MESSAGE_MIN) {
+        p('linkedin.message', 'linkedin_too_short', `${message.length} characters; name the build and the ask`);
+      }
+      if (!ASKS_FOR_TIME.test(message)) {
+        p('linkedin.message', 'no_ask', 'the message never asks for the forty-five minutes; an observation with no ask is a comment, not outreach');
+      }
+      for (const [field, text] of [
+        ['linkedin.connectionNote', li.connectionNote],
+        ['linkedin.message', li.message],
+      ] as const) {
+        if (IMPLIES_THEY_TOLD_US.test(text)) {
+          p(field, 'linkedin_too_long', 'cold outreach must not imply the recipient gave us information ("you told us", "as you mentioned")');
+        }
+        for (const id of citedIn(text, ids)) {
+          const claim = byId.get(id);
+          if (claim && !isOutboundSafe(claim)) {
+            p(field, 'non_verified_in_linkedin', `"${id}" is ${claimStatus(claim).label}, not Verified; it is call material and must not appear in a message we send`);
+          }
+        }
+      }
     }
   }
 
@@ -474,7 +589,7 @@ export function validateOneThing(
   });
   const words = wordCount(x.email.body);
   const [lo, hi] = audience === 'cold' ? [80, 260] : nul ? [100, 320] : [150, 450];
-  if (audience === 'cold' && /\byou (told|mentioned|said|wrote)\b|\bas you (said|mentioned|noted)\b/i.test(x.email.body)) {
+  if (audience === 'cold' && IMPLIES_THEY_TOLD_US.test(x.email.body)) {
     p('email.body', 'too_long', 'cold outreach must not imply the recipient gave us information ("you told us", "as you mentioned")');
   }
   if (words > hi) p('email.body', 'too_long', `${words} words; the email is meant to be read on a phone`);
@@ -521,13 +636,29 @@ export function redactUnsourced(x: OneThing, problems: OneThingProblem[]): { red
   return { redacted, count };
 }
 
-/** Ids the email cites that are not Verified, after every retry. Call material that leaked. */
-export function nonVerifiedInEmail(x: OneThing, claims: Claim[]): string[] {
+/** Ids a piece of prose cites that are not Verified. Call material that leaked. */
+export function nonVerifiedIn(text: string, claims: Claim[]): string[] {
   const byId = new Map(claims.map((c) => [c.id, c]));
-  return citedIn(x.email.body, claims.map((c) => c.id)).filter((id) => {
+  return citedIn(text, claims.map((c) => c.id)).filter((id) => {
     const c = byId.get(id);
     return c && !isOutboundSafe(c);
   });
+}
+
+/** Ids the email cites that are not Verified, after every retry. */
+export function nonVerifiedInEmail(x: OneThing, claims: Claim[]): string[] {
+  return nonVerifiedIn(x.email.body, claims);
+}
+
+/** The same for the LinkedIn messages, which are sent with no call around them. */
+export function nonVerifiedInLinkedIn(x: OneThing, claims: Claim[]): string[] {
+  if (!x.linkedin) return [];
+  return [
+    ...new Set([
+      ...nonVerifiedIn(x.linkedin.connectionNote, claims),
+      ...nonVerifiedIn(x.linkedin.message, claims),
+    ]),
+  ];
 }
 
 /** Every string a reader will see, for the voice check. */
@@ -562,9 +693,35 @@ THE EMAIL. For "recommend": 260 to 380 words. Open with the recommendation in th
 
 THE OUTBOUND RULE. Every claim carries a status: Verified, Cited, Tool data, or Ours. The email may cite Verified claims ONLY. Cited and Tool-data claims are for the call, where we can say how we know; Ours never leaves the building unspoken. Every other field may cite any status. The check rejects an email that cites anything but Verified, so do not write one. Cite ids in parentheses after the sentence they support; they will become numbered footnotes with the source underneath. Do not thank them for filling in a form. Do not describe our process. Do not mention hiring, job adverts or careers pages. Do not attach a price or a timeline unless a Verified claim carries the figure.
 
+LINKEDIN. Set the linkedin field to null. It is only written for cold outreach, and the audience block below says so when that is what this is.
+
 NUMERALS. Every digit anywhere in your output must appear in a claim you cite or in the computed facts. There is no assumptions block here. An unsupported digit is redacted before anyone sees it, so it is wasted work. Write "a fraction of the price" if you cannot cite the price.
 
 WHAT THEY TOLD US comes in three labelled answers, in their words, and it is not evidence. WHAT CHANGED RECENTLY sets why now: lead with it where the evidence supports it. WHERE THE TEAM BURNS TIME points at where the buildable gap lives; an idea that touches that step outranks one that does not. ALREADY TRIED, EVALUATED OR RULED OUT is a list of things you must not recommend; if the obvious idea is on it, say what you would do differently and why, or drop it. Never quote these answers back to them as findings.`;
+
+/**
+ * The claims a message to a stranger may open with: Verified, and dated.
+ *
+ * Listed separately from the claim register because the opening sentence of a
+ * cold message does more work than any other and the model needs to see the
+ * shortlist rather than derive it. An empty list is itself an instruction: no
+ * dated Verified observation exists, so nothing may imply recency.
+ */
+export function openerBlock(claims: Claim[]): string {
+  const openers = claims
+    .filter((c) => isDatedOpener(c))
+    .sort((a, b) => (b.observedAt ?? '').localeCompare(a.observedAt ?? ''));
+  if (openers.length === 0) {
+    return (
+      'OPENERS AVAILABLE — none. Nothing dated about this company was read on a page we opened. ' +
+      'Do not imply recency anywhere in the email or the LinkedIn message: no "we noticed you ' +
+      'recently", no month, no year we cannot cite. Open with a Verified observation about how ' +
+      'their operation works instead.'
+    );
+  }
+  return `OPENERS AVAILABLE — Verified and dated, newest first. A message to a stranger opens with one of these and cites it:
+${openers.map((c) => `- [id=${c.id} dated=${c.observedAt}] ${c.statement}`).join('\n')}`;
+}
 
 export function buildOneThingPrompt(args: {
   company: string;
@@ -608,6 +765,8 @@ ${JSON.stringify(args.facts, null, 2)}
 PEERS IN THE CLAIMS — every one needs a buyer-fit entry, by this exact name:
 ${peers.length ? peers.map((n) => `- ${n}`).join('\n') : '- (none)'}
 
+${openerBlock(args.claims)}
+
 THE ANALYSIS YOU ALREADY WROTE (validated; draw your ideas from it, sharpen them, or depart from it if the evidence points elsewhere):
 ${JSON.stringify(args.synthesis, null, 2)}
 
@@ -625,14 +784,21 @@ ${ONE_THING_INSTRUCTIONS}${audienceBlock}`;
 export const COLD_OUTREACH_INSTRUCTIONS = `AUDIENCE: COLD OUTREACH. This recipient has not asked us for anything. Overrides for THE EMAIL:
 
 - 120 to 220 words. Shorter is better. It will be read on a phone by someone who did not expect it.
-- Open with the specific, dated thing we noticed about their company, cited to a Verified claim (a brief-N claim if one exists, otherwise something read on their own site). Never open with who we are.
+- Open with the specific, dated thing we noticed about their company, cited to a Verified claim from OPENERS AVAILABLE above. If that list is empty, open with the most specific Verified thing we can see about how their operation works, and imply no recency at all. Never open with who we are.
 - Then the one idea, framed as a hypothesis about their operation, in two or three sentences: what we would build, for whom, and what it would replace. One idea. Do not list the alternatives; the report has them.
 - One sentence on why it is worth their time now.
 - The ask is forty-five minutes, framed as us bringing them the reasoning and the evidence and them telling us where it is wrong. Nothing else is offered and nothing is attached.
 - Never write "you told us", "you mentioned", "as you said", or anything implying they gave us information. They did not.
 - Never mention hiring or job postings even if a claim carries one; a stranger quoting your vacancies back at you reads as surveillance. Use the claim for the reasoning, not the prose.
 - Verified claims only in the email, as always. Cited and Tool-data claims may inform the reasoning and never appear in the text.
-- Subject line: the company or the idea in plain words, under fifty characters, no "AI", no "quick question".`;
+- Subject line: the company or the idea in plain words, under fifty characters, no "AI", no "quick question".
+
+THE LINKEDIN MESSAGES. Cold outreach is sent on LinkedIn, not by email, so the linkedin field is required and is not optional here. Write both fields.
+
+- connectionNote: at most 300 characters including spaces, and the limit is hard. The dated thing we noticed, and that we have a specific thought about what they could build. No link, no pitch, no sign-off, no "hope you're well".
+- message: 300 to 900 characters including spaces. The dated observation, the one build named concretely in a sentence, one clause on why now, and the ask: forty-five minutes in which we bring the reasoning and the evidence and they tell us where it is wrong. It must contain the words "forty-five minutes" or "45 minutes".
+- Both follow every rule above: Verified claims only, cited by id in parentheses; the ids are stripped from the text that gets pasted and kept in the review copy, so cite as you would in the email. Never mention hiring or job postings. Never imply they told us anything.
+- Say the same thing as the email, shorter and flatter. Do not write "I hope this finds you well", do not compliment their website, and do not describe our process.`;
 
 /* -- the stage ----------------------------------------------------------- */
 
@@ -646,6 +812,15 @@ export interface OneThingArtifact {
   redacted: number;
   /** Non-Verified claims the email still cites after the retry. Zero is the goal; the draft marks them. */
   callMaterialInEmail: string[];
+  /** The same for the LinkedIn messages. Anything here blocks the send. */
+  callMaterialInLinkedIn: string[];
+  /**
+   * The LinkedIn pair as it will be pasted, with its character counts.
+   *
+   * Computed here rather than left to each reader, so the review script and
+   * the renderers agree about what "287 characters" means. Null for a lead.
+   */
+  linkedinPaste: { note: string; message: string; noteChars: number; messageChars: number } | null;
   /** Who the email is for. Cold outreach is written and bounded differently. */
   audience: 'lead' | 'cold';
   attempts: number;
@@ -787,7 +962,11 @@ ${JSON.stringify(final, null, 2)}`;
         voiceRepair = { attempted: true, applied: false, reason: 'rewrite introduced a validation problem; kept the original' };
       } else if (over(after) >= over(voiceFlags)) {
         voiceRepair = { attempted: true, applied: false, reason: `rewrite did not improve the prose (${over(voiceFlags)} -> ${over(after)})` };
-      } else if ((repaired.verdict === 'recommend' && repaired.ideas.length < 3) || wordCount(repaired.email.body) < 100) {
+      } else if (
+        (repaired.verdict === 'recommend' && repaired.ideas.length < 3) ||
+        wordCount(repaired.email.body) < 100 ||
+        (args.audience === 'cold' && final.linkedin && !repaired.linkedin)
+      ) {
         voiceRepair = { attempted: true, applied: false, reason: 'rewrite lost content; kept the original' };
       } else {
         final = redactUnsourced(repaired, repairedProblems).redacted;
@@ -807,6 +986,15 @@ ${JSON.stringify(final, null, 2)}`;
     problems,
     redacted: count,
     callMaterialInEmail: nonVerifiedInEmail(final, args.claims),
+    callMaterialInLinkedIn: nonVerifiedInLinkedIn(final, args.claims),
+    linkedinPaste: final.linkedin
+      ? (() => {
+          const ids = args.claims.map((c) => c.id);
+          const note = pastable(final.linkedin!.connectionNote, ids);
+          const message = pastable(final.linkedin!.message, ids);
+          return { note, message, noteChars: note.length, messageChars: message.length };
+        })()
+      : null,
     audience: args.audience ?? 'lead',
     attempts,
     voiceFlags,

@@ -31,7 +31,7 @@
 
 import type { Claim, Coverage } from '../lib/claim.ts';
 import type { RunMeta } from '../lib/run.ts';
-import { claimStatus, isOutboundSafe, callMaterialReason } from '../lib/claim-status.ts';
+import { claimStatus, isDatedOpener, isOutboundSafe, callMaterialReason } from '../lib/claim-status.ts';
 import type { SourceCheck } from '../lib/liveness.ts';
 import type { Synthesis } from '../stages/06-synthesis.ts';
 import type { OneThingArtifact, PeerFit } from '../stages/07-one-thing.ts';
@@ -63,6 +63,8 @@ export interface ResearchReportInput {
   audience?: 'lead' | 'cold';
   /** What the brief cited and whether the page supported it. */
   briefEvidence?: import('../stages/00-brief.ts').BriefEvidenceResult[];
+  /** Stage 03b: dated changes at the target, and where each was published. */
+  targetNews?: import('../stages/03b-target-news.ts').TargetNewsArtifact | null;
 }
 
 /* -- helpers -------------------------------------------------------------- */
@@ -162,6 +164,13 @@ export function renderResearchReport(input: ResearchReportInput): string {
   if (!one) warnings.push('Stage 07 did not run: there is no recommendation in this document, only the research.');
   if (one && nul) warnings.push('VERDICT: nothing worth a call. This report says why, with the same evidence standard. The email is the honest-no version.');
   if (input.audience === 'cold') warnings.push('COLD OUTREACH: the recipient did not ask for this. The email must read as a stranger would read it.');
+  if (input.audience === 'cold' && !claims.some((c) => isDatedOpener(c))) {
+    warnings.push(
+      'NO DATED VERIFIED OPENER: nothing dated about this company was read on a page we opened, so the ' +
+        'message has nothing true and recent to lead with. Find a page that carries one, or write to ' +
+        'someone else today.'
+    );
+  }
   const unsupported = (input.briefEvidence ?? []).filter((r) => r.status !== 'verified');
   if (unsupported.length) warnings.push(`${unsupported.length} of the brief's cited page(s) did not support the note or were unreachable; the recommendation stands without them. See "What the brief cited".`);
   if (input.oneThing && input.oneThing.redacted > 0) {
@@ -306,6 +315,30 @@ export function renderResearchReport(input: ResearchReportInput): string {
     )
     .join('')}
   </tbody></table>`
+    : '';
+
+  /* -- what changed at their company -- */
+  const news = input.targetNews;
+  const newsBlock = news
+    ? news.items.length
+      ? `<h2>What changed at their company, and where it is published</h2>
+  <p class="rule-note">Dated items found from their domain alone, newest first, inside a ${news.windowMonths}-month window. An item read on their own page is Verified and may open a message we send; an item found through a search engine is Cited and stays call material, however good the source. The date never comes from a summary.</p>
+  <table class="fixed"><thead><tr><th style="width:16%">Dated</th><th>What</th><th style="width:22%">Where</th><th style="width:13%">Status</th></tr></thead><tbody>
+  ${news.items
+    .map((item, i) => {
+      const id = `news-${i + 1}`;
+      const claim = claims.find((c) => c.id === id);
+      const status = claim ? claimStatus(claim) : { label: item.readOnPage ? 'Verified' : 'Cited', cls: item.readOnPage ? 'verified' : 'cited' };
+      const source = item.sources[0];
+      return `<tr><td class="nowrap">${esc(item.observedAt)}<br><span class="src">${esc(item.dateBasis)}</span></td>
+      <td>${esc(item.statement)}${claim ? ` <a class="ref" href="#claim-${esc(id)}">${esc(id)}</a>` : ''}</td>
+      <td class="src">${source ? `<a href="${esc(source.url)}">${esc(source.publisher || source.title || source.url)}</a>` : 'no source recorded'}</td>
+      <td><span class="pill pill--${esc(status.cls)}">${esc(status.label)}</span></td></tr>`;
+    })
+    .join('')}
+  </tbody></table>`
+      : `<h2>What changed at their company</h2>
+  <p class="rule-note">Nothing dated turned up inside the ${news.windowMonths}-month window: ${news.pagesScraped} of their own page(s) read, and the searches returned nothing that passed the gates. That is a finding about their public footprint, not about the company. A message to them cannot claim recency.</p>`
     : '';
 
   /* -- the field it was chosen from -- */
@@ -473,6 +506,15 @@ export function renderResearchReport(input: ResearchReportInput): string {
   <pre class="mail">${esc(input.emailDraft.text)}</pre>`
     : '';
 
+  /* -- the LinkedIn messages, for cold outreach -- */
+  const li = input.emailDraft?.linkedin ?? null;
+  const linkedin = li
+    ? `<h2>The LinkedIn messages, as drafted</h2>
+  <p class="rule-note">What a person pastes, with the claim identifiers stripped: a connection request note of ${li.noteChars} characters against a limit of 300, and a first message of ${li.messageChars} against our ceiling of 900. The annotated pair is in the draft file, where every sentence can be checked against the page behind it before it is sent.</p>
+  <pre class="mail">${esc(li.note)}</pre>
+  <pre class="mail">${esc(li.message)}</pre>`
+    : '';
+
   const sourceCount = new Set(claims.flatMap((c) => c.sources.map((s) => s.url))).size;
   const title = nul ? `${company}: nothing worth a build this year` : `${company}: the one thing we would build`;
 
@@ -496,6 +538,7 @@ ${banner}
   ${recommendation}
   ${callMaterial}
   ${briefBlock}
+  ${newsBlock}
   ${standing}
   ${peers}
   ${considered}
@@ -505,6 +548,7 @@ ${banner}
   ${method}
   ${appendix}
   ${email}
+  ${linkedin}
   <p class="foot">
     Prepared by SeeSaw Labs, ${esc(date)}, from public evidence. ${claims.length} claims, ${sourceCount} distinct sources${
       input.cost ? `, research spend $${input.cost.spent.toFixed(2)} of a $${input.cost.ceiling.toFixed(2)} ceiling` : ''
@@ -583,6 +627,9 @@ const STYLES = `
   .pill--tool { color: var(--ink-2); }
   .pill--ours { color: var(--stop); border-color: var(--stop); }
   .peers { table-layout: fixed; }
+  .fixed { table-layout: fixed; }
+  .fixed td { overflow-wrap: anywhere; }
+  td.nowrap { white-space: nowrap; }
   .peers th:nth-child(1) { width: 18%; }
   .peers th:nth-child(2) { width: 42%; }
   .peers th:nth-child(3) { width: 22%; }

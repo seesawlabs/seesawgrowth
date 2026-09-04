@@ -1851,6 +1851,12 @@ const goodOneThing = (): OneThing => ({
     { peer: 'Rival Co', sellsTo: 'regional distributors with their own fleets', overlap: 'yes', why: 'Same buyer, from their announcement (cmp-1).', claimIds: ['cmp-1'] },
   ],
   nullResult: null,
+  linkedin: {
+    connectionNote:
+      'Your pricing page lists the Team plan at $450 a month (obs-price), and the order screen looks like where the money is made. We have a specific thought about what we would build into it first.',
+    message:
+      'Your Team plan runs at $450 a month (obs-price), which means the order screen is where the margin is decided. Our read is that the first build is a predicted delivery window shown to whoever is placing the order, at the moment they place it, from the order history you already hold. It is worth doing now because the intake side of this market moved this spring. Worth forty-five minutes? We would bring the reasoning and the evidence and you would tell us where it is wrong.',
+  },
   email: {
     subject: 'The one thing: delivery-time prediction',
     body: Array(30).fill('Build a predicted delivery window into the order screen (obs-price).').join(' '),
@@ -2218,4 +2224,346 @@ test('stage 07: cold outreach is bounded shorter and may not imply the recipient
   const lead = goodOneThing();
   lead.email.body = Array(16).fill('As you told us, the order screen is the problem (obs-price).').join(' ');
   assert.ok(!validateOneThing(lead, SEVEN_CLAIMS, SEVEN_FACTS, 'lead').some((p) => p.detail.includes('you told us')));
+});
+
+/* -- stage 03b: dated changes at the target ------------------------------- */
+
+import {
+  dateIn,
+  describesChange,
+  withinMonths,
+  datedQuotesFrom,
+  newsFromAnswer,
+  headlinesFrom,
+  newsClaimsFrom,
+  readableLines,
+  sinceMonth,
+  type TargetNewsArtifact,
+} from './stages/03b-target-news.ts';
+
+const NOW = '2026-09-04T12:00:00Z';
+const TARGET = { name: 'Cedar Hospice Pharmacy', domain: 'cedarhospicerx.com' };
+
+test('stage 03b: dates come from month names and ISO forms, never from an ambiguous numeric', () => {
+  assert.equal(dateIn('Posted August 12, 2026 by the team')?.iso, '2026-08-12');
+  assert.equal(dateIn('On 12 August 2026 the pharmacy opened')?.iso, '2026-08-12');
+  assert.equal(dateIn('Updated 2026-08-12')?.iso, '2026-08-12');
+  assert.equal(dateIn('In August 2026 we opened')?.iso, '2026-08');
+  assert.equal(dateIn('Effective 03/04/2026'), null, '03/04 is two dates in two countries; we do not guess');
+  assert.equal(dateIn('Founded in 1994'), null, 'a year alone is not a date');
+});
+
+test('stage 03b: opening, hiring and winning count as change, and stage 03 does not know those words', () => {
+  assert.ok(describesChange('Cedar opened a second compounding room in Round Rock'));
+  assert.ok(describesChange('Cedar hired a director of pharmacy operations'));
+  assert.ok(describesChange('Cedar won a three-year contract with a hospice network'));
+  assert.ok(!describesChange('Cedar is a hospice pharmacy in central Texas'));
+});
+
+test('stage 03b: the window rejects history and the future', () => {
+  assert.ok(withinMonths('2026-08', NOW));
+  assert.ok(withinMonths('2025-06-01', NOW), 'fifteen months back is inside an eighteen-month window');
+  assert.ok(!withinMonths('2024-01-10', NOW));
+  assert.ok(!withinMonths('2027-01-01', NOW), 'a date in the future is a typo, not a change');
+  assert.ok(!withinMonths('2025-06-01', NOW, 3), 'the window is a parameter');
+});
+
+test('stage 03b: sinceMonth walks the calendar back for the prompt', () => {
+  assert.equal(sinceMonth(NOW, 18), '2025-03');
+  assert.equal(sinceMonth(NOW, 3), '2026-06');
+});
+
+test('stage 03b: readableLines unwraps links and drops table rows', () => {
+  const lines = readableLines('# News\n\n![logo](a.png)\n\n[Read our announcement](/news/1)\n\n| a | b |\n');
+  assert.deepEqual(lines, ['News', 'Read our announcement']);
+});
+
+test('stage 03b: a dated line on their own page is kept verbatim, either shape', () => {
+  const page = [
+    '# Newsroom',
+    '',
+    'August 12, 2026',
+    '',
+    'Cedar opened a second compounding room in Round Rock to serve hospice agencies overnight.',
+    '',
+    'On 2026-05-02 we began delivering to twelve additional agencies across central Texas.',
+  ].join('\n');
+  const quotes = datedQuotesFrom(page, 'https://cedarhospicerx.com/news', NOW, { limit: 5 });
+  assert.equal(quotes.length, 2);
+  assert.equal(quotes[0].date, '2026-08-12');
+  assert.equal(quotes[0].basis, 'the dated line above it');
+  assert.ok(quotes[0].quote.startsWith('Cedar opened a second compounding room'));
+  assert.equal(quotes[1].date, '2026-05-02');
+  assert.equal(quotes[1].basis, 'in the quote');
+});
+
+test('stage 03b: stale, navigational and noisy lines are not openers', () => {
+  const page = [
+    'March 3, 2019',
+    '',
+    'Cedar opened its first compounding room in Austin to serve hospice agencies.',
+    '',
+    'August 2026',
+    '',
+    'Products | Services | Careers | Contact Us | Locations',
+    '',
+    'July 2026',
+    '',
+    'Please wait while we load the page; enable javascript to read this announcement text.',
+  ].join('\n');
+  assert.deepEqual(datedQuotesFrom(page, 'https://cedarhospicerx.com/news', NOW, { limit: 5 }), []);
+});
+
+test('stage 03b: a dated evergreen teaser is not a reason to write (senderrarx.com, live)', () => {
+  const page = [
+    'October 24, 2025',
+    '',
+    'Breast Cancer affects thousands throughout the United States every year. It is the second most common type of cancer among women.',
+    '',
+    'September 30, 2025',
+    '',
+    'By integrating the Hyperscience Hypercell platform with existing downstream systems, Senderra strengthens its intake process.',
+  ].join('\n');
+  const quotes = datedQuotesFrom(page, 'https://www.senderrarx.com/news-events', NOW, { limit: 5 });
+  assert.equal(quotes.length, 1, 'the awareness-month teaser is dated, verbatim and worthless');
+  assert.equal(quotes[0].date, '2025-09-30');
+});
+
+const citedSentence = (text: string, citations: { url: string; date?: string; title?: string }[]) => ({
+  text,
+  citations: citations.map((c, i) => ({ marker: i + 1, url: c.url, date: c.date, title: c.title })),
+});
+
+test('stage 03b: an ordinary dated announcement counts, with no AI term anywhere', () => {
+  const { items, dropped } = newsFromAnswer(
+    [
+      citedSentence(
+        'Cedar Hospice Pharmacy opened a second compounding facility in Round Rock, Texas, expanding overnight delivery for hospice agencies.',
+        [{ url: 'https://austinbusinessjournal.test/cedar-expands', date: '2026-07-18', title: 'Cedar expands' }]
+      ),
+    ],
+    TARGET,
+    NOW
+  );
+  assert.equal(dropped.length, 0);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].observedAt, '2026-07-18');
+  assert.equal(items[0].readOnPage, false, 'a citation we did not open is never Verified');
+  assert.equal(items[0].origin, 'search');
+});
+
+test('stage 03b: absence language, stale dates and year mismatches are dropped, with the reason', () => {
+  const { items, dropped } = newsFromAnswer(
+    [
+      citedSentence('The sources do not show any dated announcements for Cedar Hospice Pharmacy itself.', [
+        { url: 'https://x.test/a', date: '2026-08-01' },
+      ]),
+      citedSentence('Cedar Hospice Pharmacy opened its first facility in Austin serving hospice agencies statewide.', [
+        { url: 'https://x.test/b', date: '2019-03-03' },
+      ]),
+      citedSentence('Cedar Hospice Pharmacy launched a delivery service in 2026 for agencies across the state.', [
+        { url: 'https://x.test/c', date: '2024-01-05' },
+      ]),
+      citedSentence('The hospice pharmacy market expanded again this year across the south-west of the country.', [
+        { url: 'https://x.test/d', date: '2026-06-06' },
+      ]),
+    ],
+    TARGET,
+    NOW
+  );
+  assert.equal(items.length, 0);
+  assert.deepEqual(
+    dropped.map((d) => d.reason),
+    ['asserts_absence', 'stale', 'year_mismatch', 'does_not_name_peer']
+  );
+});
+
+test('stage 03b: where the sentence names a month, the source dated in it carries the date', () => {
+  const { items } = newsFromAnswer(
+    [
+      citedSentence(
+        'Cedar Hospice Pharmacy announced a strategic growth investment from Nautic Partners on December 10, 2025.',
+        [
+          { url: 'https://early.test/august', date: '2025-08-08' },
+          { url: 'https://prnewswire.test/cedar', date: '2025-12-10' },
+        ]
+      ),
+    ],
+    TARGET,
+    NOW
+  );
+  assert.equal(items.length, 1);
+  assert.equal(items[0].observedAt, '2025-12-10', 'not the earliest citation: the one the sentence points at');
+  assert.equal(items[0].sources[0].url, 'https://prnewswire.test/cedar', 'and that source leads');
+  assert.ok(items[0].dateBasis.includes('the month the sentence names'));
+
+  /* No citation in that month: the earliest stands, and the basis says so. */
+  const fallback = newsFromAnswer(
+    [
+      citedSentence('Cedar Hospice Pharmacy opened a compounding room in Round Rock in December 2025.', [
+        { url: 'https://early.test/august', date: '2025-08-08' },
+      ]),
+    ],
+    TARGET,
+    NOW
+  );
+  assert.equal(fallback.items[0].observedAt, '2025-08-08');
+  assert.ok(fallback.items[0].dateBasis.includes('the sentence names 2025-12'));
+});
+
+test('stage 03b: headlines are quoted verbatim, and directories are not reporting', () => {
+  const { items, dropped } = headlinesFrom(
+    [
+      { url: 'https://www.linkedin.com/company/cedar-hospice-pharmacy', title: 'Cedar Hospice Pharmacy | LinkedIn', publishedDate: '2026-08-01' },
+      { url: 'https://statesman.test/2026/cedar', title: 'Cedar Hospice Pharmacy opens Round Rock compounding site', publishedDate: '2026-08-20T00:00:00Z', text: 'Cedar Hospice Pharmacy said the site will serve hospice agencies.' },
+      { url: 'https://statesman.test/2019/cedar', title: 'Cedar Hospice Pharmacy names first pharmacist in charge', publishedDate: '2019-02-02', text: 'Cedar Hospice Pharmacy said…' },
+      { url: 'https://trade.test/market', title: 'Hospice pharmacy market grows through the decade ahead', publishedDate: '2026-08-02', text: 'The market for hospice pharmacy services is growing.' },
+    ],
+    TARGET,
+    NOW
+  );
+  assert.equal(items.length, 1);
+  assert.equal(items[0].statement, 'statesman.test reported: "Cedar Hospice Pharmacy opens Round Rock compounding site"');
+  assert.equal(items[0].observedAt, '2026-08-20');
+  assert.deepEqual(
+    dropped.map((d) => d.reason),
+    ['does_not_name_peer', 'stale', 'does_not_name_peer']
+  );
+});
+
+test('stage 03b: own-site claims are Verified and dated; searched claims are Cited', () => {
+  const artifact: TargetNewsArtifact = {
+    domain: TARGET.domain,
+    gatheredAt: NOW,
+    windowMonths: 18,
+    items: [
+      {
+        statement: 'Cedar opened a second compounding room in Round Rock.',
+        observedAt: '2026-08-12',
+        origin: 'own-site',
+        readOnPage: true,
+        dateBasis: 'the dated line above it',
+        sources: [{ url: 'https://cedarhospicerx.com/news', title: 'Newsroom' }],
+      },
+      {
+        statement: 'Cedar Hospice Pharmacy expanded overnight delivery for hospice agencies.',
+        observedAt: '2026-07-18',
+        origin: 'search',
+        readOnPage: false,
+        dateBasis: 'publication date of austinbusinessjournal.test',
+        sources: [{ url: 'https://austinbusinessjournal.test/cedar', publisher: 'austinbusinessjournal.test' }],
+      },
+    ],
+    ownSiteItems: 1,
+    pagesScraped: 2,
+    dropped: [],
+    dropSummary: {},
+    notes: [],
+  };
+  const claims = newsClaimsFrom(artifact, 'Cedar Hospice Pharmacy');
+  assert.deepEqual(claims.map((c) => c.id), ['news-1', 'news-2']);
+  assert.deepEqual(claims.flatMap((c) => validateClaim(c)), [], 'both claims are renderable');
+  assert.equal(claimStatus(claims[0]).label, 'Verified');
+  assert.ok(isDatedOpener(claims[0]), 'the one we read on their page may open a cold message');
+  assert.equal(claimStatus(claims[1]).label, 'Cited');
+  assert.ok(!isDatedOpener(claims[1]), 'third-party reporting stays call material');
+  assert.ok(claims[0].statement.includes('says on its own site, dated 2026-08-12'));
+});
+
+/* -- stage 07: the LinkedIn messages -------------------------------------- */
+
+import {
+  pastable,
+  openerBlock,
+  nonVerifiedInLinkedIn,
+  LINKEDIN_NOTE_MAX,
+} from './stages/07-one-thing.ts';
+import { renderLinkedIn } from './render/email-draft.ts';
+import { isDatedOpener } from './lib/claim-status.ts';
+
+const cold = (): OneThing => {
+  const x = goodOneThing();
+  x.email.body = Array(9).fill('We noticed the change on your ordering screen (obs-price) and would build the prediction first.').join(' ');
+  return x;
+};
+
+test('stage 07: cold outreach without the LinkedIn messages does not validate', () => {
+  const x = cold();
+  x.linkedin = null;
+  const problems = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS, 'cold');
+  assert.deepEqual(problems.map((p) => p.code), ['linkedin_missing']);
+  /* An inbound lead gets the email; nothing is missing. */
+  assert.deepEqual(validateOneThing({ ...goodOneThing(), linkedin: null }, SEVEN_CLAIMS, SEVEN_FACTS, 'lead'), []);
+});
+
+test('stage 07: the connection note is measured on the text that gets pasted', () => {
+  const x = cold();
+  /* Comfortably under 300 once the ids come out, over it with them in. */
+  const body =
+    'Your Team plan runs at $450 a month (obs-price), and the order screen is where that margin gets decided every single working day of the year (obs-price). We have one specific thought about what we would build into that ordering flow first, and it rests entirely on what you already publish (obs-price).';
+  x.linkedin = { connectionNote: body, message: x.linkedin!.message };
+  assert.ok(body.length > LINKEDIN_NOTE_MAX);
+  assert.ok(pastable(body, ['obs-price']).length <= LINKEDIN_NOTE_MAX);
+  assert.deepEqual(validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS, 'cold'), []);
+
+  const over = cold();
+  over.linkedin = { connectionNote: `${body} ${body}`, message: over.linkedin!.message };
+  assert.ok(validateOneThing(over, SEVEN_CLAIMS, SEVEN_FACTS, 'cold').some((p) => p.code === 'linkedin_too_long'));
+});
+
+test('stage 07: a LinkedIn message with no ask, or a note that is a wave, is caught', () => {
+  const noAsk = cold();
+  noAsk.linkedin = { ...noAsk.linkedin!, message: noAsk.linkedin!.message.replace('Worth forty-five minutes?', 'Worth a chat?') };
+  assert.ok(validateOneThing(noAsk, SEVEN_CLAIMS, SEVEN_FACTS, 'cold').some((p) => p.code === 'no_ask'));
+
+  const wave = cold();
+  wave.linkedin = { ...wave.linkedin!, connectionNote: 'Saw your news - would love to connect.' };
+  assert.ok(validateOneThing(wave, SEVEN_CLAIMS, SEVEN_FACTS, 'cold').some((p) => p.code === 'linkedin_too_short'));
+});
+
+test('stage 07: the outbound rule holds in the LinkedIn messages too', () => {
+  const x = cold();
+  x.linkedin = {
+    ...x.linkedin!,
+    message: x.linkedin!.message.replace('(obs-price)', '(cmp-1)'),
+  };
+  const problems = validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS, 'cold');
+  assert.deepEqual(problems.map((p) => p.code), ['non_verified_in_linkedin']);
+  assert.deepEqual(nonVerifiedInLinkedIn(x, SEVEN_CLAIMS), ['cmp-1']);
+});
+
+test('stage 07: the openers block lists dated Verified claims, or says there are none', () => {
+  const dated = { ...SEVEN_CLAIMS[0], id: 'news-1', observedAt: '2026-08-12', readOnPage: true };
+  const block = openerBlock([...SEVEN_CLAIMS, dated]);
+  assert.ok(block.includes('OPENERS AVAILABLE — Verified and dated'));
+  assert.ok(block.includes('news-1'));
+  assert.ok(!block.includes('cmp-1'), 'Cited claims are not openers');
+  assert.ok(openerBlock(SEVEN_CLAIMS).includes('OPENERS AVAILABLE — none'));
+});
+
+test('the draft renders the LinkedIn pair twice: paste-ready and annotated', () => {
+  const draft = renderEmailDraft({ company: 'Acme', oneThing: cold(), claims: SEVEN_CLAIMS, audience: 'cold' });
+  const li = draft.linkedin!;
+  assert.ok(!li.note.includes('obs-price'), 'the pasted note carries no claim ids');
+  assert.ok(!li.message.includes('obs-price'));
+  assert.ok(li.noteCited.includes('[1]'), 'the review copy is footnoted');
+  assert.equal(li.noteChars, li.note.length);
+  assert.ok(!li.noteOverLimit && !li.messageOverLimit);
+  assert.equal(li.callMaterial.length, 0);
+  assert.ok(draft.markdown.includes('## LinkedIn — paste these'));
+  assert.ok(draft.markdown.includes(`${li.noteChars}/300 characters`));
+  /* An inbound lead has no LinkedIn section at all. */
+  const lead = renderEmailDraft({ company: 'Acme', oneThing: { ...goodOneThing(), linkedin: null }, claims: SEVEN_CLAIMS });
+  assert.equal(lead.linkedin, null);
+  assert.ok(!lead.markdown.includes('LinkedIn'));
+});
+
+test('voice: the phrases every automated connection request uses are out', () => {
+  const flags = checkVoice(
+    'Hi Dana, hope this finds you well. Quick question - would love to connect and touch base.'
+  );
+  const cliche = flags.find((f) => f.id === 'outbound-cliche');
+  assert.ok(cliche, 'the cliché pattern fires');
+  assert.equal(cliche.count, 4);
+  assert.deepEqual(checkVoice('You were named to the Inc. 5000 list in August. Here is what we would build.'), []);
 });

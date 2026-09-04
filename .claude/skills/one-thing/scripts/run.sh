@@ -5,19 +5,27 @@
 #
 #   run.sh --domain acme.com \
 #          --to-name "Dana Whitfield" --to-role "COO" [--to-email dana@acme.com] \
-#          --category "Specialty pharmacy serving hospice agencies in Texas" \
-#          --why-now "Posted a VP of Operations role on 2026-08-30" \
-#          --why-now-url https://acme.com/careers/vp-operations \
+#          [--category "Specialty pharmacy serving hospice agencies in Texas"] \
+#          [--why-now "Posted a VP of Operations role on 2026-08-30"] \
+#          [--why-now-url https://acme.com/careers/vp-operations] \
 #          [--peers rival.com,other.com] [--known "…"] [--history "…"]
 #
-#   --why-now and --why-now-url are REQUIRED for cold outreach. The pipeline
-#   reads the URL and keeps a verbatim quote only if the page supports the
-#   note; that quote is the one thing the email may open with. A note without
-#   a page is an opinion, and the run is refused.
+#   THE DOMAIN AND THE PERSON ARE THE REQUIRED INPUTS. Everything else the
+#   run finds for itself: stage 01 derives the category from their site,
+#   stage 02 finds the comparable companies, and stage 03b looks for the
+#   dated reason to write — their own news, press and blog pages first,
+#   because a page we read ourselves is the only kind of opener a message we
+#   send is allowed to lead with.
 #
-#   --category is REQUIRED for cold outreach: one line, what they do and for
-#   whom, in your words. It aims peer discovery, which is the make-or-break
-#   stage, and a stranger's site rarely says it plainly.
+#   --why-now / --why-now-url stay as an OVERRIDE, for when you saw something
+#   the crawl will not: a LinkedIn post, a regulator's notice, a trade
+#   publication. Give both. The pipeline reads the URL and keeps a verbatim
+#   quote only if the page supports the note; a note without a page is an
+#   opinion and never becomes a claim.
+#
+#   --category is an optional one-line hint ("what they do and for whom, in
+#   your words"). It aims peer discovery, which is the make-or-break stage, so
+#   it is worth giving when a stranger's homepage does not say it plainly.
 #
 # INBOUND LEAD (someone who filled in the form; usually the Slack link is
 # simpler, but this works from a laptop too):
@@ -56,16 +64,32 @@ domain="$(domain_of "$domain")"
 [ -n "$to_name" ] || fail "--to-name is required (who the email is to)."
 
 if [ "$mode" = "cold" ]; then
+  # The role decides how the idea is framed: a COO and a CEO get different
+  # first sentences, and nobody but the person who found them on LinkedIn
+  # knows it. That is why this one stays required and the rest do not.
   [ -n "$to_role" ] || fail "--to-role is required for cold outreach (the recipient's title; it decides how the idea is framed)."
-  [ -n "$category" ] || fail "--category is required for cold outreach (one line: what they do and for whom, in your words)."
-  [ -n "$why_now" ] || fail "--why-now is required for cold outreach (the dated, specific thing you noticed)."
-  [[ "$why_now_url" =~ ^https?:// ]] || fail "--why-now-url is required for cold outreach and must be a page (https://…). The pipeline verifies the note against it; no page, no run."
   [ -n "$to_email" ] || to_email="unknown@$domain"
-  brief="OUTREACH: cold
+
+  # A why-now without a page cannot become a claim, so refuse the half-input
+  # rather than pass an opinion into the prompt.
+  if [ -n "$why_now_url" ] && [ -z "$why_now" ]; then
+    fail "--why-now-url needs --why-now: say in one sentence what the page shows, so the pipeline can check the page against it."
+  fi
+  if [ -n "$why_now" ] && [ -z "$why_now_url" ]; then
+    fail "--why-now needs --why-now-url: an observation without a page never becomes a claim. Find the page, or leave both off and let stage 03b look."
+  fi
+  if [ -n "$why_now_url" ]; then
+    [[ "$why_now_url" =~ ^https?:// ]] || fail "--why-now-url must be a page (https://…)."
+  fi
+
+  brief="OUTREACH: cold"
+  if [ -n "$why_now" ]; then
+    brief="$brief
 
 WHAT CHANGED RECENTLY: $why_now
 
 EVIDENCE: $why_now_url | $why_now"
+  fi
   [ -n "$known" ] && brief="$brief
 
 WHERE THE TEAM BURNS TIME: $known"
@@ -101,6 +125,9 @@ gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$REF" \
 sleep 6
 id="$(latest_run_id)"
 echo "Started $mode research for $domain."
+if [ "$mode" = "cold" ] && [ -z "$why_now" ]; then
+  echo "No why-now given: stage 03b will look for one on their own news, press and blog pages."
+fi
 echo "GitHub run: $id"
 echo "https://github.com/$REPO/actions/runs/$id"
 echo "About ten minutes and about \$2. Slack gets the report PDF and the email draft when it finishes."

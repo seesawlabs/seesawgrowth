@@ -129,9 +129,12 @@ format. Either way, no laptop with six API keys on it.
 `.claude/skills/one-thing/` starts the same workflow through `gh` (mode `cold` for
 a company that has not asked us for anything), downloads the finished run, and
 walks the reviewer through the send gate. It needs only a GitHub login with write
-access to this repo. Cold runs require a dated "why now" with a URL, which the
-pipeline verifies against the page before the email may cite it. See that
-folder's `SKILL.md`.
+access to this repo. A cold run needs the domain and the recipient's name and role,
+nothing else: stage 03b looks for the dated reason to write on their own news,
+press and blog pages, and a teammate's own "why now" is an optional override that
+is still verified against the page it cites. Cold runs also post a third Slack
+message: the paste-ready LinkedIn connection note and first message, with their
+character counts. See that folder's `SKILL.md`.
 
 `.github/workflows/analysis.yml` is the runner. To turn it on:
 

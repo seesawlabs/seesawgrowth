@@ -25,6 +25,7 @@
                           highest-value thing an intake form can collect
      --no-synthesis       skip the analyst (debugging the evidence stages)
      --no-one-thing       skip stage 07 (the recommendation and the email draft)
+     --no-target-news     skip stage 03b (dated changes at the target company)
      --cold               the recipient did not ask: write the email as cold outreach
      --name "..."         the recipient, for the email draft's salutation
      --trigger "..."      what the prospect said is driving this
@@ -48,6 +49,11 @@ import { runSubjectStage } from './stages/01-subject.ts';
 import { runPeersStage, type PeersArtifact } from './stages/02-peers.ts';
 import { runPeerEvidenceStage, type PeerEvidenceArtifact } from './stages/03-peer-evidence.ts';
 import { runDemandStage, type DemandArtifact } from './stages/04-demand.ts';
+import {
+  runTargetNewsStage,
+  newsClaimsFrom,
+  type TargetNewsArtifact,
+} from './stages/03b-target-news.ts';
 import { buildClaims, coverageFrom } from './stages/claims.ts';
 import { runSynthesisStage, type SynthesisArtifact } from './stages/06-synthesis.ts';
 import { renderReportHtml } from './render/report-html.ts';
@@ -120,6 +126,8 @@ interface Args {
   name?: string;
   /** Cold outreach: the recipient did not ask for anything. */
   cold: boolean;
+  /** Skip stage 03b (dated changes at the target). Saves a search and a crawl. */
+  noTargetNews: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -133,6 +141,7 @@ function parseArgs(argv: string[]): Args {
     noResearch: false,
     noOneThing: false,
     cold: false,
+    noTargetNews: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -144,6 +153,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--no-one-thing') args.noOneThing = true;
     else if (a === '--name') args.name = argv[++i];
     else if (a === '--cold') args.cold = true;
+    else if (a === '--no-target-news') args.noTargetNews = true;
     else if (a === '--peer') {
       const v = argv[++i];
       if (v) args.namedPeers.push(v);
@@ -197,6 +207,7 @@ interface TwoDocArgs {
   skipLiveness?: boolean;
   audience?: Audience;
   brief?: BriefArtifact | null;
+  targetNews?: TargetNewsArtifact | null;
 }
 
 async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact | null; draft: EmailDraft | null }> {
@@ -278,6 +289,7 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
     screenshots,
     audience: a.audience ?? 'lead',
     briefEvidence: a.brief?.results ?? [],
+    targetNews: a.targetNews ?? null,
     company: a.company,
     oneLiner: a.oneLiner,
     recipientName: a.recipientName,
@@ -351,6 +363,7 @@ async function oneThingOnly(argv: string[]): Promise<void> {
   const company = meta.companyName?.trim() || domain;
   const stageNotes: string[] = ['stage 07 re-run on an existing run; stages 01-06 as recorded'];
   const briefArtifact: BriefArtifact | null = await readOptionalJson('00-brief');
+  const newsArtifact: TargetNewsArtifact | null = await readOptionalJson('03b-target-news');
   const audience: Audience = meta.audience === 'cold' || parseBrief(meta.trigger).audience === 'cold' ? 'cold' : 'lead';
 
   console.error(`The one thing — ${domain}, from run ${runId}`);
@@ -371,6 +384,7 @@ async function oneThingOnly(argv: string[]): Promise<void> {
     skipLiveness: process.env.EXPOSURE_NO_LIVENESS === '1',
     audience,
     brief: briefArtifact,
+    targetNews: newsArtifact,
   });
   console.error(`\n${ledger.format()}`);
   console.error(`\nwrote ${join(dir, 'research-report.html')}  (and email-draft.md)`);
@@ -489,13 +503,18 @@ async function revise(argv: string[]): Promise<void> {
   console.error(formatCredentialReport());
   console.error(`\nNotes: "${args.notes.trim()}"\n`);
 
+  /* A revision inherits the audience of the run it revises: the recipient did
+     not change, only the cut. */
+  const revisedAudience: Audience =
+    meta.audience === 'cold' || parseBrief(meta.trigger).audience === 'cold' ? 'cold' : 'lead';
   const dir = await initRun(ROOT, {
     runId,
     domain,
     startedAt: now,
     companyName: meta.companyName,
     trigger: meta.trigger,
-  , audience: args.cold || parseBrief(args.trigger).audience === 'cold' ? 'cold' : 'lead' });
+    audience: revisedAudience,
+  });
   // Carried forward unchanged, so this run directory is self-contained —
   // an operator reading it later should not need to go find the original.
   await writeArtifact(dir, '01-subject', subject);
@@ -557,7 +576,8 @@ async function revise(argv: string[]): Promise<void> {
   const stageNotes: string[] = [`revised from ${sourceRunId} against notes`];
   const intake = await readOptionalJson('intake');
   const reviseBrief: BriefArtifact | null = await readOptionalJson('00-brief');
-  const reviseAudience: Audience = meta.audience === 'cold' || parseBrief(meta.trigger).audience === 'cold' ? 'cold' : 'lead';
+  const reviseNews: TargetNewsArtifact | null = await readOptionalJson('03b-target-news');
+  const reviseAudience: Audience = revisedAudience;
   await writeTwoDocs({
     dir,
     meta: { runId, domain, startedAt: now, trigger: meta.trigger, companyName: meta.companyName, audience: reviseAudience },
@@ -574,6 +594,7 @@ async function revise(argv: string[]): Promise<void> {
     skip: false,
     audience: reviseAudience,
     brief: reviseBrief,
+    targetNews: reviseNews,
   });
 
   console.error(`\n${summarizeCoverage(coverage)}`);
@@ -651,6 +672,18 @@ async function report(argv: string[]): Promise<void> {
   console.error(`        category query: "${subject.categoryQuery.query.slice(0, 110)}"`);
   console.error(`        derived from: ${subject.categoryQuery.derivedFrom}`);
   mark('01 subject');
+
+  /* The name they use for themselves.
+     The form no longer asks for a company name, so the intake passes the
+     domain in its place. A company equal to its own domain means "derive it":
+     the homepage title is what they call themselves. Derived here rather than
+     with the claims because stage 03b asks the search engines about them by
+     name, and a domain is not a name. */
+  const given = args.company?.trim();
+  const company =
+    (given && given.toLowerCase() !== domain.toLowerCase() ? given : '') ||
+    subject.pages.find((p) => p.category === 'home')?.title ||
+    domain;
 
   /* stage 02 — peers. */
   let peers: PeersArtifact | null = null;
@@ -735,6 +768,47 @@ async function report(argv: string[]): Promise<void> {
   }
   mark('03 peer evidence');
 
+  /* stage 03b — what changed at the target itself.
+     The pass that lets a run start from nothing but a URL: their own news and
+     press pages first, because only a page we read ourselves produces an
+     opener a cold email may use. */
+  let targetNews: TargetNewsArtifact | null = null;
+  const gate03b = checkStage('03b-target-news');
+  if (args.noTargetNews) {
+    stageNotes.push('stage 03b skipped: --no-target-news');
+    console.error('[03b/07] target news — SKIPPED (--no-target-news)');
+  } else if (!gate03b.ok) {
+    stageNotes.push(`stage 03b skipped: ${gate03b.missing.join(', ')} missing`);
+    console.error(`[03b/07] target news — SKIPPED (${gate03b.missing.join(', ')} missing)`);
+  } else {
+    console.error('[03b/07] target news — their own dated pages, then citation-resolved search');
+    try {
+      targetNews = await runTargetNewsStage(cache, ledger, { name: company, domain }, now, {
+        skipSearch: missingCredentials(['PERPLEXITY_API_KEY']).length > 0,
+        skipNewsIndex: missingCredentials(['EXA_API_KEY']).length > 0,
+      });
+      await writeArtifact(dir, '03b-target-news', targetNews);
+      console.error(
+        `        ${targetNews.items.length} dated item(s), ${targetNews.ownSiteItems} read on their own site ` +
+          `(${targetNews.pagesScraped} page(s) scraped)`
+      );
+      for (const item of targetNews.items) {
+        console.error(`          ${item.observedAt.padEnd(11)} ${item.origin.padEnd(11)} ${item.statement.slice(0, 92)}`);
+      }
+      const drops = Object.entries(targetNews.dropSummary)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => `${k}=${v}`)
+        .join(' ');
+      if (drops) console.error(`        dropped: ${drops}`);
+      for (const note of targetNews.notes) console.error(`        - ${note}`);
+      if (targetNews.ownSiteItems === 0) stageNotes.push('no dated item read on their own site: no Verified opener for cold outreach');
+    } catch (error) {
+      stageNotes.push(`stage 03b failed: ${(error as Error).message.slice(0, 200)}`);
+      console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
+    }
+  }
+  mark('03b target news');
+
   /* stage 04 — demand. */
   let demand: DemandArtifact | null = null;
   const gate04 = checkStage('04-demand');
@@ -793,17 +867,13 @@ async function report(argv: string[]): Promise<void> {
   /* claims — deterministic, no network, no model. */
   console.error('[05/07] claims — deterministic, no model');
   const input = { subject, peers, evidence, demand };
-  const claims = [...(briefArtifact?.claims ?? []), ...buildClaims(input)];
+  const claims = [
+    ...(briefArtifact?.claims ?? []),
+    ...(targetNews ? newsClaimsFrom(targetNews, company) : []),
+    ...buildClaims(input),
+  ];
   const { renderable, rejected } = partitionClaims(claims);
   const coverage = scoreCoverage(coverageFrom(input, renderable));
-  /* The form no longer asks for a company name, so the intake passes the
-     domain in its place. A company equal to its own domain means "derive it":
-     the homepage title is the name they use for themselves. */
-  const given = args.company?.trim();
-  const company =
-    (given && given.toLowerCase() !== domain.toLowerCase() ? given : '') ||
-    subject.pages.find((p) => p.category === 'home')?.title ||
-    domain;
   mark('05 claims');
 
   /* stage 06 — the analyst. Without this the document is a list of sourced
@@ -906,6 +976,7 @@ async function report(argv: string[]): Promise<void> {
     skip: args.noOneThing,
     audience,
     brief: briefArtifact,
+    targetNews,
   });
   mark('07 one thing + print');
 
