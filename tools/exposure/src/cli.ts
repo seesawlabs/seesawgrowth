@@ -706,7 +706,7 @@ async function report(argv: string[]): Promise<void> {
     stageNotes.push('stage 02 skipped: no subject pages crawled, so no category description to search with');
     console.error('[02/07] peers — SKIPPED (no subject content to derive a category from)');
   } else {
-    console.error('[02/07] peers — Exa category search plus find-similar');
+    console.error('[02/07] peers — Exa category search, at the subject’s own scale');
     try {
       peers = await runPeersStage(
         cache,
@@ -715,7 +715,7 @@ async function report(argv: string[]): Promise<void> {
         subject.categoryQuery.query,
         subject.pages.find((p) => p.category === 'home')?.title,
         now,
-        { namedPeers: args.namedPeers }
+        { namedPeers: args.namedPeers, subjectScale: subject.scale }
       );
       await writeArtifact(dir, '02-peers', peers);
       console.error(`        ${peers.peers.length} peer(s) kept, ${peers.rejected.length} rejected`);

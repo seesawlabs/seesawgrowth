@@ -118,6 +118,39 @@ nobody has entered.
    `email-draft.md`. The pipeline never touches LinkedIn itself: finding the
    person and sending the message are a person's job.
 
+## Peer discovery at the right size
+
+Measured on compassus.com, 2026-09-04, for about five cents. Four query shapes
+against the same target: a national home-based care provider with programmes in
+33 states.
+
+| The query | What Exa returned |
+|---|---|
+| `Home Health, Infusion, Hospice, & Palliative Care` — their own homepage title, which is what the pipeline derives | Eight single-location agencies. No national operator at all |
+| …plus the derived footprint: `A large national provider operating in 33 states across 61 locations.` | VITAS and LHC Group appear; most of the small agencies stay |
+| `National multi-state provider of home health, hospice, palliative care and home infusion, operating in 33 states` | VITAS, LHC Group, Aveanna, Ascension at Home |
+| `Large national home health and hospice company operating hundreds of programs across many states, owned by private equity or a health system` | Amedisys, Aveanna, Kindred at Home, LHC Group, VITAS, Ascension — the actual competitive set |
+
+Two things follow, and the code does both.
+
+**The pipeline derives what it can.** Stage 01 counts the location pages in the
+site map and the states named in their paths, and appends a clause to the
+category query (`deriveScale`). It is free, every number traces to a path on
+their own site, and it moved two national operators into the pool where the
+bare title produced none.
+
+**It cannot derive the sentence that actually works.** "Hundreds of programmes"
+and "owned by private equity" are not on a company's website, and they are what
+separates a peer set of comparable operators from a list of local agencies. So
+`--category` is the highest-leverage input a person can give, and the shape that
+works is *scale plus ownership plus buyer*: "large national hospice operator,
+300+ programmes, PE-backed, sells to health systems and payers". Stage 02 says
+so in its notes whenever the target operates in five or more states and nobody
+named a peer by hand.
+
+`--peers` still beats both: a named competitor skips discovery entirely and
+goes straight to validation.
+
 ## Coverage — when *not* to send
 
 Research quality varies enormously by target. A company with docs, a changelog
@@ -138,7 +171,7 @@ those files rather than calling earlier stages. Any stage can be re-run alone.
 |---|---|---|---|
 | 00 brief evidence | Firecrawl + Claude (Sonnet) | `00-brief.json`, `brief-N` claims | reads each URL a cold-outreach brief cites and keeps a verbatim quote only if the page supports the note; the teammate's words never become a claim |
 | 01 subject | Firecrawl | their surface: docs, careers, pricing, integrations | thin marketing sites yield little |
-| 02 peers | **Exa find-similar** | 5–8 named peers | **make-or-break** — wrong list, worthless report |
+| 02 peers | **Exa category search** | 5–8 named peers | **make-or-break** — wrong list, worthless report. See *Peer discovery at the right size* |
 | 03 peer evidence | Firecrawl + Perplexity | dated, sourced AI moves | Perplexity summarizes; keep the citation or drop the claim |
 | 04 demand | DataForSEO Labs | category demand, terms peers rank for | stale by default — stamp *both* dates, ours and Google's |
 | 05 assemble | none | `report.md` | deterministic, no network, no model |
@@ -223,9 +256,18 @@ exposes were found and fixed, each now pinned by a test:
 **Known weaknesses, not yet fixed.** These are visible in the artifacts rather
 than hidden, which is the point of logging every rejection:
 
-- **`find-similar` has never contributed a peer.** Across all three targets it
-  returned 45 results and 45 were filtered out. It is currently pure cost. Keep
-  it one more batch of targets, then cut it if the pattern holds.
+- **~~`find-similar` has never contributed a peer.~~ Cut 2026-09-04.** The
+  pattern held: seven live targets, zero surviving candidates, 15 of 15 filtered
+  out on the last three. On compassus.com the rejection tally read
+  `names_the_subject=11` — pages that mention the company, which is what
+  "similar to this page" means and is not a competitor. The confidence
+  promotion for generator agreement went with it, having never fired: `high`
+  now means a person named the peer.
+- **Peer discovery finds the category, not the size.** A national operator's
+  homepage title matches thousands of local agencies, and the derived footprint
+  clause only partly corrects it. See *Peer discovery at the right size*: the
+  fix is a person's `--category` line or `--peers`, and stage 02 asks for one
+  when the target is multi-state and nobody named a peer.
 - **The off-category filter passes near-neighbours.** It rejects only *zero*
   lexical overlap, so a laundry service that supplies medical facilities
   survives a medical-supply search. Zero overlap is the only threshold that

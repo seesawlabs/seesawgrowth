@@ -3,6 +3,15 @@
 
    THE TRAP, and why this file is shaped the way it is.
 
+   FIND-SIMILAR WAS CUT 2026-09-04. It ran as a second generator for seven
+   live targets and contributed zero surviving candidates on every one of them:
+   15 of 15 filtered out on hpsrx.com, on swingerz.net and on compassus.com,
+   where the rejection tally read `names_the_subject=11` — pages that mention
+   the company, which is what "similar to this page" means and is not what a
+   competitor is. The README's rule was to keep it one more batch of targets
+   and cut it if the pattern held. It held. What went with it is the confidence
+   promotion for generator agreement, which never fired either.
+
    The obvious implementation is Exa `findSimilar` on the subject's homepage
    with `excludeSourceDomain: true`. It looks right, it returns confidently
    ranked results with plausible similarity scores, and it is worthless.
@@ -41,7 +50,7 @@
 
 import type { CacheOptions } from '../lib/cache.ts';
 import type { Ledger } from '../lib/budget.ts';
-import { findSimilar, searchCompanies, type ExaResult } from '../lib/clients/exa.ts';
+import { searchCompanies, type ExaResult } from '../lib/clients/exa.ts';
 import {
   categoryOverlap,
   categoryTerms,
@@ -56,7 +65,7 @@ import {
 } from '../lib/domain.ts';
 import type { Confidence } from '../lib/claim.ts';
 
-export type Generator = 'category-search' | 'find-similar' | 'named-by-subject';
+export type Generator = 'category-search' | 'named-by-subject';
 
 export interface PeerCandidate {
   domain: string;
@@ -110,6 +119,12 @@ export interface PeerOptions {
   numResults?: number;
   /** ccTLDs acceptable for this subject. Defaults to US/Canada. */
   allowedCcTlds?: string[];
+  /**
+   * The subject's footprint, from stage 01. Used only to warn: a target with
+   * locations in thirty states and a generated peer set is probably being
+   * compared to companies a hundredth its size.
+   */
+  subjectScale?: { footprintPages: number; states: string[] };
   /**
    * Competitors the subject named on the intake form, as bare domains.
    *
@@ -227,18 +242,16 @@ export function filterCandidates(
     });
   }
 
-  // Confidence from generator agreement. Find-similar alone is weak evidence
-  // by construction: it demonstrably retrieves same-entity pages, so a
-  // candidate only it proposed has survived the filters but proved nothing.
+  /* Confidence, now that there is one generator.
+     `high` means a person named the peer; `medium` means the category search
+     proposed it and every filter let it through. Nothing else can reach high,
+     which is the honest reading: agreement between generators used to promote a
+     peer, and the second generator is gone (see the header). */
   const peers = [...kept.values()].map((peer) => {
-    /* A peer the subject named outranks anything a generator proposed: they
-       know their market and we are guessing at it. */
     if (peer.generators.includes('named-by-subject')) {
       return { ...peer, confidence: 'high' as Confidence };
     }
-    const both = peer.generators.length > 1;
-    const category = peer.generators.includes('category-search');
-    return { ...peer, confidence: (both ? 'high' : category ? 'medium' : 'low') as Confidence };
+    return { ...peer, confidence: (peer.generators.includes('category-search') ? 'medium' : 'low') as Confidence };
   });
 
   const rank: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
@@ -275,20 +288,15 @@ export async function runPeersStage(
   const notes: string[] = [];
   const numResults = opts.numResults ?? 15;
 
-  // Generator A: the one that works. A description of the category, not the
-  // company, so Exa retrieves companies rather than coverage of one company.
+  // A description of the category, not the company, so Exa retrieves companies
+  // rather than coverage of one company. This is the generator.
   const search = await searchCompanies(cache, ledger, categoryQuery, numResults, now);
 
-  // Generator B: kept for coverage, distrusted by design. Anything it alone
-  // proposes lands at low confidence.
-  const similar = await findSimilar(cache, ledger, `https://${subjectDomain}`, numResults, now);
-
   const searchRamp = looksLikeRankRamp((search.results ?? []).map((r) => r.score));
-  const similarRamp = looksLikeRankRamp((similar.results ?? []).map((r) => r.score));
   if (searchRamp) {
     notes.push(
       "category-search scores are a linear rank ramp (1 - i/(n-1)), not similarities — " +
-        'confidence comes from generator agreement instead'
+        'a peer is high confidence only when a person named it'
     );
   }
 
@@ -306,7 +314,6 @@ export async function runPeersStage(
       generator: 'named-by-subject' as Generator,
     })),
     ...(search.results ?? []).map((result) => ({ result, generator: 'category-search' as Generator })),
-    ...(similar.results ?? []).map((result) => ({ result, generator: 'find-similar' as Generator })),
   ];
   if (named.length > 0) {
     notes.push(`${named.length} peer(s) named on the intake form, seeded ahead of the generators`);
@@ -320,12 +327,15 @@ export async function runPeersStage(
   const rejectionSummary: Record<string, number> = {};
   for (const r of rejected) rejectionSummary[r.reason] = (rejectionSummary[r.reason] ?? 0) + 1;
 
-  const fromSimilarOnly = rejected.filter((r) => r.generators.includes('find-similar')).length;
-  const similarReturned = (similar.results ?? []).length;
-  if (similarReturned > 0) {
+  /* A big target with a generated peer set is the shape of the Compassus run:
+     eight single-location agencies against a national provider. Say so where
+     the operator will read it, and name the two things that fix it. */
+  if (opts.subjectScale && opts.subjectScale.states.length >= 5 && named.length === 0) {
     notes.push(
-      `find-similar contributed ${peers.filter((p) => p.generators.includes('find-similar')).length} surviving ` +
-        `candidate(s) of ${similarReturned}; ${fromSimilarOnly} of its results were filtered out`
+      `the subject operates in ${opts.subjectScale.states.length} states and no peer was named by hand — ` +
+        'if these peers are smaller than the target, re-run with --category naming scale AND ownership ' +
+        '("large national X operating in N states, private-equity owned, sells to health systems"), ' +
+        'which is the phrasing that surfaces operators of the same size, or name two with --peers'
     );
   }
 
@@ -344,7 +354,6 @@ export async function runPeersStage(
     generators: [
       { name: 'named-by-subject', returned: named.length, scoresAreRankRamp: false },
       { name: 'category-search', returned: (search.results ?? []).length, scoresAreRankRamp: searchRamp },
-      { name: 'find-similar', returned: similarReturned, scoresAreRankRamp: similarRamp },
     ],
     peers,
     rejected,

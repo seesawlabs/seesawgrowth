@@ -286,7 +286,7 @@ test('a page naming the subject is rejected before the category check', () => {
         'Distributor roundup',
         'HPSRx Enterprises is a pharmaceutical distributor serving clinics and surgery centers.'
       ),
-      generator: 'find-similar' as const,
+      generator: 'category-search' as const,
     },
   ];
   const { peers, rejected } = filterCandidates(candidates, 'hpsrx.com', 'HPSRx Enterprises', {
@@ -2653,4 +2653,63 @@ test('stage 03b: a press release under its date line is quoted from its first se
   assert.equal(quotes[0].date, '2026-02-12');
   assert.ok(quotes[0].quote.startsWith('BRENTWOOD, Tenn.'));
   assert.ok(quotes[0].quote.endsWith('Greatest Workplaces for Women.'), 'the first sentence, whole, and nothing after it');
+});
+
+/* -- stage 01: scale, and stage 02 with one generator --------------------- */
+
+import { deriveScale } from './stages/01-subject.ts';
+
+const link = (url: string) => ({ url });
+
+test('stage 01: a national footprint comes off their own location paths', () => {
+  const links = [
+    link('https://www.compassus.com'),
+    link('https://www.compassus.com/service/hospice-care'),
+    ...['alabama', 'alaska', 'arizona', 'california', 'colorado', 'florida', 'georgia', 'texas', 'ohio']
+      .map((s) => link(`https://www.compassus.com/locations/${s}`)),
+    link('https://www.compassus.com/locations/texas/san-antonio'),
+  ];
+  const scale = deriveScale(links, 'compassus.com');
+  assert.equal(scale.footprintPages, 10);
+  assert.equal(scale.states.length, 9);
+  assert.equal(scale.phrase, 'A large national provider operating in 9 states across 10 locations.');
+});
+
+test('stage 01: a two-state operator is described as one, and a one-site shop not at all', () => {
+  const two = deriveScale(
+    [link('https://acme.test/locations/texas'), link('https://acme.test/locations/oklahoma')],
+    'acme.test'
+  );
+  assert.equal(two.states.length, 2);
+  assert.equal(two.phrase, '', 'two states is not a footprint worth searching with');
+
+  const three = deriveScale(
+    ['texas', 'oklahoma', 'new-mexico'].map((s) => link(`https://acme.test/service-areas/${s}`)),
+    'acme.test'
+  );
+  assert.equal(three.phrase, 'A multi-state provider operating in Texas, Oklahoma, New Mexico.');
+
+  assert.equal(deriveScale([link('https://acme.test/about')], 'acme.test').phrase, '');
+});
+
+test('stage 01: a two-letter word outside a location path is not a state', () => {
+  /* "in" is Indiana under /locations/, and a preposition everywhere else. */
+  const wrong = deriveScale([link('https://acme.test/careers/in/austin'), link('https://acme.test/or/other')], 'acme.test');
+  assert.deepEqual(wrong.states, []);
+  const right = deriveScale([link('https://acme.test/locations/in')], 'acme.test');
+  assert.deepEqual(right.states, ['Indiana']);
+  /* Somebody else's domain says nothing about our subject's footprint. */
+  assert.equal(deriveScale([link('https://other.test/locations/texas')], 'acme.test').footprintPages, 0);
+});
+
+test('stage 02: high confidence now means a person named the peer', () => {
+  /* .com, because a .test ccTLD is rejected as foreign before any of this. */
+  const candidates = [
+    { result: exa('https://rival-distribution.com', 'Rival Distribution', PHARMA_CATEGORY), generator: 'category-search' as const },
+    { result: exa('https://named-by-hand.com', 'named-by-hand.com', ''), generator: 'named-by-subject' as const },
+  ];
+  const { peers } = filterCandidates(candidates, 'hpsrx.com', 'HPSRx Enterprises', { categoryQuery: PHARMA_CATEGORY });
+  const byDomain = Object.fromEntries(peers.map((p) => [p.domain, p.confidence]));
+  assert.equal(byDomain['named-by-hand.com'], 'high');
+  assert.equal(byDomain['rival-distribution.com'], 'medium', 'the search proposed it and the filters cleared it: that is medium, and there is no higher');
 });

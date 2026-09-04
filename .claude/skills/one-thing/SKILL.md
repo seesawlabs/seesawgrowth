@@ -134,7 +134,7 @@ Worth offering, never demanded:
 
 | Optional | What it does |
 |---|---|
-| `--category "one line, what they do and for whom"` | Aims peer discovery, the make-or-break stage. Give it when their homepage does not say it plainly |
+| `--category "…"` | **The highest-leverage thing you can add.** Aims peer discovery, the make-or-break stage. Give it for any target bigger than a single location, in the shape that works: **scale, ownership, buyer** — "large national hospice operator, 300+ programmes, PE-backed, sells to health systems and payers". Without it a national provider's own homepage title returns local agencies; measured, see `tools/exposure/README.md` → *Peer discovery at the right size* |
 | `--why-now "…"` **with** `--why-now-url https://…` | An override for something you saw that a crawl will not: a LinkedIn post, a regulator's notice, a trade story. The page is read and a verbatim passage that supports the note becomes a Verified claim. One without the other is refused |
 | `--peers a.com,b.com` | Competitors you already know |
 | `--known "…"`, `--history "…"` | Where you think their team burns time; anything they have already tried |
@@ -151,9 +151,12 @@ another target, not a vaguer sentence.
 ### Ask like this
 
 > To research **acme.com** for outreach I need two things: who it is to (name and
-> role from LinkedIn), and the domain. Optional if you have it: one line on what
-> Acme does and for whom, competitor domains, and anything you noticed that made
-> you pick them today with the page that shows it.
+> role from LinkedIn), and the domain. Worth adding if Acme is bigger than a
+> single location: one line naming their scale, ownership and buyer — "large
+> national hospice operator, 300+ programmes, PE-backed, sells to health systems"
+> — because that is what makes peer discovery find companies their size. Also
+> optional: competitor domains, and anything you noticed that made you pick them
+> today with the page that shows it.
 
 For an **inbound lead** the inputs are the lead's own answers from the form (what
 changed, where time burns, what they tried) plus name and email. The Slack link is
@@ -191,7 +194,9 @@ reasonable wait.
   that supports the note becomes a Verified claim (`brief-1`). If the page does not
   support it, no claim is made and the report says so in "What the brief cited". The
   teammate's own words never become a claim.
-- The category aims peer discovery; named competitors seed it.
+- The category aims peer discovery; named competitors seed it. Stage 01 also
+  counts their location pages and the states in those paths and adds a clause of
+  its own, which helps and is not a substitute for your line.
 - Everything else in the brief steers emphasis and is never cited.
 - **Cold rules**, enforced in stage 07: opens with a dated Verified observation and
   cites it; one idea framed as a hypothesis; the ask is forty-five minutes; never

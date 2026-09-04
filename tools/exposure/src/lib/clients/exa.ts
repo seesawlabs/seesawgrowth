@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
-   Exa client — search and findSimilar.
+   Exa client — company search and news search.
 
    Auth is `x-api-key`, not a Bearer token. Probed live 2026-08-24.
 
@@ -10,11 +10,16 @@
 
    for ten results — exactly 1 - i/(n-1). It is the rank index rescaled, not a
    similarity, and it carries no information about how good a match anything
-   is. `findSimilar` scores look like real similarities (0.959, 0.934, …) but
-   they measure "about the same entity", which is not "comparable company".
+   is. The `findSimilar` endpoint's scores looked like real similarities
+   (0.959, 0.934, …) but they measured "about the same entity", which is not
+   "comparable company".
 
-   So neither score is usable as confidence, and stage 02 derives confidence
-   from which generators agreed instead.
+   So no score here is usable as confidence. Stage 02 derived confidence from
+   agreement between two generators until 2026-09-04, when the second was cut:
+   findSimilar retrieved pages *about* the subject rather than companies like
+   it — directories, profile pages, mirrors — and contributed no surviving peer
+   across seven live targets. Its client function went with it; the filters it
+   taught us to write are still in lib/domain.ts.
 
    `contents.text` came back at no extra charge in the probe (total 0.017 =
    search 0.007 + summary 0.010); `summary` is the billed part. We ask for text
@@ -59,7 +64,7 @@ function authHeaders(): Record<string, string> {
 async function call(
   cache: CacheOptions,
   ledger: Ledger,
-  endpoint: 'search' | 'findSimilar',
+  endpoint: 'search',
   request: Record<string, unknown>,
   label: string,
   now: string
@@ -137,40 +142,6 @@ export function searchNews(
       contents: { text: { maxCharacters: textChars } },
     },
     `news ${query.slice(0, 40)}`,
-    now
-  );
-}
-
-/**
- * Find pages similar to a URL.
- *
- * Kept as a *candidate generator only*. On hpsrx.com with
- * excludeSourceDomain, 10 of 10 results were directory and mirror pages about
- * HPSRx itself — cbinsights, LinkedIn, owler, importgenius, leadiq, a state
- * license registry, a trade-show booth listing, and two mirror hosts. It
- * retrieves "pages about this entity", not "companies like this one", so
- * everything it returns goes through the full filter pipeline and anything it
- * alone proposes is low confidence.
- */
-export function findSimilar(
-  cache: CacheOptions,
-  ledger: Ledger,
-  url: string,
-  numResults: number,
-  now: string,
-  textChars = 1200
-): Promise<ExaResponse> {
-  return call(
-    cache,
-    ledger,
-    'findSimilar',
-    {
-      url,
-      numResults,
-      excludeSourceDomain: true,
-      contents: { text: { maxCharacters: textChars } },
-    },
-    url,
     now
   );
 }

@@ -610,6 +610,111 @@ export function deriveCategoryQuery(
   };
 }
 
+/* -- scale ---------------------------------------------------------------- */
+
+/**
+ * How big they are, from their own site map.
+ *
+ * WHY THIS EXISTS. Peer discovery searches with a description of the category,
+ * and a description of the category says nothing about size. Live 2026-09-04:
+ * compassus.com, a national provider with programmes in thirty states, was
+ * described by its own homepage title as "Home Health, Infusion, Hospice, &
+ * Palliative Care" — true, on topic, and shared with several thousand
+ * single-location agencies. Exa returned eight of those, and a report that
+ * compares a billion-dollar operator to Blossom Ridge Home Health has lost the
+ * reader by the second page.
+ *
+ * The signal is sitting in the map response that stage 01 already pays for: a
+ * company with locations in thirty states publishes thirty location pages. So
+ * count them, name the states, and hand peer discovery a clause it can search
+ * with. Deterministic, no extra call, and every number traces to a path on
+ * their site.
+ *
+ * It is a floor, not a measure: a national operator with one page per region
+ * looks small here. Where it says nothing, it says nothing rather than
+ * guessing, and a teammate's `--category` still beats it.
+ */
+const STATES: Record<string, string> = {
+  al: 'Alabama', ak: 'Alaska', az: 'Arizona', ar: 'Arkansas', ca: 'California',
+  co: 'Colorado', ct: 'Connecticut', de: 'Delaware', fl: 'Florida', ga: 'Georgia',
+  hi: 'Hawaii', id: 'Idaho', il: 'Illinois', in: 'Indiana', ia: 'Iowa',
+  ks: 'Kansas', ky: 'Kentucky', la: 'Louisiana', me: 'Maine', md: 'Maryland',
+  ma: 'Massachusetts', mi: 'Michigan', mn: 'Minnesota', ms: 'Mississippi',
+  mo: 'Missouri', mt: 'Montana', ne: 'Nebraska', nv: 'Nevada', nh: 'New Hampshire',
+  nj: 'New Jersey', nm: 'New Mexico', ny: 'New York', nc: 'North Carolina',
+  nd: 'North Dakota', oh: 'Ohio', ok: 'Oklahoma', or: 'Oregon', pa: 'Pennsylvania',
+  ri: 'Rhode Island', sc: 'South Carolina', sd: 'South Dakota', tn: 'Tennessee',
+  tx: 'Texas', ut: 'Utah', vt: 'Vermont', va: 'Virginia', wa: 'Washington',
+  wv: 'West Virginia', wi: 'Wisconsin', wy: 'Wyoming', dc: 'District of Columbia',
+};
+
+const BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.values(STATES).map((name) => [name.toLowerCase().replace(/\s+/g, '-'), name])
+);
+
+/** Path segments that mean "here is where we operate". */
+const FOOTPRINT_SEGMENTS = [
+  'location', 'locations', 'our-locations', 'service-area', 'service-areas',
+  'areas-we-serve', 'where-we-serve', 'branches', 'offices', 'centers',
+  'centres', 'clinics', 'facilities', 'markets', 'programs', 'programmes',
+];
+
+export interface Scale {
+  /** Pages on their own site that describe a place they operate. */
+  footprintPages: number;
+  /** US states named in those paths, in the order first seen. */
+  states: string[];
+  /** A clause for the category query. Empty when the map says nothing. */
+  phrase: string;
+}
+
+export function deriveScale(links: FirecrawlLink[], domain: string): Scale {
+  const seen = new Set<string>();
+  const states: string[] = [];
+  let footprintPages = 0;
+
+  for (const link of links) {
+    if (registrableDomain(link.url) !== domain) continue;
+    let segments: string[];
+    try {
+      segments = new URL(link.url).pathname.toLowerCase().split('/').filter(Boolean);
+    } catch {
+      continue;
+    }
+    const at = segments.findIndex((seg) => FOOTPRINT_SEGMENTS.includes(seg));
+    if (at === -1) continue;
+    footprintPages += 1;
+    /* Only a segment *under* the footprint path counts as a state, so a
+       two-letter word elsewhere in a URL cannot become Indiana. */
+    for (const seg of segments.slice(at + 1)) {
+      const state = BY_NAME[seg] ?? (seg.length === 2 ? STATES[seg] : undefined);
+      if (!state || seen.has(state)) continue;
+      seen.add(state);
+      states.push(state);
+    }
+  }
+
+  /* Wording tested against Exa on compassus.com, 2026-09-04, four shapes for
+     $0.05. The bare category query returned eight single-location agencies and
+     no national operator. This wording pulled VITAS and LHC Group into the
+     candidate pool. What worked *best* was a sentence naming scale and
+     ownership — "large national … hundreds of programs … owned by private
+     equity or a health system" returned Amedisys, Aveanna, Kindred, LHC Group
+     and VITAS — and neither "hundreds of programs" nor "private equity" is
+     derivable from a crawl. So this clause is a partial fix by construction,
+     and a teammate's own `--category` line is the real one. See the README. */
+  let phrase = '';
+  if (states.length >= 8) {
+    phrase = `A large national provider operating in ${states.length} states across ${footprintPages} locations.`;
+  } else if (states.length >= 3) {
+    phrase = `A multi-state provider operating in ${states.join(', ')}.`;
+  } else if (footprintPages >= 10) {
+    phrase = `A multi-site operator with ${footprintPages} locations.`;
+  }
+
+  return { footprintPages, states, phrase };
+}
+
 /* -- the stage ---------------------------------------------------------- */
 
 export interface SubjectArtifact {
@@ -623,6 +728,8 @@ export interface SubjectArtifact {
   pages: PageSignals[];
   pagesCrawled: number;
   categoryQuery: { query: string; seedText: string; derivedFrom: string };
+  /** How big their footprint looks from their own site map. */
+  scale: Scale;
   /** Categories the site simply doesn't have. The thin-target diagnosis. */
   categoriesMissing: PageCategory[];
   notes: string[];
@@ -708,15 +815,31 @@ export async function runSubjectStage(
     effectiveDomain,
     effectiveDomain === requested ? [] : [requested]
   );
+  /* Scale goes to peer discovery, never to the demand pull: seedText feeds
+     stage 04's keyword seeds, and "a national provider with locations in 30
+     states" is not a term anyone searches for. */
+  const scale = deriveScale(links, effectiveDomain);
+  const withScale =
+    scale.phrase && !opts.categoryQueryOverride
+      ? { ...derived, query: `${derived.query}. ${scale.phrase}`, derivedFrom: `${derived.derivedFrom}, plus scale from ${scale.footprintPages} location page(s)` }
+      : derived;
+  if (scale.phrase) {
+    notes.push(
+      `footprint: ${scale.footprintPages} location page(s)` +
+        (scale.states.length ? `, ${scale.states.length} state(s) named in their paths` : '') +
+        (opts.categoryQueryOverride ? ' — not added to the supplied category query' : ' — appended to the category query so peer discovery searches at the right size')
+    );
+  }
+
   const categoryQuery = opts.categoryQueryOverride
     ? {
         query: opts.categoryQueryOverride,
         seedText: opts.categoryQueryOverride,
         derivedFrom: 'supplied on the command line',
       }
-    : derived;
+    : withScale;
   if (opts.categoryQueryOverride) {
-    notes.push(`category query overridden; derived query would have been: "${derived.query}"`);
+    notes.push(`category query overridden; derived query would have been: "${withScale.query}"`);
   }
 
   return {
@@ -734,6 +857,7 @@ export async function runSubjectStage(
     pages,
     pagesCrawled: pages.filter((p) => !p.skipped && p.wordCount > 0).length,
     categoryQuery,
+    scale,
     categoriesMissing,
     notes,
   };
