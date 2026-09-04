@@ -372,7 +372,12 @@ const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace
  * must be a real fork or an admitted absence. Peers must be the ones in the
  * claims. The null verdict must be complete.
  */
-export function validateOneThing(x: OneThing, claims: Claim[], facts: ComputedFacts): OneThingProblem[] {
+export function validateOneThing(
+  x: OneThing,
+  claims: Claim[],
+  facts: ComputedFacts,
+  audience: 'lead' | 'cold' = 'lead'
+): OneThingProblem[] {
   const problems: OneThingProblem[] = [];
   const byId = new Map(claims.map((c) => [c.id, c]));
   const ids = claims.map((c) => c.id);
@@ -468,7 +473,10 @@ export function validateOneThing(x: OneThing, claims: Claim[], facts: ComputedFa
     if (wordCount(idea.headline) > 14) p(`ideas[${i}].headline`, 'too_long', `${wordCount(idea.headline)} words; twelve is the ceiling`);
   });
   const words = wordCount(x.email.body);
-  const [lo, hi] = nul ? [100, 320] : [150, 450];
+  const [lo, hi] = audience === 'cold' ? [80, 260] : nul ? [100, 320] : [150, 450];
+  if (audience === 'cold' && /\byou (told|mentioned|said|wrote)\b|\bas you (said|mentioned|noted)\b/i.test(x.email.body)) {
+    p('email.body', 'too_long', 'cold outreach must not imply the recipient gave us information ("you told us", "as you mentioned")');
+  }
   if (words > hi) p('email.body', 'too_long', `${words} words; the email is meant to be read on a phone`);
   if (words < lo) p('email.body', 'too_short', `${words} words; that is a note, not a recommendation`);
 
@@ -567,6 +575,7 @@ export function buildOneThingPrompt(args: {
   synthesis: Synthesis;
   trigger?: string;
   industryBrief?: string;
+  audience?: 'lead' | 'cold';
 }): string {
   const lines = args.claims.map((c) => {
     const bits = [
@@ -580,9 +589,13 @@ export function buildOneThingPrompt(args: {
   });
   const peers = [...new Set(args.claims.map((c) => c.peerName).filter((x): x is string => Boolean(x)))];
 
+  const cold = args.audience === 'cold';
   const told = args.trigger?.trim()
-    ? `\nWHAT THEY TOLD US (their words, not evidence; see the rules at the end):\n${args.trigger.trim()}\n`
+    ? cold
+      ? `\nWHAT OUR TEAM KNOWS GOING IN (a colleague's notes, not evidence; see the rules at the end). Any page they cited has already been read: if it supported the note it is a Verified claim below with id brief-N; if there is no brief-N claim, the page did not support it and you must not lean on it:\n${args.trigger.trim()}\n`
+      : `\nWHAT THEY TOLD US (their words, not evidence; see the rules at the end):\n${args.trigger.trim()}\n`
     : '';
+  const audienceBlock = cold ? `\n${COLD_OUTREACH_INSTRUCTIONS}\n` : '';
   const brief = args.industryBrief?.trim()
     ? `\nINDUSTRY CONTEXT we researched separately. Judgement only; NOT citable, so no figure from it may appear in your output:\n${args.industryBrief.trim()}\n`
     : '';
@@ -601,8 +614,25 @@ ${JSON.stringify(args.synthesis, null, 2)}
 VALIDATED CLAIMS — the only evidence. Every one is sourced and carries its status. Cite by id.
 ${lines.join('\n')}
 
-${ONE_THING_INSTRUCTIONS}`;
+${ONE_THING_INSTRUCTIONS}${audienceBlock}`;
 }
+
+/**
+ * COLD OUTREACH. The recipient did not fill in a form and did not book a call.
+ * Everything about the email changes except the evidence standard, which gets
+ * stricter in practice because there is no call to carry the caveats.
+ */
+export const COLD_OUTREACH_INSTRUCTIONS = `AUDIENCE: COLD OUTREACH. This recipient has not asked us for anything. Overrides for THE EMAIL:
+
+- 120 to 220 words. Shorter is better. It will be read on a phone by someone who did not expect it.
+- Open with the specific, dated thing we noticed about their company, cited to a Verified claim (a brief-N claim if one exists, otherwise something read on their own site). Never open with who we are.
+- Then the one idea, framed as a hypothesis about their operation, in two or three sentences: what we would build, for whom, and what it would replace. One idea. Do not list the alternatives; the report has them.
+- One sentence on why it is worth their time now.
+- The ask is forty-five minutes, framed as us bringing them the reasoning and the evidence and them telling us where it is wrong. Nothing else is offered and nothing is attached.
+- Never write "you told us", "you mentioned", "as you said", or anything implying they gave us information. They did not.
+- Never mention hiring or job postings even if a claim carries one; a stranger quoting your vacancies back at you reads as surveillance. Use the claim for the reasoning, not the prose.
+- Verified claims only in the email, as always. Cited and Tool-data claims may inform the reasoning and never appear in the text.
+- Subject line: the company or the idea in plain words, under fifty characters, no "AI", no "quick question".`;
 
 /* -- the stage ----------------------------------------------------------- */
 
@@ -616,6 +646,8 @@ export interface OneThingArtifact {
   redacted: number;
   /** Non-Verified claims the email still cites after the retry. Zero is the goal; the draft marks them. */
   callMaterialInEmail: string[];
+  /** Who the email is for. Cold outreach is written and bounded differently. */
+  audience: 'lead' | 'cold';
   attempts: number;
   voiceFlags: VoiceFlag[];
   voiceRepair?: { attempted: boolean; applied: boolean; reason: string };
@@ -685,6 +717,7 @@ export async function runOneThingStage(
     synthesis: Synthesis;
     trigger?: string;
     industryBrief?: string;
+    audience?: 'lead' | 'cold';
   },
   now: string,
   opts: { model?: string } = {}
@@ -694,7 +727,7 @@ export async function runOneThingStage(
   const base = buildOneThingPrompt(args);
 
   let draft = await callModel(cache, ledger, model, 'one-thing', base, now, 'high');
-  let problems = validateOneThing(draft, args.claims, args.facts);
+  let problems = validateOneThing(draft, args.claims, args.facts, args.audience);
   let attempts = 1;
 
   /* One retry, with the problems spelled out. A model told exactly which digit
@@ -710,7 +743,7 @@ PREVIOUS DRAFT:
 ${JSON.stringify(draft, null, 2)}`;
     try {
       const second = await callModel(cache, ledger, model, 'one-thing-retry', retry, now, 'medium');
-      const secondProblems = validateOneThing(second, args.claims, args.facts);
+      const secondProblems = validateOneThing(second, args.claims, args.facts, args.audience);
       attempts = 2;
       if (secondProblems.length <= problems.length) {
         draft = second;
@@ -747,7 +780,7 @@ DRAFT:
 ${JSON.stringify(final, null, 2)}`;
     try {
       const repaired = await callModel(cache, ledger, model, 'one-thing-voice', instruction, now, 'medium');
-      const repairedProblems = validateOneThing(repaired, args.claims, args.facts);
+      const repairedProblems = validateOneThing(repaired, args.claims, args.facts, args.audience);
       const after = checkVoice(oneThingProse(repaired));
       const over = (flags: VoiceFlag[]) => flags.reduce((n, f) => n + f.count - f.budget, 0);
       if (repairedProblems.length > problems.length) {
@@ -774,6 +807,7 @@ ${JSON.stringify(final, null, 2)}`;
     problems,
     redacted: count,
     callMaterialInEmail: nonVerifiedInEmail(final, args.claims),
+    audience: args.audience ?? 'lead',
     attempts,
     voiceFlags,
     voiceRepair,

@@ -31,6 +31,7 @@ export interface EmailDraftInput {
   claims: Claim[];
   /** Named in the salutation when known. */
   recipientName?: string;
+  audience?: 'lead' | 'cold';
 }
 
 export interface Footnote {
@@ -187,6 +188,7 @@ export function renderEmailDraft(input: EmailDraftInput): EmailDraft {
     `# Email draft — ${input.company}`,
     '',
     oneThing.verdict === 'nothing_worth_a_call' ? '> Verdict: nothing worth a call. This is the honest-no email.' : '',
+    input.audience === 'cold' ? '> Cold outreach: the recipient did not ask for this. Read it as a stranger would.' : '',
     banner ? `> **${banner}**` : '',
     '',
     `**Subject:** ${oneThing.email.subject}`,

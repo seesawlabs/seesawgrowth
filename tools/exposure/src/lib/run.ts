@@ -34,6 +34,8 @@ export interface RunMeta {
   trigger?: string;
   /** Optional intake hint: where they'd most want AI to help. */
   focus?: string;
+  /** 'cold' when the recipient did not ask for anything; the email is written differently. */
+  audience?: 'lead' | 'cold';
 }
 
 export function runDir(root: string, domain: string, runId: string): string {

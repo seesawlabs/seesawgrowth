@@ -2164,3 +2164,58 @@ test('research report: with no recommendation, it says so instead of inventing o
   assert.ok(html.includes('Stage 07 did not run'));
   assert.ok(html.includes('Claim register'));
 });
+
+/* -- the brief, stage 00, and cold outreach -------------------------------- */
+
+import { parseBrief, formatBrief } from './lib/brief.ts';
+import { verbatim, plainText } from './stages/00-brief.ts';
+
+test('brief: the form shape parses as a lead brief with no evidence', () => {
+  const b = parseBrief('WHAT CHANGED RECENTLY: New CEO.\n\nALREADY TRIED, EVALUATED OR RULED OUT: A chatbot.');
+  assert.equal(b.audience, 'lead');
+  assert.deepEqual(b.evidence, []);
+  assert.ok(b.text.includes('New CEO.') && b.text.includes('A chatbot.'));
+});
+
+test('brief: OUTREACH and EVIDENCE lines are lifted out of the text', () => {
+  const s = formatBrief({
+    audience: 'cold',
+    changed: 'Posted a VP Ops role.',
+    evidence: [{ url: 'https://acme.com/careers/vp-ops', note: 'VP Ops posting' }, { url: 'not a url', note: 'x' }],
+    burn: 'Manual scheduling.',
+  });
+  const b = parseBrief(s);
+  assert.equal(b.audience, 'cold');
+  assert.deepEqual(b.evidence, [{ url: 'https://acme.com/careers/vp-ops', note: 'VP Ops posting' }]);
+  assert.ok(!b.text.includes('EVIDENCE:'), 'evidence lines leave the prompt text');
+  assert.ok(!b.text.includes('OUTREACH'), 'the audience flag leaves the prompt text');
+  assert.ok(b.text.includes('WHAT CHANGED RECENTLY: Posted a VP Ops role.'));
+  assert.ok(b.text.includes('WHERE THE TEAM BURNS TIME: Manual scheduling.'));
+});
+
+test('brief: an empty or absent trigger is a lead brief with empty text', () => {
+  assert.deepEqual(parseBrief(undefined), { audience: 'lead', evidence: [], text: '' });
+});
+
+test('stage 00: a quote counts only if it is on the page, allowing whitespace and curly quotes', () => {
+  const page = plainText('# Careers\n\nWe are hiring a **VP of Operations** to lead “the next chapter”\nof growth across  three states.');
+  assert.ok(verbatim('hiring a VP of Operations to lead "the next chapter" of growth', page));
+  assert.ok(!verbatim('hiring a Head of Operations to lead growth', page), 'a paraphrase is not a quote');
+  assert.ok(!verbatim('VP of Ops', page), 'too short to count');
+});
+
+test('stage 07: cold outreach is bounded shorter and may not imply the recipient told us anything', () => {
+  const x = goodOneThing();
+  x.email.body = Array(9).fill('We noticed the change on your careers page (obs-price) and would build the order screen first.').join(' ');
+  assert.deepEqual(validateOneThing(x, SEVEN_CLAIMS, SEVEN_FACTS, 'cold'), []);
+  const long = goodOneThing();
+  long.email.body = Array(20).fill('We noticed the change on your careers page (obs-price) and would build the order screen first.').join(' ');
+  assert.ok(validateOneThing(long, SEVEN_CLAIMS, SEVEN_FACTS, 'cold').some((p) => p.code === 'too_long'));
+  const told = goodOneThing();
+  told.email.body = Array(9).fill('As you told us, the order screen is the problem (obs-price).').join(' ');
+  assert.ok(validateOneThing(told, SEVEN_CLAIMS, SEVEN_FACTS, 'cold').some((p) => p.detail.includes('you told us')));
+  /* The same body is fine for a lead who did tell us. */
+  const lead = goodOneThing();
+  lead.email.body = Array(16).fill('As you told us, the order screen is the problem (obs-price).').join(' ');
+  assert.ok(!validateOneThing(lead, SEVEN_CLAIMS, SEVEN_FACTS, 'lead').some((p) => p.detail.includes('you told us')));
+});

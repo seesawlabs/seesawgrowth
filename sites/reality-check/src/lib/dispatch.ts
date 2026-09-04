@@ -14,7 +14,7 @@ export const REPO = 'seesawlabs/seesawgrowth';
 export const WORKFLOW = 'analysis.yml';
 export const DEFAULT_REF = 'claude/seesaw-labs-growth-u5ou0b';
 
-export type DispatchMode = 'run' | 'revise' | 'send';
+export type DispatchMode = 'run' | 'cold' | 'revise' | 'send';
 
 export interface DispatchInputs {
   mode: DispatchMode;

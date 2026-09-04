@@ -52,12 +52,14 @@ const draftPath = find(root, 'email-draft.md');
 const pdfPath = find(root, 'research-report.pdf');
 const metaPath = find(root, '00-meta.json');
 const coveragePath = find(root, 'coverage.json');
+const briefPath = find(root, '00-brief.json');
 
 const read = (p) => (p ? JSON.parse(readFileSync(p, 'utf8')) : null);
 const art = read(oneThingPath);
 const sources = read(sourcesPath) ?? [];
 const meta = read(metaPath);
 const coverage = read(coveragePath);
+const brief = read(briefPath);
 const draft = draftPath ? readFileSync(draftPath, 'utf8') : '';
 
 const blockers = [];
@@ -66,7 +68,7 @@ const line = (s = '') => console.log(s);
 const head = (s) => line(`\n== ${s}`);
 
 line(`ONE THING REVIEW`);
-if (meta) line(`${meta.domain}  run ${meta.runId}  started ${meta.startedAt}`);
+if (meta) line(`${meta.domain}  run ${meta.runId}  started ${meta.startedAt}${meta.audience === 'cold' ? '  COLD OUTREACH' : ''}`);
 line(`PDF: ${pdfPath ?? 'NOT PRINTED (no Chrome on the runner; the HTML is in the folder)'}`);
 if (!pdfPath) cautions.push('no PDF was printed');
 
@@ -119,10 +121,31 @@ if (challenged.length) {
 if (flags.length === 0) line('  none. Clean run.');
 for (const f of flags) line(`  - ${f}`);
 
+/* 1b. brief evidence */
+if (brief?.results?.length) {
+  head('1b. What the brief cited: did the page support the note?');
+  for (const r of brief.results) {
+    line(`  ${r.status.padEnd(14)} ${r.url}`);
+    line(`    note:  ${r.note || '(none)'}`);
+    if (r.quote) line(`    quote: "${r.quote}"  -> ${r.claimId}`);
+    if (r.detail) line(`    ${r.detail}`);
+  }
+  const bad = brief.results.filter((r) => r.status !== 'verified');
+  if (bad.length) {
+    cautions.push(`${bad.length} brief citation(s) not supported by the page`);
+    if (meta?.audience === 'cold' && bad.length === brief.results.length) {
+      blockers.push('cold outreach with no verified why-now: the email has no true dated opener');
+    }
+  }
+} else if (meta?.audience === 'cold') {
+  cautions.push('cold outreach with no brief evidence recorded');
+}
+
 /* 2. verdict */
 head('2. Verdict');
 if (nul) {
   line('  nothing_worth_a_call');
+  if (meta?.audience === 'cold') blockers.push('null verdict on cold outreach: do not write to them');
   line(`  What we looked at: ${x.nullResult?.whatWeLookedAt ?? '(missing)'}`);
   for (const t of x.nullResult?.whatWeSetAside ?? []) line(`  Set aside: ${t}`);
   line(`  One question: ${x.nullResult?.oneQuestion ?? '(missing)'}`);

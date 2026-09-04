@@ -25,6 +25,7 @@
                           highest-value thing an intake form can collect
      --no-synthesis       skip the analyst (debugging the evidence stages)
      --no-one-thing       skip stage 07 (the recommendation and the email draft)
+     --cold               the recipient did not ask: write the email as cold outreach
      --name "..."         the recipient, for the email draft's salutation
      --trigger "..."      what the prospect said is driving this
      --category "..."     override the derived category query (stage 02's input)
@@ -54,6 +55,8 @@ import { renderResearchReport } from './render/research-report.ts';
 import { renderEmailDraft, type EmailDraft } from './render/email-draft.ts';
 import { runOneThingStage, chosen, isNull, type OneThingArtifact } from './stages/07-one-thing.ts';
 import { renderPdf } from './lib/pdf.ts';
+import { parseBrief, type Audience } from './lib/brief.ts';
+import { verifyBriefEvidence, type BriefArtifact } from './stages/00-brief.ts';
 import { checkSources, screenshotDataUri, summariseLiveness } from './lib/liveness.ts';
 import { registrableDomain } from './lib/domain.ts';
 import { FIXTURE_CLAIMS, FIXTURE_META } from './fixtures/prototype.ts';
@@ -115,6 +118,8 @@ interface Args {
   noOneThing: boolean;
   /** The recipient's name, for the email draft. */
   name?: string;
+  /** Cold outreach: the recipient did not ask for anything. */
+  cold: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -127,6 +132,7 @@ function parseArgs(argv: string[]): Args {
     noSynthesis: false,
     noResearch: false,
     noOneThing: false,
+    cold: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -137,6 +143,7 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--no-research') args.noResearch = true;
     else if (a === '--no-one-thing') args.noOneThing = true;
     else if (a === '--name') args.name = argv[++i];
+    else if (a === '--cold') args.cold = true;
     else if (a === '--peer') {
       const v = argv[++i];
       if (v) args.namedPeers.push(v);
@@ -188,6 +195,8 @@ interface TwoDocArgs {
   skip: boolean;
   /** Skip the URL re-fetch and screenshots (tests, offline). */
   skipLiveness?: boolean;
+  audience?: Audience;
+  brief?: BriefArtifact | null;
 }
 
 async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact | null; draft: EmailDraft | null }> {
@@ -215,6 +224,7 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
           synthesis: a.synthesis.synthesis,
           trigger: a.meta.trigger,
           industryBrief: a.synthesis.industryBrief,
+          audience: a.audience ?? 'lead',
         },
         a.now
       );
@@ -234,7 +244,7 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
   }
 
   const draft = oneThing
-    ? renderEmailDraft({ company: a.company, oneThing: oneThing.oneThing, claims: renderable, recipientName: a.recipientName })
+    ? renderEmailDraft({ company: a.company, oneThing: oneThing.oneThing, claims: renderable, recipientName: a.recipientName, audience: a.audience ?? 'lead' })
     : null;
   if (draft) await writeFile(join(a.dir, 'email-draft.md'), draft.markdown);
 
@@ -266,6 +276,8 @@ async function writeTwoDocs(a: TwoDocArgs): Promise<{ oneThing: OneThingArtifact
     meta: a.meta,
     sources,
     screenshots,
+    audience: a.audience ?? 'lead',
+    briefEvidence: a.brief?.results ?? [],
     company: a.company,
     oneLiner: a.oneLiner,
     recipientName: a.recipientName,
@@ -338,6 +350,8 @@ async function oneThingOnly(argv: string[]): Promise<void> {
   const cache: CacheOptions = { dir: join(ROOT, 'cache'), refresh: process.env.EXPOSURE_ONE_THING_REFRESH === '1' };
   const company = meta.companyName?.trim() || domain;
   const stageNotes: string[] = ['stage 07 re-run on an existing run; stages 01-06 as recorded'];
+  const briefArtifact: BriefArtifact | null = await readOptionalJson('00-brief');
+  const audience: Audience = meta.audience === 'cold' || parseBrief(meta.trigger).audience === 'cold' ? 'cold' : 'lead';
 
   console.error(`The one thing — ${domain}, from run ${runId}`);
   await writeTwoDocs({
@@ -355,6 +369,8 @@ async function oneThingOnly(argv: string[]): Promise<void> {
     now,
     skip: false,
     skipLiveness: process.env.EXPOSURE_NO_LIVENESS === '1',
+    audience,
+    brief: briefArtifact,
   });
   console.error(`\n${ledger.format()}`);
   console.error(`\nwrote ${join(dir, 'research-report.html')}  (and email-draft.md)`);
@@ -479,7 +495,7 @@ async function revise(argv: string[]): Promise<void> {
     startedAt: now,
     companyName: meta.companyName,
     trigger: meta.trigger,
-  });
+  , audience: args.cold || parseBrief(args.trigger).audience === 'cold' ? 'cold' : 'lead' });
   // Carried forward unchanged, so this run directory is self-contained —
   // an operator reading it later should not need to go find the original.
   await writeArtifact(dir, '01-subject', subject);
@@ -540,9 +556,11 @@ async function revise(argv: string[]): Promise<void> {
   /* The two documents, re-chosen against the revised analysis. */
   const stageNotes: string[] = [`revised from ${sourceRunId} against notes`];
   const intake = await readOptionalJson('intake');
+  const reviseBrief: BriefArtifact | null = await readOptionalJson('00-brief');
+  const reviseAudience: Audience = meta.audience === 'cold' || parseBrief(meta.trigger).audience === 'cold' ? 'cold' : 'lead';
   await writeTwoDocs({
     dir,
-    meta: { runId, domain, startedAt: now, trigger: meta.trigger, companyName: meta.companyName },
+    meta: { runId, domain, startedAt: now, trigger: meta.trigger, companyName: meta.companyName, audience: reviseAudience },
     company,
     oneLiner: subject.categoryQuery?.seedText,
     recipientName: intake?.name,
@@ -554,6 +572,8 @@ async function revise(argv: string[]): Promise<void> {
     cache,
     now,
     skip: false,
+    audience: reviseAudience,
+    brief: reviseBrief,
   });
 
   console.error(`\n${summarizeCoverage(coverage)}`);
@@ -746,10 +766,34 @@ async function report(argv: string[]): Promise<void> {
   }
   mark('04 demand');
 
+  /* stage 00 — the brief's evidence. A teammate's "why now" URL becomes a
+     Verified claim only if the page says it, verbatim. Otherwise the report
+     records that it did not. */
+  const brief = parseBrief(args.trigger);
+  const audience: Audience = args.cold || brief.audience === 'cold' ? 'cold' : 'lead';
+  let briefArtifact: BriefArtifact | null = null;
+  if (brief.evidence.length > 0) {
+    if (missingCredentials(['FIRECRAWL_API_KEY', 'ANTHROPIC_API_KEY']).length > 0) {
+      stageNotes.push('stage 00 skipped: brief evidence given but FIRECRAWL_API_KEY or ANTHROPIC_API_KEY missing');
+      console.error('[00/07] brief evidence — SKIPPED (credentials missing)');
+    } else {
+      console.error(`[00/07] brief evidence — reading ${brief.evidence.length} URL(s) the brief cites`);
+      try {
+        briefArtifact = await verifyBriefEvidence(cache, ledger, brief.evidence, domain, now);
+        await writeArtifact(dir, '00-brief', briefArtifact);
+        for (const r of briefArtifact.results) console.error(`        ${r.status.padEnd(14)} ${r.url}${r.detail ? ` (${r.detail})` : ''}`);
+        for (const note of briefArtifact.notes) stageNotes.push(note);
+      } catch (error) {
+        stageNotes.push(`stage 00 failed: ${(error as Error).message.slice(0, 200)}`);
+        console.error(`        FAILED: ${(error as Error).message.slice(0, 200)}`);
+      }
+    }
+  }
+
   /* claims — deterministic, no network, no model. */
   console.error('[05/07] claims — deterministic, no model');
   const input = { subject, peers, evidence, demand };
-  const claims = buildClaims(input);
+  const claims = [...(briefArtifact?.claims ?? []), ...buildClaims(input)];
   const { renderable, rejected } = partitionClaims(claims);
   const coverage = scoreCoverage(coverageFrom(input, renderable));
   /* The form no longer asks for a company name, so the intake passes the
@@ -783,7 +827,7 @@ async function report(argv: string[]): Promise<void> {
           subject,
           peers,
           evidence,
-          trigger: args.trigger,
+          trigger: brief.text,
           oneLiner: args.category ?? subject.categoryQuery.seedText,
         },
         now,
@@ -848,7 +892,7 @@ async function report(argv: string[]): Promise<void> {
   /* stage 07 and the two documents the offer actually delivers. */
   await writeTwoDocs({
     dir,
-    meta: { runId, domain, startedAt: now, trigger: args.trigger, companyName: args.company },
+    meta: { runId, domain, startedAt: now, trigger: brief.text, companyName: args.company, audience },
     company,
     oneLiner: args.category ?? subject.categoryQuery.seedText,
     recipientName: args.name,
@@ -860,6 +904,8 @@ async function report(argv: string[]): Promise<void> {
     cache,
     now,
     skip: args.noOneThing,
+    audience,
+    brief: briefArtifact,
   });
   mark('07 one thing + print');
 

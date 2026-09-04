@@ -60,6 +60,9 @@ export interface ResearchReportInput {
   cost?: { spent: number; ceiling: number };
   /** Named on the cover when known. */
   recipientName?: string;
+  audience?: 'lead' | 'cold';
+  /** What the brief cited and whether the page supported it. */
+  briefEvidence?: import('../stages/00-brief.ts').BriefEvidenceResult[];
 }
 
 /* -- helpers -------------------------------------------------------------- */
@@ -158,6 +161,9 @@ export function renderResearchReport(input: ResearchReportInput): string {
   const warnings: string[] = [];
   if (!one) warnings.push('Stage 07 did not run: there is no recommendation in this document, only the research.');
   if (one && nul) warnings.push('VERDICT: nothing worth a call. This report says why, with the same evidence standard. The email is the honest-no version.');
+  if (input.audience === 'cold') warnings.push('COLD OUTREACH: the recipient did not ask for this. The email must read as a stranger would read it.');
+  const unsupported = (input.briefEvidence ?? []).filter((r) => r.status !== 'verified');
+  if (unsupported.length) warnings.push(`${unsupported.length} of the brief's cited page(s) did not support the note or were unreachable; the recommendation stands without them. See "What the brief cited".`);
   if (input.oneThing && input.oneThing.redacted > 0) {
     warnings.push(
       `${input.oneThing.redacted} figure(s) were redacted as unsourced and appear as ${REDACTED}. Read those sentences before anything is sent.`
@@ -282,6 +288,25 @@ export function renderResearchReport(input: ResearchReportInput): string {
     .join('')}
   </tbody></table>`;
   })();
+
+  /* -- what the brief cited -- */
+  const briefBlock = (input.briefEvidence ?? []).length
+    ? `<h2>What the brief cited, and what the pages actually say</h2>
+  <p class="rule-note">A colleague pointed at these pages before the research ran. Each was read; a verbatim passage that supports the note became a Verified claim. A page that did not support the note produced no claim, and nothing in this report leans on it.</p>
+  <table><thead><tr><th>Page</th><th>The note</th><th>Result</th></tr></thead><tbody>
+  ${input.briefEvidence!
+    .map(
+      (r) => `<tr><td class="src"><a href="${esc(r.url)}">${esc(r.title || r.url)}</a></td><td>${esc(r.note || '(no note)')}</td><td>${
+        r.status === 'verified'
+          ? `<span class="pill pill--verified">Verified</span> <a class="ref" href="#claim-${esc(r.claimId ?? '')}">${esc(r.claimId ?? '')}</a><br><span class="src">&ldquo;${esc(r.quote ?? '')}&rdquo;</span>`
+          : r.status === 'unreachable'
+            ? `<span class="pill pill--ours">Unreachable</span><br><span class="src">${esc(r.detail ?? '')}</span>`
+            : `<span class="pill pill--ours">Not supported</span><br><span class="src">${esc(r.detail ?? '')}</span>`
+      }</td></tr>`
+    )
+    .join('')}
+  </tbody></table>`
+    : '';
 
   /* -- the field it was chosen from -- */
   const considered =
@@ -470,6 +495,7 @@ ${banner}
   </div>
   ${recommendation}
   ${callMaterial}
+  ${briefBlock}
   ${standing}
   ${peers}
   ${considered}

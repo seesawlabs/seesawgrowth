@@ -111,6 +111,7 @@ those files rather than calling earlier stages. Any stage can be re-run alone.
 
 | Stage | Tool | Output | Where it breaks |
 |---|---|---|---|
+| 00 brief evidence | Firecrawl + Claude (Sonnet) | `00-brief.json`, `brief-N` claims | reads each URL a cold-outreach brief cites and keeps a verbatim quote only if the page supports the note; the teammate's words never become a claim |
 | 01 subject | Firecrawl | their surface: docs, careers, pricing, integrations | thin marketing sites yield little |
 | 02 peers | **Exa find-similar** | 5–8 named peers | **make-or-break** — wrong list, worthless report |
 | 03 peer evidence | Firecrawl + Perplexity | dated, sourced AI moves | Perplexity summarizes; keep the citation or drop the claim |
@@ -251,6 +252,12 @@ npm run report -- <domain> [flags]
   --no-synthesis       skip stage 06 (and therefore 07)
   --no-one-thing       skip stage 07
   --name "..."         the recipient, for the email draft's salutation
+  --cold               cold outreach: the recipient did not ask. The email is
+                       120-220 words, opens with the dated thing we noticed
+                       (a Verified brief-N claim), never says "you told us"
+  --trigger "..."      the brief. Labelled lines: WHAT CHANGED RECENTLY, WHERE
+                       THE TEAM BURNS TIME, ALREADY TRIED..., plus for cold runs
+                       OUTREACH: cold and EVIDENCE: <url> | <note> (stage 00)
   --quiet              don't print the report to stdout
 ```
 
