@@ -364,9 +364,13 @@ export function evidenceFromAnswer(
 
 /** URL paths where a company announces things. */
 const ANNOUNCEMENT_KEYWORDS = [
-  'news', 'press', 'press-release', 'newsroom', 'blog', 'announcement',
-  'announcements', 'media', 'insights', 'articles', 'technology', 'innovation',
-  'ai', 'automation', 'digital',
+  /* Plurals earn their place: compassus.com links its blog at /blogs/, and
+     "blogs" is not "blog" once a path is split into words. A missed path here
+     costs a Verified opener in stage 03b, which is the whole reason to write. */
+  'news', 'press', 'press-release', 'press-releases', 'newsroom', 'blog',
+  'blogs', 'announcement', 'announcements', 'media', 'insights', 'articles',
+  'stories', 'updates', 'technology', 'innovation', 'ai', 'automation',
+  'digital',
 ];
 
 export function selectAnnouncementPages(
@@ -386,8 +390,13 @@ export function selectAnnouncementPages(
     const tokens = path.split('/').flatMap((s) => s.split(/[-_.]/)).filter(Boolean);
     const index = ANNOUNCEMENT_KEYWORDS.findIndex((k) => tokens.includes(k));
     if (index === -1) continue;
+    /* A listing shard is worse than the index it shards: compassus.com's map
+       offered /everyday-compassion-blog/category/grief three times over and
+       none of them carried a dated announcement. Demoted rather than dropped,
+       because on a small site a category page may be all there is. */
+    const shard = /\/(category|categories|tag|tags|author|topics?|page)\//.test(path) ? 500 : 0;
     // Earlier keyword = better, shorter path = closer to the index page.
-    scored.push({ url: link.url, score: index * 100 + path.length });
+    scored.push({ url: link.url, score: shard + index * 100 + path.length });
   }
   scored.sort((a, b) => a.score - b.score);
   const seen = new Set<string>();

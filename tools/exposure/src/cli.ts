@@ -628,12 +628,23 @@ async function report(argv: string[]): Promise<void> {
   console.error(formatCredentialReport());
   console.error(`\nBudget ceiling for this run: $${ledger.ceiling.toFixed(2)}${args.refresh ? ' (cache reads bypassed)' : ''}\n`);
 
+  /* Who this is for, decided before anything runs and recorded in the meta.
+     It has to be on disk: with the URL-only cold flow the brief is empty, so
+     nothing else in the run directory says the run was cold, and the review
+     gate, the Slack release and a later `onething` would all read it as an
+     inbound lead and drop the cold rules. Found by the Compassus run of
+     2026-09-04, which wrote a correct cold draft and then released it without
+     the warning that it had no dated Verified opener. */
+  const brief = parseBrief(args.trigger);
+  const audience: Audience = args.cold || brief.audience === 'cold' ? 'cold' : 'lead';
+
   const dir = await initRun(ROOT, {
     runId,
     domain,
     startedAt: now,
     companyName: args.company,
     trigger: args.trigger,
+    audience,
   });
 
   const stageNotes: string[] = [];
@@ -843,8 +854,6 @@ async function report(argv: string[]): Promise<void> {
   /* stage 00 — the brief's evidence. A teammate's "why now" URL becomes a
      Verified claim only if the page says it, verbatim. Otherwise the report
      records that it did not. */
-  const brief = parseBrief(args.trigger);
-  const audience: Audience = args.cold || brief.audience === 'cold' ? 'cold' : 'lead';
   let briefArtifact: BriefArtifact | null = null;
   if (brief.evidence.length > 0) {
     if (missingCredentials(['FIRECRAWL_API_KEY', 'ANTHROPIC_API_KEY']).length > 0) {

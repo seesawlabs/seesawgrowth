@@ -102,7 +102,9 @@ nobody has entered.
 
 6. **The pipeline finds the reason to write.** Stage 03b
    (`src/stages/03b-target-news.ts`) looks for dated changes at the target from
-   the domain alone. A line read on their own page is `observed` and
+   the domain alone. Their own pages are found from the site map *and* from the
+   homepage's own links, because a national provider's map is all
+   `/locations/<state>` and no keyword would guess `/compassus-news/`. A line read on their own page is `observed` and
    `readOnPage`, so it is Verified and may open a message; anything found
    through a search index is Cited and stays call material however good the
    source. Dates never come from a summary. With no dated Verified item, the

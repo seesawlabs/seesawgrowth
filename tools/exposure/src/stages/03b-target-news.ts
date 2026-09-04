@@ -51,6 +51,7 @@ import { map, scrape } from '../lib/clients/firecrawl.ts';
 import {
   hostOf,
   isAggregatorHost,
+  nameKey,
   isNearMissDomain,
   isSubjectMirror,
   hasProfilePath,
@@ -186,6 +187,31 @@ export function withinMonths(iso: string, now: string, months = NEWS_WINDOW_MONT
 
 const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
+/**
+ * Same-domain links out of a page's markdown.
+ *
+ * THE COMPASSUS PROBLEM, live 2026-09-04. Their newsroom sits at
+ * /compassus-news/ and their blog at /blogs/, both linked from the homepage,
+ * with dated items under /news_items/. The site map came back dominated by
+ * /locations/<state> — a national provider has hundreds — so the announcement
+ * paths never appeared in the sample and the run produced no Verified opener
+ * for a company that publishes press releases weekly.
+ *
+ * A bigger map sample helps and is free, but it is not the fix: no path
+ * keyword would have guessed "compassus-news". What finds it is what a person
+ * does — open the homepage and look at the navigation. So when the map yields
+ * no announcement path, the homepage's own links are scored the same way.
+ */
+export function linksIn(markdown: string, domain: string): { url: string }[] {
+  const out: string[] = [];
+  for (const m of markdown.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) {
+    const url = m[1].replace(/[).,]+$/, '');
+    if (registrableDomain(url) !== registrableDomain(domain)) continue;
+    if (!out.includes(url)) out.push(url);
+  }
+  return out.map((url) => ({ url }));
+}
+
 /* -- their own site ------------------------------------------------------- */
 
 export interface DatedQuote {
@@ -208,6 +234,11 @@ export function readableLines(markdown: string): string[] {
 }
 
 const DATE_ONLY_MAX = 48;
+
+/** The first sentence of a line, or the line itself when it holds just one. */
+function firstSentence(line: string): string {
+  return line.split(/(?<=[.!?])\s+(?=["“A-Z])/)[0] ?? line;
+}
 
 /**
  * Dated lines from one page, kept verbatim.
@@ -258,14 +289,19 @@ export function datedQuotesFrom(
     if (found) {
       /* A long paragraph carries its date in its first sentence; later
          sentences in it are undated as far as we can tell. */
-      const first = line.split(/(?<=[.!?])\s+(?=[A-Z])/)[0] ?? line;
+      const first = firstSentence(line);
       keep(first.length >= 40 ? first : line.slice(0, 300), found.iso, 'in the quote');
       pending = null;
       continue;
     }
 
     if (pending) {
-      keep(line, pending.iso, 'the dated line above it');
+      /* A press release is one long paragraph under its date line: on
+         compassus.com the line under "February 12, 2026" is 557 characters,
+         which the 300-character ceiling threw away, and with it the only
+         Verified opener that company had. The first sentence is the quote —
+         datelined, verbatim, and the part a person would read aloud. */
+      keep(firstSentence(line), pending.iso, 'the dated line above it');
       pending = null;
     }
   }
@@ -452,6 +488,49 @@ export function newsFromAnswer(
  * profile pages and mirrors of the company's own site are dropped: stage 02
  * learned that those dominate any search for a company name.
  */
+/** Titles that belong to a company profile rather than to a story about it. */
+const PROFILE_TITLE =
+  /\|\s*(linkedin|crunchbase|zoominfo|owler|glassdoor|indeed|bloomberg|pitchbook|dun\s*&\s*bradstreet|d&b|apollo\.io|rocketreach|zippia|comparably)\b|\b(company profile|company overview|employee directory|contact information|competitors and alternatives)\b/i;
+
+/**
+ * A title whose only content besides the company name is the publisher's own
+ * name: a directory entry, not a story.
+ *
+ * Live 2026-09-04 the news index returned "Compassus - National Alliance for
+ * Care at Home | National Alliance for Care at Home", dated, from the
+ * alliance's provider directory. It is a listing of the company, and there is
+ * no event in it to write about.
+ *
+ * Deliberately narrow. Requiring a verb of change in the headline would have
+ * been simpler and would have dropped "COMPASSUS CELEBRATES TWO DECADES",
+ * which is a real dated announcement — "celebrates" is nobody's action verb.
+ * So the test is not "does the headline describe a change" but "does the
+ * headline say anything at all beyond who they are and whose page this is".
+ */
+export function looksLikeListingTitle(title: string, target: { name: string; domain: string }, url: string): boolean {
+  const key = nameKey(target.name);
+  /* The host without its public suffix: "allianceforcareathome" out of
+     allianceforcareathome.org, which is what a site puts in its own titles. */
+  const host = squash(
+    hostOf(url)
+      .replace(/^www\./, '')
+      .split('.')
+      .slice(0, -1)
+      .join('')
+  ).replace(/ /g, '');
+  const segments = title
+    .split(/\s[|–—]\s|\s-\s/)
+    .map((part) => squash(part).replace(/ /g, ''))
+    .map((part) => (key.length >= 4 ? part.split(key).join('') : part))
+    .filter(Boolean);
+  const unique = [...new Set(segments)];
+  if (unique.length > 1) return false;
+  const rest = unique[0] ?? '';
+  /* Nothing but the company name, or nothing but the publisher's own name. */
+  if (rest === '') return true;
+  return rest.length < 45 && host.length >= 4 && (host.includes(rest) || rest.includes(host));
+}
+
 export function headlinesFrom(
   results: { url: string; title?: string; publishedDate?: string; text?: string }[],
   target: { name: string; domain: string },
@@ -476,6 +555,18 @@ export function headlinesFrom(
     }
     if (isAggregatorHost(r.url) || hasProfilePath(r.url) || isSubjectMirror(r.url, target.domain)) {
       drop(title, 'does_not_name_peer', `${hostOf(r.url)} is a directory, profile or mirror page, not reporting`);
+      continue;
+    }
+    /* A profile page mirrored onto some other host, which the host checks
+       cannot see. Live 2026-09-04 the index returned "Compassus | LinkedIn"
+       from a university web-archive domain, dated, and it rendered in the
+       register as reporting. The title is the tell. */
+    if (PROFILE_TITLE.test(title)) {
+      drop(title, 'does_not_name_peer', 'the title is a directory or profile page, mirrored onto another host');
+      continue;
+    }
+    if (looksLikeListingTitle(title, target, r.url)) {
+      drop(title, 'does_not_name_peer', 'the title says nothing beyond their name and the publisher’s: a directory entry, not a story');
       continue;
     }
     if (!r.publishedDate) {
@@ -563,9 +654,20 @@ export async function runTargetNewsStage(
   /* 1 — their own site. First, because it is the only pass that produces an
      opener we are allowed to use. */
   try {
-    const mapped = await map(cache, ledger, target.domain, 60, now);
-    const pages = selectAnnouncementPages(mapped.links ?? [], opts.maxPages ?? 3);
-    if (pages.length === 0) notes.push('no news, press or blog path in their site map');
+    /* 200 rather than 60: the map is one call whatever the limit, and a
+       multi-location provider spends the first hundred links on /locations. */
+    const mapped = await map(cache, ledger, target.domain, 200, now);
+    /* The homepage's own links, always, not as a fallback. On compassus.com the
+       map's 200 links held three shards of a grief-support blog and not the
+       newsroom, so a run that only fell back when the map found *nothing*
+       still missed /compassus-news/ — the path their homepage links first. One
+       extra scrape, and the selection sees what a visitor sees. */
+    const candidates = [...(mapped.links ?? [])];
+    const home = await scrape(cache, ledger, `https://${target.domain}`, now);
+    if (home.ok) candidates.push(...linksIn(home.markdown, target.domain));
+    else notes.push(`homepage not readable: ${home.skipped ?? 'no markdown'}`);
+    const pages = selectAnnouncementPages(candidates, opts.maxPages ?? 3);
+    if (pages.length === 0) notes.push('no news, press or blog path on their site map or their homepage');
     for (const url of pages) {
       const page = await scrape(cache, ledger, url, now);
       if (!page.ok) {

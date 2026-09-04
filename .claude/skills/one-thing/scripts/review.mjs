@@ -64,13 +64,18 @@ const brief = read(briefPath);
 const news = read(newsPath);
 const draft = draftPath ? readFileSync(draftPath, 'utf8') : '';
 
+/* The audience, from the meta where the run recorded it and from the stage 07
+   artifact otherwise. Runs made before 00-meta carried it — and any path that
+   writes the recommendation without the meta — must still get the cold rules. */
+const audience = meta?.audience ?? art?.audience ?? 'lead';
+
 const blockers = [];
 const cautions = [];
 const line = (s = '') => console.log(s);
 const head = (s) => line(`\n== ${s}`);
 
 line(`ONE THING REVIEW`);
-if (meta) line(`${meta.domain}  run ${meta.runId}  started ${meta.startedAt}${meta.audience === 'cold' ? '  COLD OUTREACH' : ''}`);
+if (meta) line(`${meta.domain}  run ${meta.runId}  started ${meta.startedAt}${audience === 'cold' ? '  COLD OUTREACH' : ''}`);
 line(`PDF: ${pdfPath ?? 'NOT PRINTED (no Chrome on the runner; the HTML is in the folder)'}`);
 if (!pdfPath) cautions.push('no PDF was printed');
 
@@ -112,7 +117,7 @@ if (coverage && !coverage.sufficient) {
 }
 const verifiedBrief = (brief?.results ?? []).filter((r) => r.status === 'verified').length;
 const ownSiteNews = news?.ownSiteItems ?? 0;
-if (meta?.audience === 'cold' && verifiedBrief + ownSiteNews === 0) {
+if (audience === 'cold' && verifiedBrief + ownSiteNews === 0) {
   flags.push(
     'NO DATED VERIFIED OPENER: nothing dated about this company was read on a page we opened, so the ' +
       'first sentence has nothing true and recent to stand on. Find a page that carries one, or write ' +
@@ -165,7 +170,7 @@ if (news) {
 head('2. Verdict');
 if (nul) {
   line('  nothing_worth_a_call');
-  if (meta?.audience === 'cold') blockers.push('null verdict on cold outreach: do not write to them');
+  if (audience === 'cold') blockers.push('null verdict on cold outreach: do not write to them');
   line(`  What we looked at: ${x.nullResult?.whatWeLookedAt ?? '(missing)'}`);
   for (const t of x.nullResult?.whatWeSetAside ?? []) line(`  Set aside: ${t}`);
   line(`  One question: ${x.nullResult?.oneQuestion ?? '(missing)'}`);
@@ -222,7 +227,7 @@ if (art.linkedinPaste) {
     blockers.push('a redaction marker is in the LinkedIn text');
   }
   line('  Read the first sentence as the stranger would: is it true, specific, and about them?');
-} else if (meta?.audience === 'cold') {
+} else if (audience === 'cold') {
   blockers.push('cold outreach with no LinkedIn messages written');
 }
 

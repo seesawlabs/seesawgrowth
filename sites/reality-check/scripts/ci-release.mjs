@@ -294,7 +294,11 @@ if (!pdf) caveats.push(':warning: No PDF was printed on the runner (no Chrome). 
    on a page ourselves. Stage 03b looks for it; the brief may carry one. */
 const news = bundle['03b-target-news'];
 const verifiedBrief = (bundle['00-brief']?.results ?? []).filter((r) => r.status === 'verified').length;
-const isCold = bundle['00-meta']?.audience === 'cold';
+/* From the meta where the run recorded it, and from the recommendation itself
+   otherwise: a cold run started from a URL alone carries no brief to infer it
+   from, and the Compassus run of 2026-09-04 released without its warning
+   because of exactly that. */
+const isCold = (bundle['00-meta']?.audience ?? oneThing?.audience) === 'cold';
 if (isCold && (news?.ownSiteItems ?? 0) + verifiedBrief === 0) {
   caveats.push(
     ':no_entry_sign: *No dated Verified opener.* Nothing dated about them was read on a page we opened, ' +

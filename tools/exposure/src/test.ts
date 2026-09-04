@@ -2231,6 +2231,8 @@ test('stage 07: cold outreach is bounded shorter and may not imply the recipient
 import {
   dateIn,
   describesChange,
+  linksIn,
+  looksLikeListingTitle,
   withinMonths,
   datedQuotesFrom,
   newsFromAnswer,
@@ -2479,6 +2481,7 @@ import {
   LINKEDIN_NOTE_MAX,
 } from './stages/07-one-thing.ts';
 import { renderLinkedIn } from './render/email-draft.ts';
+import { selectAnnouncementPages } from './stages/03-peer-evidence.ts';
 import { isDatedOpener } from './lib/claim-status.ts';
 
 const cold = (): OneThing => {
@@ -2566,4 +2569,88 @@ test('voice: the phrases every automated connection request uses are out', () =>
   assert.ok(cliche, 'the cliché pattern fires');
   assert.equal(cliche.count, 4);
   assert.deepEqual(checkVoice('You were named to the Inc. 5000 list in August. Here is what we would build.'), []);
+});
+
+test('stage 03b: the homepage finds the newsroom a site map buries (compassus.com, live)', () => {
+  /* Their map came back as /locations/<state>, hundreds of them, with no
+     announcement path in the sample. The homepage links both. */
+  const home = [
+    '# Compassus',
+    '[Find a location](https://www.compassus.com/locations/texas)',
+    '[Compassus News](https://www.compassus.com/compassus-news/)',
+    '[Blogs](https://www.compassus.com/blogs/)',
+    '[LinkedIn](https://www.linkedin.com/company/compassus)',
+  ].join('\n');
+  const links = linksIn(home, 'compassus.com');
+  assert.deepEqual(
+    links.map((l) => l.url),
+    [
+      'https://www.compassus.com/locations/texas',
+      'https://www.compassus.com/compassus-news/',
+      'https://www.compassus.com/blogs/',
+    ],
+    'same domain only: LinkedIn is not their site'
+  );
+  assert.deepEqual(selectAnnouncementPages(links, 3), [
+    'https://www.compassus.com/compassus-news/',
+    'https://www.compassus.com/blogs/',
+  ]);
+});
+
+test('stage 03b: a profile page mirrored onto another host is not reporting', () => {
+  const { items, dropped } = headlinesFrom(
+    [
+      { url: 'https://waps.l3s.uni-hannover.de/x/compassus', title: 'Compassus | LinkedIn', publishedDate: '2026-04-01', text: 'Compassus is a national provider.' },
+      { url: 'https://leadiq.test/companies/cedar', title: 'Cedar Hospice Pharmacy Company Profile', publishedDate: '2026-04-01', text: 'Cedar Hospice Pharmacy revenue and employees.' },
+    ],
+    TARGET,
+    NOW
+  );
+  assert.equal(items.length, 0);
+  assert.equal(dropped.length, 2);
+  assert.ok(dropped.every((d) => d.detail.includes('profile')));
+});
+
+test('stage 03b: a directory listing is not a story, but an odd headline still is', () => {
+  const compassus = { name: 'Compassus', domain: 'compassus.com' };
+  assert.ok(
+    looksLikeListingTitle(
+      'Compassus - National Alliance for Care at Home | National Alliance for Care at Home',
+      compassus,
+      'https://allianceforcareathome.org/nahc_provider/compassus/'
+    ),
+    'nothing in the title but their name and the publisher’s'
+  );
+  assert.ok(
+    !looksLikeListingTitle(
+      'COMPASSUS CELEBRATES TWO DECADES, LOOKS TO NEXT DECADE OF HOME-BASED CARE DELIVERY',
+      compassus,
+      'https://www.prnewswire.com/news-releases/compassus-celebrates-two-decades-302817215.html'
+    ),
+    '"celebrates" is nobody’s action verb and this is still an announcement'
+  );
+  assert.ok(
+    !looksLikeListingTitle(
+      'Compassus CMO: Deliver on the Hospice Promise - Hospice News',
+      compassus,
+      'https://hospicenews.com/2026/08/18/compassus-cmo-deliver-on-the-hospice-promise/'
+    )
+  );
+});
+
+test('stage 03b: a press release under its date line is quoted from its first sentence', () => {
+  /* The shape of every wire release, and the shape that used to be dropped:
+     one 557-character paragraph under a date-only line. */
+  const page = [
+    'Compassus Named One of Newsweek’s America’s Greatest Workplaces for Women 2026',
+    '',
+    'February 12, 2026',
+    '',
+    'BRENTWOOD, Tenn. – Compassus, a leading national provider of integrated home-based health care services, announced today it has been named one of the Greatest Workplaces for Women. The recognition is awarded in partnership with a research firm, and it reflects survey responses from thousands of employees across the country about culture, pay and progression, gathered over the preceding twelve months in a study of large employers.',
+  ].join('\n');
+  const quotes = datedQuotesFrom(page, 'https://www.compassus.com/news_items/x', '2026-09-04T00:00:00Z', { limit: 3 });
+  assert.equal(quotes.length, 1);
+  assert.equal(quotes[0].date, '2026-02-12');
+  assert.ok(quotes[0].quote.startsWith('BRENTWOOD, Tenn.'));
+  assert.ok(quotes[0].quote.endsWith('Greatest Workplaces for Women.'), 'the first sentence, whole, and nothing after it');
 });
