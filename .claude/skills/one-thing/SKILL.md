@@ -38,18 +38,34 @@ run. Two parts:
    the code.
 6. Generate, and copy the `github_pat_…` value. It is shown once.
 
-*Put it in the environment*, next to `FIRECRAWL_API_KEY`, `EXA_API_KEY` and the
-other keys these sessions already carry — the environment's variables in Claude
-Code's settings, **not** anything under the repository's own Settings tab. Name it
-`SEESAW_DISPATCH_TOKEN`. A session started after that picks it up.
+*Put it in the cloud environment*, next to `FIRECRAWL_API_KEY`, `EXA_API_KEY` and
+the other keys these sessions already carry. There is no settings page for this
+and no direct URL — it hangs off the environment selector:
+
+1. At **claude.ai/code**, click the **cloud icon showing the environment's name**
+   in the row above the message box (for us: *Calvin SeeSaw*).
+2. In the menu, under **Cloud**, hover that environment and click the **gear icon**
+   that appears on its right.
+3. In the **Update cloud environment** dialog, find **Environment variables**. It
+   takes `.env` format, one `KEY=value` per line. Add:
+
+   ```
+   SEESAW_DISPATCH_TOKEN=github_pat_…
+   ```
+
+4. Save, then **start a new session**. Variables are copied once at session
+   startup, so a session already running keeps the values it started with.
+
+Anyone who uses that environment can read the value, which is the same trust
+boundary as the API keys already there.
 
 Two traps, both of which have caught us:
 
 - **Not the repository's Actions variables.** GitHub → Settings → Actions
   variables is a different thing entirely: those are for the workflow, they are
   public plain text, and GitHub reserves the `GITHUB_` prefix there, so the name
-  is rejected with a validation error. The token belongs to the session, not to
-  the repo.
+  is rejected with a validation error. The token belongs to the cloud
+  environment, not to the repo — see the four steps above.
 - **The session's own `GH_TOKEN` is not enough.** It is present in every Claude
   Code session and is read-only for Actions, so a dispatch with it returns 403.
   The scripts name the variable that answered and say what to set instead.
