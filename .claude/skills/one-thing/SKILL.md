@@ -45,8 +45,10 @@ this repo inherits it. Next to `FIRECRAWL_API_KEY`, `EXA_API_KEY` and the other
 keys these sessions already carry. There is no settings page for this and no
 direct URL — it hangs off the environment selector:
 
-1. At **claude.ai/code**, click the **cloud icon showing the environment's name**
-   in the row above the message box (for us: *Calvin SeeSaw*).
+1. At **claude.ai/code**, on the **new-session screen** rather than inside a
+   running session, click the **cloud icon showing the environment's name** in the
+   row above the message box (for us: *Calvin SeeSaw*). The gear is reachable
+   there; from inside a running session it may not be.
 2. In the menu, under **Cloud**, hover that environment and click the **gear icon**
    that appears on its right.
 3. In the **Update cloud environment** dialog, find **Environment variables**. It
@@ -56,8 +58,9 @@ direct URL — it hangs off the environment selector:
    SEESAW_DISPATCH_TOKEN=github_pat_…
    ```
 
-4. Save, then **start a new session**. Variables are copied once at session
-   startup, so a session already running keeps the values it started with.
+4. Save, then start the session from that same screen — it will carry the
+   variable. Variables are copied once at session startup, so a session already
+   running keeps the values it started with and needs no second restart.
 
 Anyone who uses that environment can read the value, which is the same trust
 boundary as the API keys already there.
