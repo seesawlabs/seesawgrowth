@@ -179,6 +179,12 @@ These are enforced in code; the skill's job is to make sure nobody works around 
 
 - `run.sh` fails with 404 or 403: the account lacks write access to the repo, or `gh`
   is logged in to the wrong account. `gh auth status` shows which.
+- **A Claude Code session on the web cannot start a run.** Its GitHub token is
+  read-only for Actions — proven 2026-09-04, `403 Resource not accessible by
+  integration` on the dispatch — so this skill needs a session on a machine where
+  the person's own `gh` is logged in. From the web, use the workflow's Run workflow
+  form in the GitHub UI instead: mode `cold`, the domain, `unknown@<domain>` as the
+  email, their name, and the domain again as the company.
 - The run fails in Actions: `status.sh` prints the failed step. Read the job log with
   `gh run view <id> --log-failed`. A 401 from a service means a wrong secret in the
   repo's Actions settings, not a code problem.

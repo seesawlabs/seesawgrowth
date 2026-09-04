@@ -55,7 +55,17 @@ const coveragePath = find(root, 'coverage.json');
 const briefPath = find(root, '00-brief.json');
 const newsPath = find(root, '03b-target-news.json');
 
-const read = (p) => (p ? JSON.parse(readFileSync(p, 'utf8')) : null);
+/* A truncated or half-written artifact must not crash the gate: a reviewer
+   needs to be told what is missing, not handed a stack trace. */
+const read = (p) => {
+  if (!p) return null;
+  try {
+    return JSON.parse(readFileSync(p, 'utf8'));
+  } catch {
+    console.error(`Note: ${p} is not readable JSON; treating it as absent.`);
+    return null;
+  }
+};
 const art = read(oneThingPath);
 const sources = read(sourcesPath) ?? [];
 const meta = read(metaPath);
