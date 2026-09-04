@@ -38,9 +38,12 @@ run. Two parts:
    the code.
 6. Generate, and copy the `github_pat_…` value. It is shown once.
 
-*Put it in the cloud environment*, next to `FIRECRAWL_API_KEY`, `EXA_API_KEY` and
-the other keys these sessions already carry. There is no settings page for this
-and no direct URL — it hangs off the environment selector:
+*Put it somewhere the session can read it.* Best first, and any one is enough.
+
+**A. The cloud environment's variables** — permanent, and every future session on
+this repo inherits it. Next to `FIRECRAWL_API_KEY`, `EXA_API_KEY` and the other
+keys these sessions already carry. There is no settings page for this and no
+direct URL — it hangs off the environment selector:
 
 1. At **claude.ai/code**, click the **cloud icon showing the environment's name**
    in the row above the message box (for us: *Calvin SeeSaw*).
@@ -58,6 +61,30 @@ and no direct URL — it hangs off the environment selector:
 
 Anyone who uses that environment can read the value, which is the same trust
 boundary as the API keys already there.
+
+**No gear icon on that row?** Then the environment is shared by the organization
+rather than personal, and only an Owner can edit it: **claude.ai/admin-settings** →
+**Cloud environments** → the environment → **Environment variables**. Members see
+it read-only. Two ways past that without waiting for anyone: **Add cloud
+environment** in the same selector makes a personal one you can edit (copy the
+other keys across if you want the pipeline probes to work from a session too), or
+use B.
+
+**B. Armed for one session** — when that dialog is out of reach:
+
+```
+echo "github_pat_…" | scripts/arm.sh
+```
+
+The token arrives on stdin, so it stays out of shell history, and lands in
+`~/.one-thing-token` with owner-only permissions, outside the repository. On a
+laptop it persists; in a cloud session it lives as long as the VM. **What it
+costs:** a token pasted into a session is in that session's transcript, so prefer
+A where you can, and revoke the token at github.com/settings/personal-access-tokens
+if you would rather it had not been.
+
+**C. Nothing at all** — on a laptop with `gh auth login` done, none of this
+applies. The skill uses that.
 
 Two traps, both of which have caught us:
 
@@ -140,6 +167,7 @@ Scripts live next to this file in `scripts/`. Run them from the repo root.
 | status | `scripts/status.sh [run-id]` |
 | review | `scripts/fetch.sh <run-id>` then `node scripts/review.mjs <downloaded dir>` |
 | revise | `scripts/revise.sh --domain acme.com --run <pipeline runId> --notes "…"` |
+| arm a session with a token | `echo "github_pat_…" \| scripts/arm.sh` |
 
 `run.sh` checks the required inputs, packs them into the brief the pipeline expects,
 dispatches the workflow (mode `cold` or `run`), and prints the GitHub run id and URL.

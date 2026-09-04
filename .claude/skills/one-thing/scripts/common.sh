@@ -40,7 +40,18 @@ need() {
 need node
 need curl
 
-api_token() { printf '%s' "${SEESAW_DISPATCH_TOKEN:-${GITHUB_DISPATCH_TOKEN:-${GH_TOKEN:-}}}"; }
+# Where a token may come from, in order. The file is for the case that keeps
+# happening: the environment's variables are behind a gear icon a member of an
+# organization cannot always reach, and a person with a token in their clipboard
+# should not be stuck. scripts/arm.sh writes it.
+TOKEN_FILE="${ONE_THING_TOKEN_FILE:-$HOME/.one-thing-token}"
+
+api_token() {
+  if [ -n "${SEESAW_DISPATCH_TOKEN:-}" ]; then printf '%s' "$SEESAW_DISPATCH_TOKEN"; return; fi
+  if [ -n "${GITHUB_DISPATCH_TOKEN:-}" ]; then printf '%s' "$GITHUB_DISPATCH_TOKEN"; return; fi
+  if [ -s "$TOKEN_FILE" ]; then tr -d ' \t\r\n' < "$TOKEN_FILE"; return; fi
+  printf '%s' "${GH_TOKEN:-}"
+}
 
 have_gh() { command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; }
 
@@ -53,6 +64,7 @@ elif [ -n "$(api_token)" ]; then
   # the value.
   if [ -n "${SEESAW_DISPATCH_TOKEN:-}" ]; then TOKEN_FROM=SEESAW_DISPATCH_TOKEN
   elif [ -n "${GITHUB_DISPATCH_TOKEN:-}" ]; then TOKEN_FROM=GITHUB_DISPATCH_TOKEN
+  elif [ -s "$TOKEN_FILE" ]; then TOKEN_FROM="$TOKEN_FILE"
   else TOKEN_FROM=GH_TOKEN; fi
 else
   cat >&2 <<'MSG'
@@ -99,9 +111,14 @@ GitHub refused $method $path with 403.
 
 The token being used (from \$$TOKEN_FROM) cannot act on Actions for $REPO. In a
 Claude Code session that is usually the default GH_TOKEN, which is present in
-every session and is read-only for Actions. Set SEESAW_DISPATCH_TOKEN in the ENVIRONMENT's variables
-— the same place FIRECRAWL_API_KEY lives, not the repository's Actions settings
-— to a fine-grained GitHub token scoped to this repository with Repository
+every session and is read-only for Actions.
+
+Fix it either way:
+  - Set SEESAW_DISPATCH_TOKEN in the cloud ENVIRONMENT's variables, the same
+    place FIRECRAWL_API_KEY lives — not the repository's Actions settings.
+  - Or, for this session only: scripts/arm.sh, which takes the token on stdin.
+
+Either wants a fine-grained GitHub token scoped to $REPO with Repository
 permissions -> Actions: Read and write.
 MSG
       return 1 ;;
