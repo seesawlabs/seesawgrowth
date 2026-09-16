@@ -1,7 +1,12 @@
 # Assured Senior Living — meeting brief
 
 *Prepared 2026-09-16 for a meeting with Brian Turner and Francis LeGasse Jr. Research
-pulled 2026-09-16 with Firecrawl, Exa and Perplexity.*
+pulled 2026-09-16 with Firecrawl and Perplexity.*
+
+> **Superseded in one place.** `14-assured-one-thing-report.md` runs the full research
+> across all four tools and **replaces the one-big-thing hypothesis in §6 below.** Their own
+> pages show TBI at only two communities, so the BI-waiver documentation burden is an acute
+> case rather than the main lever. §1-§5 and §7 here still stand; read `14` for the build.
 
 > **This is hand-built analysis, not a `/one-thing` pipeline run.** The dispatch is blocked
 > on a token permission — see §8. The pipeline would add source-traced claim validation and
