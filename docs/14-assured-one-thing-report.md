@@ -8,9 +8,9 @@ Perplexity (category evidence) and DataForSEO (market density). Claim register a
 > The four research APIs were called directly instead, so the evidence is the same; what is
 > missing is the pipeline's automated `validateClaim()` pass and its formal verdict. The
 > claim register below was assembled by hand to the same rule: **every numeral carries a
-> source and a tier, or it is not stated.**
-> **Tiers.** `V` Verified — read by us on their own pages. `C` Cited — third party. `T` Tool
-> data. `K` Category evidence. Only `V` claims may open a message.
+> source and a tier, or it is not stated.** **Tiers.** `V` Verified — read by us on their
+> own pages. `C` Cited — third party. `T` Tool data. `K` Category evidence. Only `V` claims
+> may open a message.
 
 ## 1. What changed, and what they are telling you
 
@@ -82,8 +82,8 @@ Four things make that assumption fragile here, and they compound:
 **Why this is a build and not a purchase.** `K4` The mature ambient-documentation vendors
 — Abridge, Ambience, Suki, Nabla, DeepScribe, Microsoft DAX — target health systems and
 ambulatory clinicians, and the post-acute specialists target **OASIS and HOPE**, which are
-home-health and hospice instruments. `K5` Evidence of ambient documentation deployed inside
-mainstream assisted-living platforms is limited to pilots and vendor marketing.
+home-health and hospice instruments. `K5` Evidence of ambient documentation deployed
+inside mainstream assisted-living platforms is limited to pilots and vendor marketing.
 
 > **Corrected 2026-09-16 by `15`.** An earlier version of this paragraph said nobody builds
 > for this shape. That is too strong. A whole category serves scattered-site residential
@@ -166,16 +166,116 @@ not a formality.
 | K4 | Ambient documentation vendors target health systems and OASIS/HOPE | K | Market overviews, 2026-04-26 and 2026-09-16 |
 | K5 | Ambient documentation inside AL platforms limited to pilots and marketing | K | Same; absence noted, not asserted as "does not exist" |
 | K6 | ALIS × Inspiren fall-safety integration announced 2026-08-04 | K | go-alis.com press release, 2026-08-04 |
+| C-p | LeGasse is a podcast host, and a frequent guest elsewhere | C | His own LinkedIn headline; guest appearances on The Care Home Show, Scales of Success, CareSmartz360, AgingIN |
+| R1 | MorningStar Senior Living: 38 properties, 5,000+ units, 11 states; Holly Park Centennial 2026-04-09; Parker 2026-03-09; assumed a former Balfour community in Longmont 2026-02-19; $305M three-community Denver portfolio to Morgan Stanley funds 2025-12-04 | C | wolfmediausa.com releases; morningstarseniorliving.com press page |
+| R2 | Generations LLC manages eight northern Colorado communities acquired by NHI from Columbine Health Systems, effective 2026-05-01 | C | coloradobiz.com, 2026-05-06 |
+| R3 | 12 Oaks Senior Living acquired Springbrooke, 145 units, Denver | C | 12oaks.com, 2026-08-01; Senior Housing News Dealbook, 2026-08-07 |
+| R4 | Dial Senior Living engaged to manage Jackson Creek, 132 units, Monument CO | C | inlandgroup.com, 2026-03-11 |
+| R5 | Oakmont Senior Living bought four Colorado communities from Bonaventure | C | wolfmediausa.com, 2026-04-13 |
 
 **Figures deliberately not stated:** their occupancy, revenue, headcount, TBI census, and
 the BI-waiver rate they bill. None could be sourced, and none is estimated here.
 
-## 8. How to use this tomorrow
+## 8. If they are a referral source rather than a customer
+
+Raised 2026-09-16. **It changes the meeting more than it changes the analysis**, and it is
+probably the right posture.
+
+### Why a well-run operator is a weak customer and a strong judge
+
+Assured has been founder-owned since December 2017, grew organically rather than by
+acquisition, and runs `C1` 1:4 ratios. An operator like that has likely **already solved**
+knowledge propagation locally — through tenure, culture, small teams and founders who know
+residents by name. That makes the build less compelling *for them*, and makes their read
+on **who has not solved it** considerably more valuable than their purchase order.
+
+So the hypothesis in §3 stops being a pitch and becomes **a diagnostic instrument**. You
+are not asking "would you buy this." You are asking "is this the real problem, and who has
+it worst?" That is a better question to put to someone with thirty-plus houses of
+experience, and — unlike a pitch — it is a question people enjoy answering.
+
+### The fork changes meaning
+
+In §6 the fork decides *which build for Assured*. Under the referral posture it decides
+**which segment to sell to**:
+
+- **Lean knowledge-transfer** → the buyer is private-pay memory care at scale, where the
+  pain is continuity and family trust.
+- **Lean compliance-evidence** → the buyer is waiver-heavy residential, where the pain is
+  proving it. Colorado's **Alternative Care Facility** construct is the mechanism by which
+  assisted living takes Medicaid here, so mixed-payer operators are the ones carrying
+  parallel documentation regimes.
+
+Their answer segments the market. That is worth more than a yes.
+
+### Who has this worse than they do — named, dated, and mostly local
+
+The sharpest version of the thesis is not "many homes." It is **many homes that recently
+arrived from somewhere else**, because acquired sites bring their own care-plan formats,
+assessment tools, record systems and training norms. Colorado has had an unusually busy
+eighteen months:
+
+| Operator | Why they fit the thesis harder than Assured |
+|---|---|
+| **MorningStar Senior Living** (Denver HQ) | `R1` **38 properties, 5,000+ units, 11 states**, IL/AL/memory care — and four transactions in nine months: Holly Park in Centennial (2026-04-09), Parker (2026-03-09), **assumed management of a former Balfour community in Longmont** (2026-02-19), and a three-community Denver portfolio sold to Morgan Stanley funds for **$305M** with MorningStar staying on as operator (2025-12-04). Denver-based, roll-up shaped, repeatedly inheriting other operators' sites |
+| **Generations LLC** | `R2` Contracted to manage **eight northern Colorado communities** acquired by NHI from Columbine Health Systems, effective 2026-05-01. Eight sites inheriting another operator's processes at once — the acutest integration case found |
+| **12 Oaks Senior Living** (TX) | `R3` Acquired **Springbrooke**, a 145-unit IL/AL/memory care community in Denver (2026-08-01). An out-of-state manager absorbing a single large Colorado site |
+| **Dial Senior Living** | `R4` Engaged to manage **Jackson Creek**, 132 units in Monument CO (2026-03-11) |
+| **Oakmont Senior Living** | `R5` Bought **four Colorado communities** from Bonaventure (2026-04-13) |
+
+**Stated carefully:** these are *structural* risk profiles drawn from public transactions.
+No source says any of them has poor care-plan dissemination, and none is asserted to. What
+is verifiable is portfolio heterogeneity and repeated management transitions, which is the
+condition the thesis predicts.
+
+**MorningStar is the standout** — Denver-headquartered, the right size band, and acquiring
+steadily. It belongs on the `11` target list, and none of these five is there yet.
+
+### What to actually ask for
+
+"Do you know anyone who'd want this" produces nothing. Specific beats broad, in roughly
+this order:
+
+1. **His podcast guests.** `C-p` Francis is a podcast host per his own LinkedIn headline
+   and a frequent guest elsewhere. **His guest list is a pre-qualified, already-warm list
+   of operators who talk publicly about their problems.** This is the single best ask in
+   the whole engagement and it has been under-used — ask who he has had on, and who he has
+   been trying to get.
+2. **NIC.** He is a listed speaker. It is the seniors-housing capital and operator
+   conference, so the room is owners, operators and lenders.
+3. **Peers who just grew.** Name the profile rather than the companies: *"who do you know
+   that has taken on somebody else's homes in the last year?"* Let him supply the names —
+   it is a better question than reading him a list, and his answer tells you whether the
+   thesis reads as real to an operator.
+4. **His vendors.** Whoever supplies his record system, plus Serenity Engage. **Vendors
+   know exactly which of their customers are struggling**, and a warm operator reference
+   into a vendor is a different conversation from a cold one.
+5. **Capital.** Lument has featured the company; lenders and REITs see operator pain
+   across whole portfolios.
+
+### What success looks like tomorrow
+
+Not "they lean toward a build." Two things:
+
+1. **The hypothesis in §3 is confirmed or killed** by someone with thirty-plus houses of
+   experience. A clear "no, that is not the problem — the problem is X" is a *better*
+   outcome than a polite yes, and it costs nothing to get.
+2. **Two or three named introductions**, at least one of them a podcast guest or a
+   recently-acquisitive operator.
+
+### What does not change
+
+**Still do not pitch.** Now for a second and stronger reason: a referral source who feels
+sold to stops referring. The build conversation can happen later and only if he raises it
+— and §9 below still applies.
+
+## 9. How to use this tomorrow
 
 Lead with `V1`. *"You published on Tuesday that rigid care plans miss the subtle changes —
 how does a plan actually reach the caregiver on a Sunday morning in Littleton?"* That
 opens the whole thing, it is true and specific and about them, and it is their own
 sentence.
 
-Then work the fork in §6. Then the §7 questions in `13`. **Do not pitch a build** — `11`
-§3 and issue #5 both say the network and the proof are worth more here than the revenue.
+Then work the fork in §6, in the segmentation sense of §8. Then the §7 questions in `13`,
+plus the five asks in §8. **Do not pitch a build** — `11` §3 and issue #5 both say the
+network and the proof are worth more here than the revenue.
