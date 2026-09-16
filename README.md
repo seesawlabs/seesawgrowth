@@ -40,6 +40,7 @@ Two standing caveats before acting on anything here:
 | [docs/12-content-and-events-plan.md](docs/12-content-and-events-plan.md) | Content and events that book meetings — borrowed distribution first (trade-press webinars, Prime Health, conference speaking), roundtables, what to skip, and why not to give away build hours | 2026-09-08 |
 | [docs/13-assured-meeting-brief.md](docs/13-assured-meeting-brief.md) | Pre-meeting brief on Assured Senior Living — industry economics, the Colorado BI-waiver picture, what AI is really doing in senior living, and the one-big-thing hypothesis with its fork | 2026-09-16 |
 | [docs/14-assured-one-thing-report.md](docs/14-assured-one-thing-report.md) | The one big thing for Assured, with a claim register — researched across Firecrawl, Exa, Perplexity and DataForSEO. Supersedes the hypothesis in `13` §6 | 2026-09-16 |
+| [docs/15-assured-peers-and-vendor-landscape.md](docs/15-assured-peers-and-vendor-landscape.md) | Peer test of the `14` assumptions, plus what Abridge, Ambience, Suki, Nabla, DeepScribe and Dragon Copilot actually do and why none fit — and what to build instead | 2026-09-16 |
 
 Read them in that order. `00` tells you what's live, `01` is the decision surface, `02` and
 `03` are the evidence base you go to when a recommendation needs defending, and `09` is where

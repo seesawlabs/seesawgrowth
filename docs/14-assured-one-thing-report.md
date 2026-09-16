@@ -81,12 +81,17 @@ Four things make that assumption fragile here, and they compound:
 
 **Why this is a build and not a purchase.** `K4` The mature ambient-documentation vendors
 — Abridge, Ambience, Suki, Nabla, DeepScribe, Microsoft DAX — target health systems and
-ambulatory clinicians. The post-acute specialists target **OASIS and HOPE**, which are
-home-health and hospice instruments. `K5` Evidence of ambient documentation deployed
-inside mainstream assisted-living platforms is limited to pilots and vendor marketing.
-**Nobody is building for what a caregiver in a small home actually does.** A
-scattered-site, small-home, high-acuity operator is too specific a shape for any of them
-to serve, which is exactly what makes it buildable and defensible.
+ambulatory clinicians, and the post-acute specialists target **OASIS and HOPE**, which are
+home-health and hospice instruments. `K5` Evidence of ambient documentation deployed inside
+mainstream assisted-living platforms is limited to pilots and vendor marketing.
+
+> **Corrected 2026-09-16 by `15`.** An earlier version of this paragraph said nobody builds
+> for this shape. That is too strong. A whole category serves scattered-site residential
+> care — **Therap** (15,000+ providers), **iCareManager** (which markets to assisted living
+> *and* IDD and advertises "Plans current 88%"), eVero, Sandata. The accurate claim is
+> narrower and better: those platforms are built for **the organisation** — compliance,
+> billing, audit — not for **the caregiver in the moment**. The build is a last-mile layer
+> over a system of record, not a system of record. See `15` §3 and §5.
 
 **The TBI line is the acute case of the same problem, not a different one.** `V3` Two
 houses, the highest complexity, the most genuinely individualised plans, and — if the
