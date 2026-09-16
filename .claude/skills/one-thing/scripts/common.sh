@@ -100,6 +100,7 @@ rest() {
     -H "Authorization: Bearer $(api_token)" \
     -H 'Accept: application/vnd.github+json' \
     -H 'X-GitHub-Api-Version: 2022-11-28' \
+    ${body:+-H 'Content-Type: application/json'} \
     ${body:+-d "$body"} "$API/$path")"
   code="$(printf '%s' "$out" | tail -n1)"
   printf '%s' "$out" | sed '$d'
@@ -123,6 +124,10 @@ permissions -> Actions: Read and write.
 MSG
       return 1 ;;
     404) echo "GitHub returned 404 for $method $path. Wrong repo, or the token cannot see it." >&2; return 1 ;;
+    415)
+      echo "GitHub returned 415 for $method $path: the request body was not sent as JSON." >&2
+      echo "curl -d defaults to form encoding, so this call needs Content-Type: application/json." >&2
+      return 1 ;;
     *) echo "GitHub API $method $path -> HTTP $code" >&2; return 1 ;;
   esac
 }
